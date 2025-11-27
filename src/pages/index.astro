@@ -173,15 +173,18 @@ const convexUrl = getConvexUrl();
       }
 
       // Track visits when clicking "Open in Google Maps"
-      // Uses sendBeacon for reliable fire-and-forget tracking that survives navigation
+      // Uses fetch with keepalive for reliable fire-and-forget tracking that survives navigation
       function trackVisit(parkId) {
-        const payload = JSON.stringify({
-          path: "actions/trackVisit:trackVisit",
-          args: { parkId },
-          format: "json",
-        });
-        const blob = new Blob([payload], { type: "application/json" });
-        navigator.sendBeacon(`${convexUrl}/api/action`, blob);
+        fetch(`${convexUrl}/api/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: "actions/trackVisit:trackVisit",
+            args: { parkId },
+            format: "json",
+          }),
+          keepalive: true, // Ensures request completes even if page unloads
+        }).catch(() => {}); // Silently ignore errors for fire-and-forget
       }
 
       // Attach click handlers to maps links
