@@ -2,6 +2,7 @@
 dist/
 # generated types
 .astro/
+.playwright/
 
 # dependencies
 node_modules/
@@ -22,3 +23,5 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+.env.local

@@ -1,16 +1,172 @@
 ---
+import { pickPark, getConvexUrl } from "../lib/convexClient";
+import "../styles/global.css";
 
+let park = null;
+let error = null;
+
+try {
+  park = await pickPark();
+} catch (e) {
+  error = e instanceof Error ? e.message : "Failed to pick a park";
+  console.error("Error picking park:", e);
+}
+
+const convexUrl = getConvexUrl();
 ---
 
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Today's Park</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 class="title">Today's Park</h1>
+        <p class="subtitle">A random adventure awaits</p>
+      </header>
+
+      <main id="park-display">
+        {
+          error ? (
+            <div class="error-card">
+              <div class="error-icon">⚠️</div>
+              <p class="error-message">{error}</p>
+              <p class="error-hint">
+                Make sure Convex is running and parks are synced.
+              </p>
+            </div>
+          ) : park ? (
+            <article class="park-card">
+              {park.photoUrl && (
+                <div class="park-image-wrapper">
+                  <img
+                    src={park.photoUrl}
+                    alt={`Photo of ${park.name}`}
+                    class="park-image"
+                    loading="eager"
+                  />
+                  <div class="image-overlay" />
+                </div>
+              )}
+              <div class="park-info">
+                <h2 class="park-name">{park.name}</h2>
+                {park.address && <p class="park-address">{park.address}</p>}
+                <a
+                  href={`https://www.google.com/maps/place/?q=place_id:${park.placeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="maps-link"
+                >
+                  Open in Google Maps →
+                </a>
+              </div>
+            </article>
+          ) : (
+            <div class="loading-card">
+              <div class="spinner" />
+              <p>Finding your park...</p>
+            </div>
+          )
+        }
+      </main>
+
+      <div class="actions">
+        <button id="pick-again" class="pick-button" disabled={!park && !error}>
+          <span class="button-text">Pick Another Park</span>
+          <span class="button-spinner hidden"></span>
+        </button>
+      </div>
+
+      <footer>
+        <p>Parks are chosen randomly, with no repeats in the last 5 picks.</p>
+      </footer>
+    </div>
+
+    <script define:vars={{ convexUrl }}>
+      const button = document.getElementById("pick-again");
+      const display = document.getElementById("park-display");
+
+      async function pickNewPark() {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Finding park...";
+        button.querySelector(".button-spinner").classList.remove("hidden");
+
+        try {
+          const response = await fetch(`${convexUrl}/api/action`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              path: "actions/pickPark:pickPark",
+              args: {},
+              format: "json",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to pick park");
+          }
+
+          const park = result.value;
+
+          display.innerHTML = `
+            <article class="park-card">
+              ${
+                park.photoUrl
+                  ? `
+                <div class="park-image-wrapper">
+                  <img
+                    src="${park.photoUrl}"
+                    alt="Photo of ${park.name}"
+                    class="park-image"
+                    loading="eager"
+                  />
+                  <div class="image-overlay"></div>
+                </div>
+              `
+                  : ""
+              }
+              <div class="park-info">
+                <h2 class="park-name">${park.name}</h2>
+                ${park.address ? `<p class="park-address">${park.address}</p>` : ""}
+                <a
+                  href="https://www.google.com/maps/place/?q=place_id:${park.placeId}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="maps-link"
+                >
+                  Open in Google Maps →
+                </a>
+              </div>
+            </article>
+          `;
+        } catch (err) {
+          display.innerHTML = `
+            <div class="error-card">
+              <div class="error-icon">⚠️</div>
+              <p class="error-message">${err.message}</p>
+            </div>
+          `;
+        } finally {
+          button.disabled = false;
+          button.querySelector(".button-text").textContent = "Pick Another Park";
+          button.querySelector(".button-spinner").classList.add("hidden");
+        }
+      }
+
+      button.addEventListener("click", pickNewPark);
+    </script>
+  </body>
 </html>

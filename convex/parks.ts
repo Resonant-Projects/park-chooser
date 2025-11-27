@@ -1,0 +1,110 @@
+import {
+  query,
+  mutation,
+  internalQuery,
+  internalMutation,
+} from "./_generated/server";
+import { v } from "convex/values";
+
+/**
+ * Get all parks from the database.
+ */
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("parks").collect();
+  },
+});
+
+/**
+ * Get a single park by ID.
+ */
+export const get = query({
+  args: { id: v.id("parks") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * Get the current sync state (internal).
+ */
+export const getSyncState = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("syncState").first();
+  },
+});
+
+/**
+ * Update the sync state (internal).
+ */
+export const updateSyncState = internalMutation({
+  args: { lastSyncedAt: v.number() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("syncState").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastSyncedAt: args.lastSyncedAt });
+    } else {
+      await ctx.db.insert("syncState", { lastSyncedAt: args.lastSyncedAt });
+    }
+  },
+});
+
+/**
+ * Upsert parks from sync (internal).
+ */
+export const upsertParks = internalMutation({
+  args: {
+    parks: v.array(
+      v.object({
+        placeId: v.string(),
+        name: v.string(),
+        address: v.optional(v.string()),
+        photoRefs: v.array(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    for (const park of args.parks) {
+      // Check if park already exists
+      const existing = await ctx.db
+        .query("parks")
+        .withIndex("by_placeId", (q) => q.eq("placeId", park.placeId))
+        .first();
+
+      if (existing) {
+        // Update existing park
+        await ctx.db.patch(existing._id, {
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lastSynced: now,
+        });
+      } else {
+        // Insert new park
+        await ctx.db.insert("parks", {
+          placeId: park.placeId,
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lastSynced: now,
+        });
+      }
+    }
+  },
+});
+
+/**
+ * Get park count (for checking if we have data).
+ */
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const parks = await ctx.db.query("parks").collect();
+    return parks.length;
+  },
+});
+
