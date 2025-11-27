@@ -1,5 +1,6 @@
 ---
 import { pickPark, getConvexUrl } from "../lib/convexClient";
+import Analytics from "@vercel/analytics/astro";
 import "../styles/global.css";
 
 let park = null;
@@ -28,6 +29,7 @@ const convexUrl = getConvexUrl();
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <Analytics />
   </head>
   <body>
     <div class="container">
@@ -161,7 +163,8 @@ const convexUrl = getConvexUrl();
           `;
         } finally {
           button.disabled = false;
-          button.querySelector(".button-text").textContent = "Pick Another Park";
+          button.querySelector(".button-text").textContent =
+            "Pick Another Park";
           button.querySelector(".button-spinner").classList.add("hidden");
         }
       }
