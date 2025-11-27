@@ -1,0 +1,228 @@
+---
+import { getParkStats } from "../lib/convexClient";
+import "../styles/global.css";
+
+let parks: Awaited<ReturnType<typeof getParkStats>> = [];
+let error: string | null = null;
+
+try {
+  parks = await getParkStats();
+} catch (e) {
+  error = e instanceof Error ? e.message : "Failed to load stats";
+  console.error("Error loading stats:", e);
+}
+
+const totalVisits = parks.reduce(
+  (sum, park) => sum + (park.visitCount ?? 0),
+  0
+);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Park Stats</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      main {
+        flex: 1;
+        display: block;
+      }
+
+      .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .back-link {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-gold);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      .back-link:hover {
+        color: var(--color-cream);
+      }
+
+      .total-visits {
+        font-size: 0.875rem;
+        color: var(--color-mist);
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+      }
+
+      .stats-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .stats-card {
+        background: var(--color-cream);
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: card-appear 0.4s ease-out;
+        animation-fill-mode: both;
+      }
+
+      .stats-card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .stats-card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .stats-card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .stats-card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .stats-card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .stats-card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+      .stats-card:nth-child(7) {
+        animation-delay: 0.35s;
+      }
+      .stats-card:nth-child(8) {
+        animation-delay: 0.4s;
+      }
+      .stats-card:nth-child(9) {
+        animation-delay: 0.45s;
+      }
+      .stats-card:nth-child(10) {
+        animation-delay: 0.5s;
+      }
+
+      .park-details {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .stats-park-name {
+        font-family: "Fraunces", Georgia, serif;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-forest);
+        margin: 0 0 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stats-park-address {
+        font-size: 0.875rem;
+        color: var(--color-moss);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .visit-count {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
+        margin-left: 1rem;
+      }
+
+      .count-badge {
+        font-family: "Fraunces", Georgia, serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-sunset);
+        min-width: 2.5rem;
+        text-align: center;
+      }
+
+      .count-label {
+        font-size: 0.75rem;
+        color: var(--color-sage);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .empty-state {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border-radius: 1.5rem;
+        padding: 3rem 2rem;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .empty-state p {
+        color: var(--color-mist);
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 class="title">Park Stats</h1>
+        <p class="subtitle">Track your park adventures</p>
+      </header>
+
+      <main>
+        <div class="stats-header">
+          <a href="/" class="back-link">← Back to Today's Park</a>
+          <span class="total-visits">{totalVisits} total visits</span>
+        </div>
+
+        {
+          error ? (
+            <div class="error-card">
+              <div class="error-icon">⚠️</div>
+              <p class="error-message">{error}</p>
+            </div>
+          ) : parks.length === 0 ? (
+            <div class="empty-state">
+              <p>No parks found. Visit some parks to see stats!</p>
+            </div>
+          ) : (
+            <div class="stats-list">
+              {parks.map((park) => (
+                <article class="stats-card">
+                  <div class="park-details">
+                    <h2 class="stats-park-name">{park.name}</h2>
+                    {park.address && (
+                      <p class="stats-park-address">{park.address}</p>
+                    )}
+                  </div>
+                  <div class="visit-count">
+                    <span class="count-badge">{park.visitCount ?? 0}</span>
+                    <span class="count-label">visits</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )
+        }
+      </main>
+
+      <footer>
+        <p>Stats update each time you open a park in Google Maps.</p>
+      </footer>
+    </div>
+  </body>
+</html>

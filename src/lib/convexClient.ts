@@ -10,6 +10,13 @@ interface PickedPark {
   placeId: string;
 }
 
+interface ParkStats {
+  _id: string;
+  name: string;
+  address?: string;
+  visitCount?: number;
+}
+
 /**
  * Call a Convex action via HTTP.
  */
@@ -47,6 +54,42 @@ async function callAction<T>(
 }
 
 /**
+ * Call a Convex query via HTTP.
+ */
+async function callQuery<T>(
+  deploymentUrl: string,
+  queryPath: string,
+  args: Record<string, unknown> = {}
+): Promise<T> {
+  const url = `${deploymentUrl}/api/query`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      path: queryPath,
+      args,
+      format: "json",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Convex query failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  if (result.status === "error") {
+    throw new Error(result.errorMessage || "Unknown Convex error");
+  }
+
+  return result.value as T;
+}
+
+/**
  * Pick a random park from the Convex backend.
  */
 export async function pickPark(): Promise<PickedPark> {
@@ -66,3 +109,15 @@ export function getConvexUrl(): string {
   return import.meta.env.CONVEX_URL || "";
 }
 
+/**
+ * Get all parks sorted by visit count.
+ */
+export async function getParkStats(): Promise<ParkStats[]> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+
+  if (!convexUrl) {
+    throw new Error("CONVEX_URL environment variable is not set");
+  }
+
+  return callQuery<ParkStats[]>(convexUrl, "parks:listByVisitCount", {});
+}

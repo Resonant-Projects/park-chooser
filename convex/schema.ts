@@ -9,6 +9,7 @@ export default defineSchema({
     address: v.optional(v.string()),
     photoRefs: v.array(v.string()), // Google Places photo references
     lastSynced: v.number(), // timestamp
+    visitCount: v.optional(v.number()), // number of times user opened in Google Maps
   }).index("by_placeId", ["placeId"]),
 
   // History of park picks
@@ -22,4 +23,3 @@ export default defineSchema({
     lastSyncedAt: v.number(),
   }),
 });
-

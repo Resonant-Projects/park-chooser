@@ -65,10 +65,11 @@ const convexUrl = getConvexUrl();
                 <h2 class="park-name">{park.name}</h2>
                 {park.address && <p class="park-address">{park.address}</p>}
                 <a
-                  href={`https://www.google.com/maps/place/?q=place_id:${park.placeId}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="maps-link"
+                  data-park-id={park.id}
                 >
                   Open in Google Maps →
                 </a>
@@ -92,6 +93,7 @@ const convexUrl = getConvexUrl();
 
       <footer>
         <p>Parks are chosen randomly, with no repeats in the last 5 picks.</p>
+        <p><a href="/stats" class="stats-link">View run stats →</a></p>
       </footer>
     </div>
 
@@ -144,10 +146,11 @@ const convexUrl = getConvexUrl();
                 <h2 class="park-name">${park.name}</h2>
                 ${park.address ? `<p class="park-address">${park.address}</p>` : ""}
                 <a
-                  href="https://www.google.com/maps/place/?q=place_id:${park.placeId}"
+                  href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="maps-link"
+                  data-park-id="${park.id}"
                 >
                   Open in Google Maps →
                 </a>
@@ -168,6 +171,45 @@ const convexUrl = getConvexUrl();
           button.querySelector(".button-spinner").classList.add("hidden");
         }
       }
+
+      // Track visits when clicking "Open in Google Maps"
+      async function trackVisit(parkId) {
+        try {
+          await fetch(`${convexUrl}/api/mutation`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              path: "parks:incrementVisitCount",
+              args: { parkId },
+              format: "json",
+            }),
+          });
+        } catch (err) {
+          console.error("Failed to track visit:", err);
+        }
+      }
+
+      // Attach click handlers to maps links
+      function attachMapsLinkHandlers() {
+        document.querySelectorAll(".maps-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            const parkId = link.dataset.parkId;
+            if (parkId) {
+              trackVisit(parkId);
+            }
+          });
+        });
+      }
+
+      // Attach handlers on initial load
+      attachMapsLinkHandlers();
+
+      // Re-attach after picking a new park
+      const originalPickNewPark = pickNewPark;
+      pickNewPark = async function () {
+        await originalPickNewPark();
+        attachMapsLinkHandlers();
+      };
 
       button.addEventListener("click", pickNewPark);
     </script>

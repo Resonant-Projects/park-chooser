@@ -108,3 +108,28 @@ export const count = query({
   },
 });
 
+/**
+ * Increment the visit count for a park (when user clicks "Open in Google Maps").
+ */
+export const incrementVisitCount = mutation({
+  args: { parkId: v.id("parks") },
+  handler: async (ctx, args) => {
+    const park = await ctx.db.get(args.parkId);
+    if (park) {
+      await ctx.db.patch(args.parkId, {
+        visitCount: (park.visitCount ?? 0) + 1,
+      });
+    }
+  },
+});
+
+/**
+ * Get all parks sorted by visit count (most visited first).
+ */
+export const listByVisitCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const parks = await ctx.db.query("parks").collect();
+    return parks.sort((a, b) => (b.visitCount ?? 0) - (a.visitCount ?? 0));
+  },
+});

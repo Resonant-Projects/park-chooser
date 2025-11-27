@@ -288,6 +288,21 @@ footer p {
   opacity: 0.8;
 }
 
+footer p + p {
+  margin-top: 0.5rem;
+}
+
+.stats-link {
+  color: var(--color-gold);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.stats-link:hover {
+  color: var(--color-cream);
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .title {
