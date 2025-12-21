@@ -196,6 +196,53 @@ main {
   margin: 0;
 }
 
+/* Welcome Card */
+.welcome-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 1.5rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 100%;
+  animation: card-appear 0.5s ease-out;
+}
+
+.welcome-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.welcome-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-cream);
+  margin: 0 0 0.75rem;
+}
+
+.welcome-text {
+  font-size: 1rem;
+  color: var(--color-mist);
+  margin: 0 0 1.5rem;
+}
+
+/* Bounce animation for arrow */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+
+.bounce-arrow {
+  font-size: 2rem;
+  color: var(--color-gold);
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
 /* Loading Card */
 .loading-card {
   background: rgba(255, 255, 255, 0.1);
