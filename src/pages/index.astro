@@ -99,6 +99,9 @@ const convexUrl = getConvexUrl();
                 ${park.customName ? `<p class="park-custom-name">${park.customName}</p>` : ""}
                 <h2 class="park-name">${park.name}</h2>
                 ${park.address ? `<p class="park-address">${park.address}</p>` : ""}
+                <div class="travel-time-badge" data-place-id="${park.placeId}">
+                  <span class="travel-time-spinner"></span>
+                </div>
                 <a
                   href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}"
                   target="_blank"
@@ -140,6 +143,83 @@ const convexUrl = getConvexUrl();
         }).catch(() => {}); // Silently ignore errors for fire-and-forget
       }
 
+      // Geolocation and travel time calculation
+      let userLocation = null;
+
+      async function getUserLocation() {
+        if (userLocation) return userLocation;
+
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocation not supported"));
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              resolve(userLocation);
+            },
+            (error) => {
+              console.warn("Geolocation error:", error);
+              reject(error);
+            },
+            {
+              timeout: 10000,
+              maximumAge: 300000, // Cache for 5 minutes
+            }
+          );
+        });
+      }
+
+      async function updateTravelTime() {
+        const badge = document.querySelector(".travel-time-badge");
+        if (!badge) return;
+
+        const placeId = badge.dataset.placeId;
+        if (!placeId) return;
+
+        try {
+          const location = await getUserLocation();
+
+          const response = await fetch(`${convexUrl}/api/action`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              path: "actions/getTravelTime:calculateTravelTime",
+              args: {
+                originLat: location.lat,
+                originLng: location.lng,
+                placeId: placeId,
+              },
+              format: "json",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.status === "error" || !result.value) {
+            throw new Error(result.errorMessage || "Failed to calculate travel time");
+          }
+
+          const travelData = result.value;
+
+          badge.innerHTML = `
+            <div class="travel-time-content">
+              <span class="travel-duration">${travelData.durationText}</span>
+              <span class="travel-distance">${travelData.distanceText}</span>
+            </div>
+          `;
+          badge.classList.add("loaded");
+        } catch (error) {
+          console.warn("Could not get travel time:", error);
+          badge.style.display = "none";
+        }
+      }
+
       // Attach click handlers to maps links
       function attachMapsLinkHandlers() {
         document.querySelectorAll(".maps-link").forEach((link) => {
@@ -160,6 +240,7 @@ const convexUrl = getConvexUrl();
       pickNewPark = async function () {
         await originalPickNewPark();
         attachMapsLinkHandlers();
+        updateTravelTime();
       };
 
       button.addEventListener("click", pickNewPark);

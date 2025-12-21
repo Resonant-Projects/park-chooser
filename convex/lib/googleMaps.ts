@@ -150,3 +150,58 @@ export function getPhotoUrl(
   // Places API (New) photo media endpoint
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${apiKey}`;
 }
+
+export interface TravelTimeResult {
+  durationText: string; // e.g., "15 mins"
+  distanceText: string; // e.g., "5.2 mi"
+}
+
+/**
+ * Calculate driving time from origin coordinates to a destination place ID.
+ * Uses Google Distance Matrix API.
+ */
+export async function getTravelTime(
+  originLat: number,
+  originLng: number,
+  destinationPlaceId: string,
+  apiKey: string
+): Promise<TravelTimeResult | null> {
+  const url = new URL(
+    "https://maps.googleapis.com/maps/api/distancematrix/json"
+  );
+  url.searchParams.set("origins", `${originLat},${originLng}`);
+  url.searchParams.set("destinations", `place_id:${destinationPlaceId}`);
+  url.searchParams.set("mode", "driving");
+  url.searchParams.set("units", "imperial");
+  url.searchParams.set("key", apiKey);
+
+  try {
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      console.error(`Distance Matrix API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK") {
+      console.error(`Distance Matrix API status: ${data.status}`);
+      return null;
+    }
+
+    const element = data.rows?.[0]?.elements?.[0];
+    if (!element || element.status !== "OK") {
+      console.warn("No route found for destination");
+      return null;
+    }
+
+    return {
+      durationText: element.duration.text,
+      distanceText: element.distance.text,
+    };
+  } catch (error) {
+    console.error("Error fetching travel time:", error);
+    return null;
+  }
+}

@@ -124,6 +124,7 @@ main {
 }
 
 .park-info {
+  position: relative;
   padding: 1.75rem 2rem 2rem;
 }
 
@@ -165,6 +166,71 @@ main {
 
 .maps-link:hover {
   color: var(--color-bark);
+}
+
+/* Travel Time Badge */
+.travel-time-badge {
+  position: absolute;
+  bottom: 1.75rem;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(26, 58, 47, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  opacity: 0;
+  animation: badge-fade-in 0.4s ease-out 0.3s forwards;
+}
+
+@keyframes badge-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.travel-time-badge.loaded {
+  animation: none;
+  opacity: 1;
+}
+
+.travel-time-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-mist);
+  border-top-color: var(--color-forest);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.travel-time-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.travel-duration {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-forest);
+  white-space: nowrap;
+}
+
+.travel-distance {
+  font-size: 0.6875rem;
+  color: var(--color-sage);
+  white-space: nowrap;
 }
 
 /* Error Card */
@@ -371,5 +437,11 @@ footer p + p {
 
   .park-name {
     font-size: 1.5rem;
+  }
+
+  .travel-time-badge {
+    position: static;
+    margin-bottom: 1rem;
+    width: fit-content;
   }
 }
