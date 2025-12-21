@@ -1,17 +1,7 @@
 ---
-import { pickPark, getConvexUrl } from "../lib/convexClient";
+import { getConvexUrl } from "../lib/convexClient";
 import Analytics from "@vercel/analytics/astro";
 import "../styles/global.css";
-
-let park = null;
-let error = null;
-
-try {
-  park = await pickPark();
-} catch (e) {
-  error = e instanceof Error ? e.message : "Failed to pick a park";
-  console.error("Error picking park:", e);
-}
 
 const convexUrl = getConvexUrl();
 ---
@@ -39,57 +29,17 @@ const convexUrl = getConvexUrl();
       </header>
 
       <main id="park-display">
-        {
-          error ? (
-            <div class="error-card">
-              <div class="error-icon">⚠️</div>
-              <p class="error-message">{error}</p>
-              <p class="error-hint">
-                Make sure Convex is running and parks are synced.
-              </p>
-            </div>
-          ) : park ? (
-            <article class="park-card">
-              {park.photoUrl && (
-                <div class="park-image-wrapper">
-                  <img
-                    src={park.photoUrl}
-                    alt={`Photo of ${park.name}`}
-                    class="park-image"
-                    loading="eager"
-                  />
-                  <div class="image-overlay" />
-                </div>
-              )}
-              <div class="park-info">
-                {park.customName && (
-                  <p class="park-custom-name">{park.customName}</p>
-                )}
-                <h2 class="park-name">{park.name}</h2>
-                {park.address && <p class="park-address">{park.address}</p>}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="maps-link"
-                  data-park-id={park._id}
-                >
-                  Open in Google Maps →
-                </a>
-              </div>
-            </article>
-          ) : (
-            <div class="loading-card">
-              <div class="spinner" />
-              <p>Finding your park...</p>
-            </div>
-          )
-        }
+        <div class="welcome-card">
+          <div class="welcome-icon">🌲</div>
+          <h2 class="welcome-title">Ready for an adventure?</h2>
+          <p class="welcome-text">Click below to discover your park for today!</p>
+          <div class="bounce-arrow">↓</div>
+        </div>
       </main>
 
       <div class="actions">
-        <button id="pick-again" class="pick-button" disabled={!park && !error}>
-          <span class="button-text">Pick Another Park</span>
+        <button id="pick-again" class="pick-button">
+          <span class="button-text">Pick a Park</span>
           <span class="button-spinner hidden"></span>
         </button>
       </div>
@@ -170,8 +120,7 @@ const convexUrl = getConvexUrl();
           `;
         } finally {
           button.disabled = false;
-          button.querySelector(".button-text").textContent =
-            "Pick Another Park";
+          button.querySelector(".button-text").textContent = "Pick Another Park";
           button.querySelector(".button-spinner").classList.add("hidden");
         }
       }
