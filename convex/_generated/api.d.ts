@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actions_getTravelTime from "../actions/getTravelTime.js";
 import type * as actions_pickPark from "../actions/pickPark.js";
 import type * as actions_syncParks from "../actions/syncParks.js";
 import type * as actions_trackVisit from "../actions/trackVisit.js";
@@ -23,6 +24,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actions/getTravelTime": typeof actions_getTravelTime;
   "actions/pickPark": typeof actions_pickPark;
   "actions/syncParks": typeof actions_syncParks;
   "actions/trackVisit": typeof actions_trackVisit;
