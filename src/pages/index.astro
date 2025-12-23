@@ -1,7 +1,14 @@
 ---
 import { getConvexUrl } from "../lib/convexClient";
 import Analytics from "@vercel/analytics/astro";
+import "../styles/starwind.css";
 import "../styles/global.css";
+import Button from "../components/starwind/button/Button.astro";
+import Card from "../components/starwind/card/Card.astro";
+import CardContent from "../components/starwind/card/CardContent.astro";
+import CardTitle from "../components/starwind/card/CardTitle.astro";
+import CardDescription from "../components/starwind/card/CardDescription.astro";
+import Spinner from "../components/starwind/spinner/Spinner.astro";
 
 const convexUrl = getConvexUrl();
 ---
@@ -29,24 +36,35 @@ const convexUrl = getConvexUrl();
       </header>
 
       <main id="park-display">
-        <div class="welcome-card">
-          <div class="welcome-icon">🌲</div>
-          <h2 class="welcome-title">Ready for an adventure?</h2>
-          <p class="welcome-text">Click below to discover your park for today!</p>
-          <div class="bounce-arrow">↓</div>
-        </div>
+        <Card class="bg-white/10 backdrop-blur-xl border border-white/15 text-center w-full">
+          <CardContent class="py-12 px-8">
+            <div class="text-5xl mb-4">🌲</div>
+            <CardTitle class="font-[Fraunces] text-2xl text-cream mb-3">
+              Ready for an adventure?
+            </CardTitle>
+            <CardDescription class="text-mist mb-6">
+              Click below to discover your park for today!
+            </CardDescription>
+            <div class="text-3xl text-gold animate-bounce">↓</div>
+          </CardContent>
+        </Card>
       </main>
 
       <div class="actions">
-        <button id="pick-again" class="pick-button">
+        <Button
+          id="pick-again"
+          variant="primary"
+          size="lg"
+          class="rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+        >
           <span class="button-text">Pick a Park</span>
-          <span class="button-spinner hidden"></span>
-        </button>
+          <Spinner class="button-spinner hidden size-4" />
+        </Button>
       </div>
 
-      <footer>
-        <p>Parks are chosen randomly, with no repeats in the last 5 picks.</p>
-        <p><a href="/stats" class="stats-link">View run stats →</a></p>
+      <footer class="mt-8 text-center">
+        <p class="text-sm text-mist opacity-80">Parks are chosen randomly, with no repeats in the last 5 picks.</p>
+        <p class="text-sm text-mist opacity-80 mt-2"><a href="/stats" class="text-gold font-semibold hover:text-cream transition-colors">View run stats →</a></p>
       </footer>
     </div>
 
@@ -79,34 +97,34 @@ const convexUrl = getConvexUrl();
           const park = result.value;
 
           display.innerHTML = `
-            <article class="park-card">
+            <article class="bg-cream rounded-3xl overflow-hidden shadow-2xl animate-card-appear w-full">
               ${
                 park.photoUrl
                   ? `
-                <div class="park-image-wrapper">
+                <div class="relative w-full aspect-[16/10] overflow-hidden">
                   <img
                     src="${park.photoUrl}"
                     alt="Photo of ${park.name}"
-                    class="park-image"
+                    class="w-full h-full object-cover transition-transform duration-400 hover:scale-[1.03]"
                     loading="eager"
                   />
-                  <div class="image-overlay"></div>
+                  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-forest/15 pointer-events-none"></div>
                 </div>
               `
                   : ""
               }
-              <div class="park-info">
-                ${park.customName ? `<p class="park-custom-name">${park.customName}</p>` : ""}
-                <h2 class="park-name">${park.name}</h2>
-                ${park.address ? `<p class="park-address">${park.address}</p>` : ""}
-                <div class="travel-time-badge" data-place-id="${park.placeId}">
-                  <span class="travel-time-spinner"></span>
+              <div class="relative p-7">
+                ${park.customName ? `<p class="text-sm font-semibold text-sunset uppercase tracking-widest mb-1">${park.customName}</p>` : ""}
+                <h2 class="font-[Fraunces] text-2xl font-semibold text-forest mb-2 leading-tight">${park.name}</h2>
+                ${park.address ? `<p class="text-base text-moss mb-5 leading-relaxed">${park.address}</p>` : ""}
+                <div class="travel-time-badge absolute bottom-7 right-7 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-md flex items-center justify-center min-w-20 opacity-0 animate-badge-fade-in" data-place-id="${park.placeId}">
+                  <span class="travel-time-spinner w-4 h-4 border-2 border-mist border-t-forest rounded-full animate-spin"></span>
                 </div>
                 <a
                   href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="maps-link"
+                  class="maps-link inline-flex items-center gap-1 text-[0.9375rem] font-semibold text-sunset hover:text-bark transition-colors"
                   data-park-id="${park._id}"
                 >
                   Open in Google Maps →
@@ -116,9 +134,9 @@ const convexUrl = getConvexUrl();
           `;
         } catch (err) {
           display.innerHTML = `
-            <div class="error-card">
-              <div class="error-icon">⚠️</div>
-              <p class="error-message">${err.message}</p>
+            <div class="bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full">
+              <div class="text-4xl mb-4">⚠️</div>
+              <p class="text-lg text-cream font-medium">${err.message}</p>
             </div>
           `;
         } finally {
@@ -208,12 +226,13 @@ const convexUrl = getConvexUrl();
           const travelData = result.value;
 
           badge.innerHTML = `
-            <div class="travel-time-content">
-              <span class="travel-duration">${travelData.durationText}</span>
-              <span class="travel-distance">${travelData.distanceText}</span>
+            <div class="flex flex-col items-center gap-0.5">
+              <span class="text-sm font-semibold text-forest whitespace-nowrap">${travelData.durationText}</span>
+              <span class="text-[0.6875rem] text-sage whitespace-nowrap">${travelData.distanceText}</span>
             </div>
           `;
           badge.classList.add("loaded");
+          badge.classList.remove("opacity-0");
         } catch (error) {
           console.warn("Could not get travel time:", error);
           badge.style.display = "none";
