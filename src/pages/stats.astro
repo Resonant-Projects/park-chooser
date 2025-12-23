@@ -1,12 +1,30 @@
 ---
 import { getParkStats } from "../lib/convexClient";
+import "../styles/starwind.css";
 import "../styles/global.css";
+import Card from "../components/starwind/card/Card.astro";
+import CardContent from "../components/starwind/card/CardContent.astro";
+import Badge from "../components/starwind/badge/Badge.astro";
+import Table from "../components/starwind/table/Table.astro";
+import TableBody from "../components/starwind/table/TableBody.astro";
+import TableCell from "../components/starwind/table/TableCell.astro";
+import TableHead from "../components/starwind/table/TableHead.astro";
+import TableHeader from "../components/starwind/table/TableHeader.astro";
+import TableRow from "../components/starwind/table/TableRow.astro";
+import Separator from "../components/starwind/separator/Separator.astro";
 
 let parks: Awaited<ReturnType<typeof getParkStats>> = [];
 let error: string | null = null;
 
 try {
-  parks = await getParkStats();
+  const rawParks = await getParkStats();
+  // Sort by visit count (highest first), then alphabetically by name
+  parks = rawParks.sort((a, b) => {
+    const visitsA = a.visitCount ?? 0;
+    const visitsB = b.visitCount ?? 0;
+    if (visitsB !== visitsA) return visitsB - visitsA;
+    return a.name.localeCompare(b.name);
+  });
 } catch (e) {
   error = e instanceof Error ? e.message : "Failed to load stats";
   console.error("Error loading stats:", e);
@@ -31,150 +49,6 @@ const totalVisits = parks.reduce(
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <style>
-      main {
-        flex: 1;
-        display: block;
-      }
-
-      .stats-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-      }
-
-      .back-link {
-        font-size: 0.9375rem;
-        font-weight: 600;
-        color: var(--color-gold);
-        text-decoration: none;
-        transition: color 0.2s ease;
-      }
-
-      .back-link:hover {
-        color: var(--color-cream);
-      }
-
-      .total-visits {
-        font-size: 0.875rem;
-        color: var(--color-mist);
-        background: rgba(255, 255, 255, 0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 9999px;
-      }
-
-      .stats-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-
-      .stats-card {
-        background: var(--color-cream);
-        border-radius: 1rem;
-        padding: 1.25rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        animation: card-appear 0.4s ease-out;
-        animation-fill-mode: both;
-      }
-
-      .stats-card:nth-child(1) {
-        animation-delay: 0.05s;
-      }
-      .stats-card:nth-child(2) {
-        animation-delay: 0.1s;
-      }
-      .stats-card:nth-child(3) {
-        animation-delay: 0.15s;
-      }
-      .stats-card:nth-child(4) {
-        animation-delay: 0.2s;
-      }
-      .stats-card:nth-child(5) {
-        animation-delay: 0.25s;
-      }
-      .stats-card:nth-child(6) {
-        animation-delay: 0.3s;
-      }
-      .stats-card:nth-child(7) {
-        animation-delay: 0.35s;
-      }
-      .stats-card:nth-child(8) {
-        animation-delay: 0.4s;
-      }
-      .stats-card:nth-child(9) {
-        animation-delay: 0.45s;
-      }
-      .stats-card:nth-child(10) {
-        animation-delay: 0.5s;
-      }
-
-      .park-details {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .stats-park-name {
-        font-family: "Fraunces", Georgia, serif;
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: var(--color-forest);
-        margin: 0 0 0.25rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .stats-park-address {
-        font-size: 0.875rem;
-        color: var(--color-moss);
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .visit-count {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-shrink: 0;
-        margin-left: 1rem;
-      }
-
-      .count-badge {
-        font-family: "Fraunces", Georgia, serif;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--color-sunset);
-        min-width: 2.5rem;
-        text-align: center;
-      }
-
-      .count-label {
-        font-size: 0.75rem;
-        color: var(--color-sage);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .empty-state {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(12px);
-        border-radius: 1.5rem;
-        padding: 3rem 2rem;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-      }
-
-      .empty-state p {
-        color: var(--color-mist);
-        margin: 0;
-      }
-    </style>
   </head>
   <body>
     <div class="container">
@@ -183,45 +57,78 @@ const totalVisits = parks.reduce(
         <p class="subtitle">Track your park adventures</p>
       </header>
 
-      <main>
-        <div class="stats-header">
-          <a href="/" class="back-link">← Back to Today's Park</a>
-          <span class="total-visits">{totalVisits} total visits</span>
-        </div>
+      <main class="flex-1 flex flex-col">
+        <!-- Navigation header -->
+        <Card class="bg-white/10 backdrop-blur-xl border-white/15 mb-4">
+          <CardContent class="flex justify-between items-center p-4">
+            <a href="/" class="text-[0.9375rem] font-semibold text-gold hover:text-cream transition-colors">← Back to Today's Park</a>
+            <Badge variant="outline" class="bg-white/10 text-mist border-none">{totalVisits} total visits</Badge>
+          </CardContent>
+        </Card>
 
         {
           error ? (
-            <div class="error-card">
-              <div class="error-icon">⚠️</div>
-              <p class="error-message">{error}</p>
-            </div>
+            <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+              <CardContent class="p-10 text-center">
+                <div class="text-4xl mb-4">⚠️</div>
+                <p class="text-lg text-cream font-medium">{error}</p>
+              </CardContent>
+            </Card>
           ) : parks.length === 0 ? (
-            <div class="empty-state">
-              <p>No parks found. Visit some parks to see stats!</p>
-            </div>
+            <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+              <CardContent class="py-12 px-8 text-center">
+                <p class="text-mist">No parks found. Visit some parks to see stats!</p>
+              </CardContent>
+            </Card>
           ) : (
-            <div class="stats-list">
-              {parks.map((park) => (
-                <article class="stats-card">
-                  <div class="park-details">
-                    <h2 class="stats-park-name">{park.name}</h2>
-                    {park.address && (
-                      <p class="stats-park-address">{park.address}</p>
-                    )}
-                  </div>
-                  <div class="visit-count">
-                    <span class="count-badge">{park.visitCount ?? 0}</span>
-                    <span class="count-label">visits</span>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <Card class="overflow-hidden">
+              <Table class="table-fixed">
+                <TableHeader>
+                  <TableRow class="bg-mist/30 border-b border-sage/30">
+                    <TableHead class="text-forest font-semibold text-sm py-3 px-3">Park</TableHead>
+                    <TableHead class="text-forest font-semibold text-sm py-3 px-2 text-center w-14">Visits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parks.map((park, index) => {
+                    const hasVisits = (park.visitCount ?? 0) > 0;
+                    return (
+                      <TableRow
+                        class={`border-b border-sage/20 transition-colors animate-card-appear ${hasVisits ? 'bg-gold/5' : ''}`}
+                        style={`animation-delay: ${index * 0.03}s`}
+                      >
+                        <TableCell class="py-3 px-3">
+                          <div class="font-[Fraunces] font-semibold text-forest text-[0.9375rem] leading-tight truncate">
+                            {park.name}
+                          </div>
+                          {park.address && (
+                            <div class="text-xs text-moss mt-0.5 truncate">
+                              {park.address}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell class="text-center align-top py-3 px-2 w-14">
+                          <div class="flex flex-col items-center">
+                            <span class={`font-[Fraunces] text-lg font-bold ${hasVisits ? 'text-sunset' : 'text-sage'}`}>
+                              {park.visitCount ?? 0}
+                            </span>
+                            <span class="text-[0.5625rem] text-sage uppercase tracking-wide">
+                              visits
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
           )
         }
       </main>
 
-      <footer>
-        <p>Stats update each time you open a park in Google Maps.</p>
+      <footer class="mt-8 text-center">
+        <p class="text-sm text-mist opacity-80">Stats update each time you open a park in Google Maps.</p>
       </footer>
     </div>
   </body>
