@@ -123,11 +123,6 @@ main {
   opacity: 1;
 }
 
-/* Utility classes */
-.hidden {
-  display: none;
-}
-
 /* Responsive */
 @media (max-width: 480px) {
   .title {

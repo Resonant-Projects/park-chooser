@@ -133,12 +133,20 @@ const convexUrl = getConvexUrl();
             </article>
           `;
         } catch (err) {
-          display.innerHTML = `
-            <div class="bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full">
-              <div class="text-4xl mb-4">⚠️</div>
-              <p class="text-lg text-cream font-medium">${err.message}</p>
-            </div>
-          `;
+          const errorContainer = document.createElement("div");
+          errorContainer.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+
+          const icon = document.createElement("div");
+          icon.className = "text-4xl mb-4";
+          icon.textContent = "⚠️";
+
+          const message = document.createElement("p");
+          message.className = "text-lg text-cream font-medium";
+          message.textContent = err.message;
+
+          errorContainer.appendChild(icon);
+          errorContainer.appendChild(message);
+          display.replaceChildren(errorContainer);
         } finally {
           button.disabled = false;
           button.querySelector(".button-text").textContent = "Pick Another Park";
