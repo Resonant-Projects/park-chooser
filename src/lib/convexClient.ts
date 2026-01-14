@@ -219,4 +219,22 @@ export async function storeUser(token: string): Promise<string> {
   return callMutation<string>(convexUrl, "users:store", {}, token);
 }
 
+/**
+ * Get user's parks (for manage page).
+ */
+export async function getUserParks(token: string) {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery(convexUrl, "userParks:listUserParks", {}, token);
+}
+
+/**
+ * Get parks available to add (not in user's list).
+ */
+export async function getAvailableParks(token: string) {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery(convexUrl, "parks:getAvailableParks", {}, token);
+}
+
 export { callAction, callQuery, callMutation };

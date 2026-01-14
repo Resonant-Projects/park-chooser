@@ -1,0 +1,220 @@
+---
+import { getConvexUrl, getUserParks, getAvailableParks } from "../lib/convexClient";
+import { UserButton } from "@clerk/astro/components";
+import "../styles/starwind.css";
+import "../styles/global.css";
+import Button from "../components/starwind/button/Button.astro";
+
+// Auth check
+const { userId, getToken } = Astro.locals.auth();
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const token = await getToken({ template: "convex" });
+const convexUrl = getConvexUrl();
+
+// Fetch both lists server-side
+const [userParks, availableParks] = await Promise.all([
+  getUserParks(token!),
+  getAvailableParks(token!),
+]);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manage Parks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <a href="/" class="text-gold text-sm font-medium hover:text-cream transition-colors mb-1 inline-block">&larr; Back</a>
+            <h1 class="title">Manage Parks</h1>
+            <p class="subtitle">Add or remove parks from your list</p>
+          </div>
+          <div class="mt-1">
+            <UserButton afterSignOutUrl="/sign-in">
+              <UserButton.MenuItems>
+                <UserButton.Link label="Manage Parks" href="/manage">
+                  <svg
+                    slot="label-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                  >
+                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z" />
+                  </svg>
+                </UserButton.Link>
+              </UserButton.MenuItems>
+            </UserButton>
+          </div>
+        </div>
+      </header>
+
+      <main class="space-y-8 !block">
+        <!-- My Parks Section -->
+        <section>
+          <h2 class="font-[Fraunces] text-xl text-cream mb-4">My Parks ({userParks.length})</h2>
+
+          {userParks.length === 0 ? (
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/15">
+              <p class="text-mist">No parks yet. Add some below to get started.</p>
+            </div>
+          ) : (
+            <div class="grid gap-3">
+              {userParks.map((park: any) => (
+                <article
+                  class="park-card bg-cream rounded-xl p-4 flex justify-between items-center gap-4 transition-opacity duration-200"
+                  data-park-id={park.parkId}
+                >
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-[Fraunces] text-forest font-semibold truncate">{park.name}</h3>
+                    {park.customName && <p class="text-sm text-sunset truncate">{park.customName}</p>}
+                    {park.address && <p class="text-sm text-moss truncate">{park.address}</p>}
+                    {park.visitCount > 0 && (
+                      <span class="inline-block mt-1 text-xs bg-gold/20 text-forest px-2 py-0.5 rounded-full">
+                        {park.visitCount} visit{park.visitCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    class="remove-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-sunset/10 hover:bg-sunset/20 text-sunset transition-colors"
+                    data-remove={park.parkId}
+                    aria-label={`Remove ${park.name}`}
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <!-- Available Parks Section -->
+        <section>
+          <h2 class="font-[Fraunces] text-xl text-cream mb-4">Add Parks ({availableParks.length})</h2>
+
+          {availableParks.length === 0 ? (
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/15">
+              <p class="text-mist">You've added all available parks!</p>
+            </div>
+          ) : (
+            <div class="grid gap-3">
+              {availableParks.map((park: any) => (
+                <article
+                  class="park-card bg-white/10 backdrop-blur-xl rounded-xl p-4 flex justify-between items-center gap-4 border border-white/15 transition-opacity duration-200"
+                  data-available-id={park._id}
+                >
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-[Fraunces] text-cream font-semibold truncate">{park.name}</h3>
+                    {park.customName && <p class="text-sm text-gold truncate">{park.customName}</p>}
+                    {park.address && <p class="text-sm text-mist truncate">{park.address}</p>}
+                  </div>
+                  <button
+                    class="add-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/20 hover:bg-gold/30 text-gold transition-colors"
+                    data-add={park._id}
+                    aria-label={`Add ${park.name}`}
+                  >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer class="mt-8 text-center">
+        <p class="text-sm text-mist opacity-80">
+          <a href="/" class="text-gold font-semibold hover:text-cream transition-colors">Pick a park &rarr;</a>
+        </p>
+      </footer>
+    </div>
+
+    <script define:vars={{ convexUrl, convexToken: token }}>
+      // Handle add park
+      document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const button = e.currentTarget;
+          const parkId = button.dataset.add;
+
+          button.disabled = true;
+          button.innerHTML = '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
+
+          try {
+            await fetch(`${convexUrl}/api/mutation`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${convexToken}`
+              },
+              body: JSON.stringify({
+                path: 'userParks:addParkToUserList',
+                args: { parkId },
+                format: 'json'
+              })
+            });
+
+            // Simple: refresh page to show updated state
+            location.reload();
+          } catch (err) {
+            console.error('Failed to add park:', err);
+            button.disabled = false;
+            button.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+          }
+        });
+      });
+
+      // Handle remove park
+      document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const button = e.currentTarget;
+          const parkId = button.dataset.remove;
+
+          button.disabled = true;
+          button.innerHTML = '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
+
+          try {
+            await fetch(`${convexUrl}/api/mutation`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${convexToken}`
+              },
+              body: JSON.stringify({
+                path: 'userParks:removeParkFromUserList',
+                args: { parkId },
+                format: 'json'
+              })
+            });
+
+            // Simple: refresh page to show updated state
+            location.reload();
+          } catch (err) {
+            console.error('Failed to remove park:', err);
+            button.disabled = false;
+            button.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

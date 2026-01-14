@@ -112,3 +112,39 @@ export const count = query({
 // Visit tracking is now per-user via userParks.ts:
 // - incrementUserParkVisit (internal mutation)
 // - listUserParksByVisits (public query)
+
+/**
+ * Get parks available for user to add (not already in their list).
+ */
+export const getAvailableParks = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      // Unauthenticated: return all parks
+      return await ctx.db.query("parks").collect();
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) {
+      return await ctx.db.query("parks").collect();
+    }
+
+    // Get user's current park IDs
+    const userParks = await ctx.db
+      .query("userParks")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const userParkIds = new Set(userParks.map((up) => up.parkId.toString()));
+
+    // Get all parks, filter out user's parks
+    const allParks = await ctx.db.query("parks").collect();
+
+    return allParks.filter((park) => !userParkIds.has(park._id.toString()));
+  },
+});
