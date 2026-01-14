@@ -114,6 +114,67 @@ export const count = query({
 // - listUserParksByVisits (public query)
 
 /**
+ * Upsert discovered parks from nearby search (internal).
+ * Includes lat/lng coordinates and primaryType for location-based features.
+ */
+export const upsertDiscoveredParks = internalMutation({
+  args: {
+    parks: v.array(
+      v.object({
+        placeId: v.string(),
+        name: v.string(),
+        address: v.optional(v.string()),
+        photoRefs: v.array(v.string()),
+        lat: v.number(),
+        lng: v.number(),
+        primaryType: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const upsertedIds: Array<{ placeId: string; _id: string }> = [];
+
+    for (const park of args.parks) {
+      const existing = await ctx.db
+        .query("parks")
+        .withIndex("by_placeId", (q) => q.eq("placeId", park.placeId))
+        .first();
+
+      if (existing) {
+        // Update existing park with latest data
+        await ctx.db.patch(existing._id, {
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lat: park.lat,
+          lng: park.lng,
+          primaryType: park.primaryType,
+          lastSynced: now,
+        });
+        upsertedIds.push({ placeId: park.placeId, _id: existing._id });
+      } else {
+        // Insert new discovered park
+        const newId = await ctx.db.insert("parks", {
+          placeId: park.placeId,
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lat: park.lat,
+          lng: park.lng,
+          primaryType: park.primaryType,
+          lastSynced: now,
+          discoveredAt: now,
+        });
+        upsertedIds.push({ placeId: park.placeId, _id: newId });
+      }
+    }
+
+    return upsertedIds;
+  },
+});
+
+/**
  * Get parks available for user to add (not already in their list).
  */
 export const getAvailableParks = query({

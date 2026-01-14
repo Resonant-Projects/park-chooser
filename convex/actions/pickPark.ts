@@ -4,6 +4,11 @@ import { action } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { getPhotoUrl } from "../lib/googleMaps";
+import {
+  ENTITLEMENT_ERRORS,
+  createLimitError,
+  getNextMidnightUTC,
+} from "../lib/entitlements";
 
 export interface PickedPark {
   _id: string;
@@ -37,6 +42,24 @@ export const pickPark = action({
     const user = await ctx.runQuery(internal.users.getCurrentUserInternal);
     if (!user) {
       throw new Error("Authentication required to pick a park");
+    }
+
+    // Check daily pick limit
+    const pickCheck = await ctx.runQuery(internal.entitlements.checkCanPickToday, {
+      userId: user._id,
+    });
+
+    if (!pickCheck.canPick) {
+      throw createLimitError(
+        ENTITLEMENT_ERRORS.DAILY_PICK_LIMIT_EXCEEDED,
+        `Daily pick limit reached (${pickCheck.currentCount}/${pickCheck.limit}). Upgrade to Premium for unlimited picks.`,
+        {
+          tier: pickCheck.tier,
+          limit: pickCheck.limit,
+          current: pickCheck.currentCount,
+          resetsAt: getNextMidnightUTC(),
+        }
+      );
     }
 
     // Check if user needs seeding (new user with no parks)
@@ -85,6 +108,11 @@ export const pickPark = action({
       parkId: selectedPark.parkId,
       userId: user._id,
       userParkId: selectedPark._id,
+    });
+
+    // Increment daily pick count for rate limiting
+    await ctx.runMutation(internal.entitlements.incrementDailyPickCount, {
+      userId: user._id,
     });
 
     // Generate photo URL if we have a photo reference

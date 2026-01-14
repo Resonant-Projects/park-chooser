@@ -5,6 +5,12 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  TIER_LIMITS,
+  type Tier,
+  ENTITLEMENT_ERRORS,
+  createLimitError,
+} from "./lib/entitlements";
 
 /**
  * List all parks in the current user's list with merged park details.
@@ -78,6 +84,28 @@ export const addParkToUserList = mutation({
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    // Check entitlement limits
+    const entitlement = await ctx.db
+      .query("userEntitlements")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .unique();
+
+    const tier: Tier = entitlement?.tier ?? "free";
+    const limit = TIER_LIMITS[tier].maxParks;
+
+    const currentParks = await ctx.db
+      .query("userParks")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    if (currentParks.length >= limit) {
+      throw createLimitError(
+        ENTITLEMENT_ERRORS.PARK_LIMIT_EXCEEDED,
+        `Park limit reached (${currentParks.length}/${limit}). Upgrade to Premium for unlimited parks.`,
+        { tier, limit, current: currentParks.length }
+      );
     }
 
     // Verify park exists in catalog
@@ -267,6 +295,21 @@ export const listUserParksByVisits = query({
 });
 
 // --- Internal functions (for use by actions) ---
+
+/**
+ * Get set of park IDs in user's list (for checking isInUserList).
+ */
+export const getUserParkIds = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const userParks = await ctx.db
+      .query("userParks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    return userParks.map((up) => up.parkId.toString());
+  },
+});
 
 /**
  * Get last N picked park IDs for a specific user.

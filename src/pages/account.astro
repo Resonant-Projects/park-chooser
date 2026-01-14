@@ -1,0 +1,252 @@
+---
+import { getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
+import { UserButton, UserProfile } from "@clerk/astro/components";
+import "../styles/starwind.css";
+import "../styles/global.css";
+import Card from "../components/starwind/card/Card.astro";
+import CardContent from "../components/starwind/card/CardContent.astro";
+
+// Auth check
+const { userId, getToken } = Astro.locals.auth();
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const token = await getToken({ template: "convex" });
+
+// Fetch entitlements
+let entitlements: UserEntitlements | null = null;
+try {
+  entitlements = await getUserEntitlements(token!);
+} catch (error) {
+  console.error("Failed to fetch entitlements:", error);
+}
+
+// Format period end date
+const formatDate = (timestamp: number | undefined) => {
+  if (!timestamp) return null;
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const periodEndDate = formatDate(entitlements?.periodEnd);
+const isPremium = entitlements?.tier === "premium";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Account - Today's Park</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <a href="/" class="text-gold text-sm font-medium hover:text-cream transition-colors mb-1 inline-block">&larr; Back</a>
+            <h1 class="title">Account</h1>
+            <p class="subtitle">Manage your account and subscription</p>
+          </div>
+          <div class="mt-1">
+            <UserButton afterSignOutUrl="/sign-in">
+              <UserButton.MenuItems>
+                <UserButton.Link label="Manage Parks" href="/manage">
+                  <svg
+                    slot="label-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                  >
+                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z" />
+                  </svg>
+                </UserButton.Link>
+              </UserButton.MenuItems>
+            </UserButton>
+          </div>
+        </div>
+      </header>
+
+      <main class="space-y-6">
+        <!-- Current Plan Card -->
+        <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+          <CardContent class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-[Fraunces] text-xl font-semibold text-cream">Your Plan</h2>
+              {isPremium ? (
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-gold/20 text-gold border border-gold/30">
+                  <span>⭐</span>
+                  <span>Premium</span>
+                </span>
+              ) : (
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-forest/20 text-cream border border-forest/30">
+                  <span>🌲</span>
+                  <span>Free</span>
+                </span>
+              )}
+            </div>
+
+            {entitlements ? (
+              <div class="space-y-4">
+                {/* Usage Stats */}
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="bg-white/5 rounded-xl p-4">
+                    <p class="text-mist text-sm mb-1">Parks Saved</p>
+                    <p class="text-cream text-2xl font-semibold">
+                      {entitlements.usage.currentParks}
+                      {entitlements.limits.maxParks > 0 && (
+                        <span class="text-mist text-base font-normal">
+                          /{entitlements.limits.maxParks}
+                        </span>
+                      )}
+                      {entitlements.limits.maxParks === -1 && (
+                        <span class="text-gold text-sm font-normal ml-1">unlimited</span>
+                      )}
+                    </p>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-4">
+                    <p class="text-mist text-sm mb-1">Picks Today</p>
+                    <p class="text-cream text-2xl font-semibold">
+                      {entitlements.usage.picksToday}
+                      {entitlements.limits.picksPerDay > 0 && (
+                        <span class="text-mist text-base font-normal">
+                          /{entitlements.limits.picksPerDay}
+                        </span>
+                      )}
+                      {entitlements.limits.picksPerDay === -1 && (
+                        <span class="text-gold text-sm font-normal ml-1">unlimited</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Plan Benefits */}
+                <div class="border-t border-white/10 pt-4">
+                  <p class="text-mist text-sm mb-2">Plan Benefits</p>
+                  <ul class="space-y-2">
+                    {isPremium ? (
+                      <>
+                        <li class="flex items-center gap-2 text-cream text-sm">
+                          <span class="text-gold">✓</span> Unlimited parks
+                        </li>
+                        <li class="flex items-center gap-2 text-cream text-sm">
+                          <span class="text-gold">✓</span> Unlimited daily picks
+                        </li>
+                        <li class="flex items-center gap-2 text-cream text-sm">
+                          <span class="text-gold">✓</span> Priority support
+                        </li>
+                      </>
+                    ) : (
+                      <>
+                        <li class="flex items-center gap-2 text-cream text-sm">
+                          <span class="text-forest">✓</span> Save up to {entitlements.limits.maxParks} parks
+                        </li>
+                        <li class="flex items-center gap-2 text-cream text-sm">
+                          <span class="text-forest">✓</span> {entitlements.limits.picksPerDay} park pick per day
+                        </li>
+                        <li class="flex items-center gap-2 text-mist/70 text-sm">
+                          <span class="text-mist/50">-</span> <span class="line-through">Unlimited parks</span>
+                        </li>
+                        <li class="flex items-center gap-2 text-mist/70 text-sm">
+                          <span class="text-mist/50">-</span> <span class="line-through">Unlimited daily picks</span>
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+
+                {/* Billing Info (Premium only) */}
+                {isPremium && periodEndDate && (
+                  <div class="border-t border-white/10 pt-4">
+                    <p class="text-mist text-sm">
+                      {entitlements.status === "active"
+                        ? `Your subscription renews on ${periodEndDate}`
+                        : entitlements.status === "canceled"
+                          ? `Your premium access ends on ${periodEndDate}`
+                          : `Subscription status: ${entitlements.status}`
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Upgrade CTA (Free only) */}
+                {!isPremium && (
+                  <div class="border-t border-white/10 pt-4">
+                    <a
+                      href="/pricing"
+                      class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-6 py-3 rounded-full hover:bg-cream transition-colors w-full justify-center"
+                    >
+                      <span>⭐</span>
+                      <span>Upgrade to Premium</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p class="text-mist">Unable to load subscription information.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <!-- Account Settings via Clerk -->
+        <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+          <CardContent class="p-6">
+            <h2 class="font-[Fraunces] text-xl font-semibold text-cream mb-4">Account Settings</h2>
+            <div class="user-profile-wrapper">
+              <UserProfile />
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+
+      <footer class="mt-8 pt-4 border-t border-white/10">
+        <nav class="flex justify-center gap-6 text-sm text-mist">
+          <a href="/" class="hover:text-cream transition-colors">Home</a>
+          <a href="/manage" class="hover:text-cream transition-colors">Manage Parks</a>
+          <a href="/pricing" class="hover:text-cream transition-colors">Pricing</a>
+          <a href="/help" class="hover:text-cream transition-colors">Help</a>
+        </nav>
+      </footer>
+    </div>
+
+    <style>
+      /* Style overrides for Clerk UserProfile to match app theme */
+      .user-profile-wrapper {
+        --clerk-surface-background: transparent;
+        --clerk-elements-card-background: rgba(255, 255, 255, 0.05);
+      }
+
+      .user-profile-wrapper :global(.cl-userProfile-root) {
+        background: transparent;
+        width: 100%;
+      }
+
+      .user-profile-wrapper :global(.cl-card) {
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .user-profile-wrapper :global(.cl-navbar) {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 0.75rem;
+      }
+
+      .user-profile-wrapper :global(.cl-pageScrollBox) {
+        padding: 0;
+      }
+    </style>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 ---
-import { getConvexUrl } from "../lib/convexClient";
+import { getConvexUrl, getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import Analytics from "@vercel/analytics/astro";
 import "../styles/starwind.css";
@@ -16,6 +16,20 @@ const convexUrl = getConvexUrl();
 // Get the Clerk token for Convex
 const { getToken } = Astro.locals.auth();
 const convexToken = await getToken({ template: "convex" });
+
+// Fetch user entitlements for SSR display
+let entitlements: UserEntitlements | null = null;
+if (convexToken) {
+  try {
+    entitlements = await getUserEntitlements(convexToken);
+  } catch (err) {
+    console.error("Failed to fetch entitlements:", err);
+  }
+}
+
+// Calculate limit status for display
+const isFreeUser = entitlements?.tier === "free";
+const canPick = entitlements?.canPick ?? true;
 ---
 
 <!doctype html>
@@ -25,12 +39,25 @@ const convexToken = await getToken({ template: "convex" });
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Today's Park</title>
+    <!-- Font preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- API preconnects for faster park loading -->
+    <link rel="preconnect" href="https://places.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://www.google.com" />
+    <!-- Async font loading for faster initial render -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <Analytics />
   </head>
   <body>
@@ -62,6 +89,21 @@ const convexToken = await getToken({ template: "convex" });
         </div>
       </header>
 
+      {/* Upgrade prompt when limit reached */}
+      {!canPick && isFreeUser && (
+        <div id="limit-banner" class="bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center">
+          <p class="text-cream font-medium mb-2">You've used your daily pick!</p>
+          <p class="text-mist text-sm mb-3">Upgrade to Premium for unlimited picks and parks.</p>
+          <a
+            href="/pricing"
+            class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+          >
+            <span>⭐</span>
+            <span>Upgrade to Premium</span>
+          </a>
+        </div>
+      )}
+
       <main id="park-display">
         <Card class="bg-white/10 backdrop-blur-xl border border-white/15 text-center w-full">
           <CardContent class="py-12 px-8">
@@ -81,11 +123,11 @@ const convexToken = await getToken({ template: "convex" });
         <Button
           id="pick-again"
           variant="primary"
-          size="lg"
-          class="rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+          size="toddler"
+          class="rounded-full shadow-2xl hover:shadow-3xl transition-all hover:-translate-y-1 active:scale-95 active:shadow-lg"
         >
           <span class="button-text">Pick a Park</span>
-          <Spinner class="button-spinner hidden size-4" />
+          <Spinner class="button-spinner hidden size-5" />
         </Button>
       </div>
 
@@ -96,12 +138,59 @@ const convexToken = await getToken({ template: "convex" });
           <span class="mx-2 text-mist/50">·</span>
           <a href="/stats" class="text-gold font-semibold hover:text-cream transition-colors">View stats</a>
         </p>
+        <nav class="flex justify-center gap-6 text-sm text-mist mt-4 pt-4 border-t border-white/10">
+          <a href="/about" class="hover:text-cream transition-colors">About</a>
+          <a href="/help" class="hover:text-cream transition-colors">Help</a>
+          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+        </nav>
       </footer>
     </div>
 
-    <script define:vars={{ convexUrl, convexToken }}>
+    <script define:vars={{ convexUrl, convexToken, canPick, isFreeUser }}>
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
+      const limitBanner = document.getElementById("limit-banner");
+
+      // Disable button if user has reached daily limit
+      if (!canPick && isFreeUser) {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        button.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+      // Helper to check if error is a limit error
+      function isLimitError(errorMessage) {
+        return errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
+               errorMessage.includes("Daily pick limit reached");
+      }
+
+      // Show limit reached UI
+      function showLimitReachedUI() {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        button.querySelector(".button-spinner").classList.add("hidden");
+        button.classList.add("opacity-60", "cursor-not-allowed");
+
+        // Show the upgrade banner if it doesn't exist
+        if (!limitBanner) {
+          const banner = document.createElement("div");
+          banner.id = "limit-banner";
+          banner.className = "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
+          banner.innerHTML = `
+            <p class="text-cream font-medium mb-2">You've used your daily pick!</p>
+            <p class="text-mist text-sm mb-3">Upgrade to Premium for unlimited picks and parks.</p>
+            <a
+              href="/pricing"
+              class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+            >
+              <span>⭐</span>
+              <span>Upgrade to Premium</span>
+            </a>
+          `;
+          display.parentNode.insertBefore(banner, display);
+        }
+      }
 
       // Store user on page load
       async function storeUser() {
@@ -127,8 +216,24 @@ const convexToken = await getToken({ template: "convex" });
 
       storeUser();
 
+      // Debounce guards to prevent rapid multiple taps
+      let isPickingPark = false;
+      const DEBOUNCE_MS = 500;
+      let lastClickTime = 0;
+
       async function pickNewPark() {
+        // Debounce guard - prevent rapid clicks
+        const now = Date.now();
+        if (isPickingPark || (now - lastClickTime) < DEBOUNCE_MS) {
+          console.log('Pick request debounced');
+          return;
+        }
+
+        lastClickTime = now;
+        isPickingPark = true;
+
         button.disabled = true;
+        button.classList.add('button-loading');
         button.querySelector(".button-text").textContent = "Finding park...";
         button.querySelector(".button-spinner").classList.remove("hidden");
 
@@ -193,24 +298,52 @@ const convexToken = await getToken({ template: "convex" });
             </article>
           `;
         } catch (err) {
-          const errorContainer = document.createElement("div");
-          errorContainer.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+          // Check if this is a limit error
+          if (isLimitError(err.message)) {
+            showLimitReachedUI();
 
-          const icon = document.createElement("div");
-          icon.className = "text-4xl mb-4";
-          icon.textContent = "⚠️";
+            // Show a friendly message in the display area
+            const limitCard = document.createElement("div");
+            limitCard.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            limitCard.innerHTML = `
+              <div class="text-5xl mb-4">⏰</div>
+              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">Daily Limit Reached</h2>
+              <p class="text-mist mb-6">Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!</p>
+              <a
+                href="/pricing"
+                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
+              >
+                <span>⭐</span>
+                <span>Upgrade for Unlimited Picks</span>
+              </a>
+            `;
+            display.replaceChildren(limitCard);
+          } else {
+            const errorContainer = document.createElement("div");
+            errorContainer.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
 
-          const message = document.createElement("p");
-          message.className = "text-lg text-cream font-medium";
-          message.textContent = err.message;
+            const icon = document.createElement("div");
+            icon.className = "text-4xl mb-4";
+            icon.textContent = "⚠️";
 
-          errorContainer.appendChild(icon);
-          errorContainer.appendChild(message);
-          display.replaceChildren(errorContainer);
+            const message = document.createElement("p");
+            message.className = "text-lg text-cream font-medium";
+            message.textContent = err.message;
+
+            errorContainer.appendChild(icon);
+            errorContainer.appendChild(message);
+            display.replaceChildren(errorContainer);
+          }
         } finally {
-          button.disabled = false;
-          button.querySelector(".button-text").textContent = "Pick Another Park";
+          isPickingPark = false;
+          button.classList.remove('button-loading');
           button.querySelector(".button-spinner").classList.add("hidden");
+
+          // Only re-enable if not at limit
+          if (!button.classList.contains("cursor-not-allowed")) {
+            button.disabled = false;
+            button.querySelector(".button-text").textContent = "Pick Another Park";
+          }
         }
       }
 
@@ -341,6 +474,14 @@ const convexToken = await getToken({ template: "convex" });
       };
 
       button.addEventListener("click", pickNewPark);
+
+      // Touch event handler to prevent double-tap zoom on mobile
+      button.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent double-tap zoom
+        if (!isPickingPark) {
+          pickNewPark();
+        }
+      }, { passive: false });
     </script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 ---
-import { getConvexUrl, getUserParks, getAvailableParks } from "../lib/convexClient";
+import { getConvexUrl, getUserParks, getAvailableParks, getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import "../styles/starwind.css";
 import "../styles/global.css";
@@ -14,11 +14,19 @@ if (!userId) {
 const token = await getToken({ template: "convex" });
 const convexUrl = getConvexUrl();
 
-// Fetch both lists server-side
-const [userParks, availableParks] = await Promise.all([
+// Fetch parks and entitlements server-side
+const [userParks, availableParks, entitlements] = await Promise.all([
   getUserParks(token!),
   getAvailableParks(token!),
+  getUserEntitlements(token!).catch(() => null),
 ]);
+
+// Calculate limits for display
+const isFreeUser = entitlements?.tier === "free";
+const maxParks = entitlements?.limits.maxParks ?? -1;
+const currentParkCount = (userParks as any[]).length;
+const canAddPark = entitlements?.canAddPark ?? true;
+const isAtLimit = !canAddPark && isFreeUser;
 ---
 
 <!doctype html>
@@ -63,12 +71,52 @@ const [userParks, availableParks] = await Promise.all([
             </UserButton>
           </div>
         </div>
+
+        {/* Park limit badge for free users */}
+        {isFreeUser && maxParks > 0 && (
+          <div class="mt-2 flex justify-center">
+            <span class={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+              canAddPark
+                ? "bg-forest/20 text-cream border border-forest/30"
+                : "bg-sunset/20 text-sunset border border-sunset/30"
+            }`}>
+              {canAddPark ? (
+                <>
+                  <span>🌲</span>
+                  <span>{currentParkCount}/{maxParks} parks</span>
+                </>
+              ) : (
+                <>
+                  <span>⚠️</span>
+                  <span>Park limit reached ({maxParks}/{maxParks})</span>
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </header>
+
+      {/* Upgrade prompt when limit reached */}
+      {isAtLimit && (
+        <div id="limit-banner" class="bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center">
+          <p class="text-cream font-medium mb-2">You've reached your park limit!</p>
+          <p class="text-mist text-sm mb-3">Free accounts can save up to {maxParks} parks. Upgrade to Premium for unlimited parks.</p>
+          <a
+            href="/pricing"
+            class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+          >
+            <span>⭐</span>
+            <span>Upgrade to Premium</span>
+          </a>
+        </div>
+      )}
 
       <main class="space-y-8 !block">
         <!-- My Parks Section -->
         <section>
-          <h2 class="font-[Fraunces] text-xl text-cream mb-4">My Parks ({userParks.length})</h2>
+          <h2 class="font-[Fraunces] text-xl text-cream mb-4">
+            My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
+          </h2>
 
           {userParks.length === 0 ? (
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/15">
@@ -127,9 +175,14 @@ const [userParks, availableParks] = await Promise.all([
                     {park.address && <p class="text-sm text-mist truncate">{park.address}</p>}
                   </div>
                   <button
-                    class="add-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/20 hover:bg-gold/30 text-gold transition-colors"
+                    class={`add-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full transition-colors ${
+                      isAtLimit
+                        ? "bg-mist/10 text-mist/50 cursor-not-allowed"
+                        : "bg-gold/20 hover:bg-gold/30 text-gold"
+                    }`}
                     data-add={park._id}
                     aria-label={`Add ${park.name}`}
+                    disabled={isAtLimit}
                   >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -142,25 +195,102 @@ const [userParks, availableParks] = await Promise.all([
         </section>
       </main>
 
-      <footer class="mt-8 text-center">
+      <footer class="mt-8 text-center space-y-2">
+        <p class="text-sm text-mist opacity-80">
+          <a href="/discover" class="text-gold font-semibold hover:text-cream transition-colors">Discover nearby parks &rarr;</a>
+        </p>
         <p class="text-sm text-mist opacity-80">
           <a href="/" class="text-gold font-semibold hover:text-cream transition-colors">Pick a park &rarr;</a>
         </p>
+        <nav class="flex justify-center gap-6 text-sm text-mist mt-4 pt-4 border-t border-white/10">
+          <a href="/about" class="hover:text-cream transition-colors">About</a>
+          <a href="/help" class="hover:text-cream transition-colors">Help</a>
+          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+        </nav>
       </footer>
     </div>
 
-    <script define:vars={{ convexUrl, convexToken: token }}>
-      // Handle add park
+    <script define:vars={{ convexUrl, convexToken: token, isAtLimit, isFreeUser, maxParks }}>
+      // Track current park count for dynamic limit checking
+      let currentCount = document.querySelectorAll('section:first-of-type .park-card').length;
+
+      // Helper to check if error is a limit error
+      function isLimitError(errorMessage) {
+        return errorMessage.includes("PARK_LIMIT_EXCEEDED") ||
+               errorMessage.includes("park limit") ||
+               errorMessage.includes("Maximum parks");
+      }
+
+      // Helper to update section counts
+      function updateCounts() {
+        const myParksSection = document.querySelector('section:first-of-type');
+        const addParksSection = document.querySelector('section:last-of-type');
+
+        const myParksCount = myParksSection?.querySelectorAll('.park-card').length || 0;
+        const addParksCount = addParksSection?.querySelectorAll('.park-card').length || 0;
+
+        currentCount = myParksCount;
+
+        const myParksHeader = myParksSection?.querySelector('h2');
+        const addParksHeader = addParksSection?.querySelector('h2');
+
+        if (myParksHeader) {
+          myParksHeader.textContent = isFreeUser && maxParks > 0
+            ? `My Parks (${myParksCount}/${maxParks})`
+            : `My Parks (${myParksCount})`;
+        }
+        if (addParksHeader) addParksHeader.textContent = `Add Parks (${addParksCount})`;
+
+        // Check if at limit and disable add buttons
+        if (isFreeUser && maxParks > 0 && myParksCount >= maxParks) {
+          document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.disabled = true;
+            btn.classList.remove('bg-gold/20', 'hover:bg-gold/30', 'text-gold');
+            btn.classList.add('bg-mist/10', 'text-mist/50', 'cursor-not-allowed');
+          });
+        }
+      }
+
+      // Show limit error UI
+      function showLimitError() {
+        // Show a toast or banner
+        const existingBanner = document.getElementById('limit-banner');
+        if (!existingBanner) {
+          const banner = document.createElement('div');
+          banner.id = 'limit-banner';
+          banner.className = 'bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center';
+          banner.innerHTML = `
+            <p class="text-cream font-medium mb-2">You've reached your park limit!</p>
+            <p class="text-mist text-sm mb-3">Free accounts can save up to ${maxParks} parks. Upgrade to Premium for unlimited parks.</p>
+            <a
+              href="/pricing"
+              class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+            >
+              <span>⭐</span>
+              <span>Upgrade to Premium</span>
+            </a>
+          `;
+          const main = document.querySelector('main');
+          main.parentNode.insertBefore(banner, main);
+        }
+      }
+
+      // Handle add park with optimistic UI
       document.querySelectorAll('.add-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const button = e.currentTarget;
           const parkId = button.dataset.add;
+          const card = button.closest('.park-card');
+
+          // Prevent action if already at limit
+          if (button.disabled) return;
 
           button.disabled = true;
           button.innerHTML = '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
           try {
-            await fetch(`${convexUrl}/api/mutation`, {
+            const response = await fetch(`${convexUrl}/api/mutation`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -173,21 +303,40 @@ const [userParks, availableParks] = await Promise.all([
               })
             });
 
-            // Simple: refresh page to show updated state
-            location.reload();
+            const result = await response.json();
+
+            if (result.status === 'error') {
+              throw new Error(result.errorMessage || 'Failed to add park');
+            }
+
+            // Optimistic UI: fade out and remove card
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+              card.remove();
+              updateCounts();
+            }, 200);
           } catch (err) {
             console.error('Failed to add park:', err);
-            button.disabled = false;
-            button.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+
+            // Check if this is a limit error
+            if (isLimitError(err.message)) {
+              showLimitError();
+              updateCounts(); // Will disable all add buttons
+            } else {
+              button.disabled = false;
+              button.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+            }
           }
         });
       });
 
-      // Handle remove park
+      // Handle remove park with optimistic UI
       document.querySelectorAll('.remove-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const button = e.currentTarget;
           const parkId = button.dataset.remove;
+          const card = button.closest('.park-card');
 
           button.disabled = true;
           button.innerHTML = '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
@@ -206,8 +355,13 @@ const [userParks, availableParks] = await Promise.all([
               })
             });
 
-            // Simple: refresh page to show updated state
-            location.reload();
+            // Optimistic UI: fade out and remove card
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+              card.remove();
+              updateCounts();
+            }, 200);
           } catch (err) {
             console.error('Failed to remove park:', err);
             button.disabled = false;

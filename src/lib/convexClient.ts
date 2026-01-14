@@ -31,6 +31,46 @@ interface UserParkStats {
 }
 
 /**
+ * User entitlements (tier, limits, usage).
+ */
+export interface UserEntitlements {
+  tier: "free" | "premium";
+  status: "active" | "past_due" | "canceled" | "incomplete";
+  limits: {
+    maxParks: number; // -1 means unlimited
+    picksPerDay: number; // -1 means unlimited
+  };
+  usage: {
+    currentParks: number;
+    picksToday: number;
+  };
+  canAddPark: boolean;
+  canPick: boolean;
+  periodEnd?: number;
+}
+
+/**
+ * Structured error from entitlement limit checks.
+ */
+export interface LimitError {
+  code: string;
+  message: string;
+  tier: "free" | "premium";
+  limit: number;
+  current?: number;
+  resetsAt?: number;
+}
+
+/**
+ * Error codes for entitlement limits.
+ */
+export const ENTITLEMENT_ERROR_CODES = {
+  PARK_LIMIT_EXCEEDED: "PARK_LIMIT_EXCEEDED",
+  DAILY_PICK_LIMIT_EXCEEDED: "DAILY_PICK_LIMIT_EXCEEDED",
+  PAYMENT_REQUIRED: "PAYMENT_REQUIRED",
+} as const;
+
+/**
  * Call a Convex action via HTTP with optional auth token.
  */
 async function callAction<T>(
@@ -235,6 +275,82 @@ export async function getAvailableParks(token: string) {
   const convexUrl = import.meta.env.CONVEX_URL;
   if (!convexUrl) throw new Error("CONVEX_URL not set");
   return callQuery(convexUrl, "parks:getAvailableParks", {}, token);
+}
+
+/**
+ * Get user's entitlements (tier, limits, usage).
+ * Returns null if not authenticated.
+ */
+export async function getUserEntitlements(
+  token: string
+): Promise<UserEntitlements | null> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery<UserEntitlements | null>(
+    convexUrl,
+    "entitlements:getUserEntitlements",
+    {},
+    token
+  );
+}
+
+/**
+ * Parse a limit error from an error message.
+ * Returns null if the error is not a limit error.
+ */
+export function parseLimitError(error: unknown): LimitError | null {
+  if (!(error instanceof Error)) return null;
+
+  try {
+    // Try to parse the error message as JSON
+    const parsed = JSON.parse(error.message);
+    if (
+      parsed.code &&
+      Object.values(ENTITLEMENT_ERROR_CODES).includes(parsed.code)
+    ) {
+      return parsed as LimitError;
+    }
+  } catch {
+    // Not a JSON error, check if the message contains a limit error code
+    const message = error.message;
+    for (const code of Object.values(ENTITLEMENT_ERROR_CODES)) {
+      if (message.includes(code)) {
+        return {
+          code,
+          message,
+          tier: "free",
+          limit: -1,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if an error is a limit error.
+ */
+export function isLimitError(error: unknown): boolean {
+  return parseLimitError(error) !== null;
+}
+
+/**
+ * Format reset time for display.
+ */
+export function formatResetTime(resetsAt: number): string {
+  const now = Date.now();
+  const diff = resetsAt - now;
+
+  if (diff <= 0) return "now";
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 export { callAction, callQuery, callMutation };

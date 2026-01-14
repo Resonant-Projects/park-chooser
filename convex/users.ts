@@ -40,12 +40,39 @@ export const store = mutation({
     }
 
     // Create new user
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
       name: identity.name ?? undefined,
       email: identity.email ?? undefined,
       imageUrl: identity.pictureUrl ?? undefined,
     });
+
+    // Create default free tier entitlement for new user
+    const now = Date.now();
+    await ctx.db.insert("userEntitlements", {
+      userId,
+      tier: "free",
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return userId;
+  },
+});
+
+/**
+ * Get user by token identifier.
+ */
+export const getByToken = query({
+  args: {
+    tokenIdentifier: v.string(),
+  },
+  handler: async (ctx, { tokenIdentifier }) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
+      .unique();
   },
 });
 

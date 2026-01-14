@@ -19,6 +19,7 @@
     "@vercel/analytics": "^1.6.1",
     "astro": "^5.16.9",
     "convex": "^1.31.4",
+    "svix": "^1.84.1",
     "tailwind-merge": "^3.4.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.1.18",

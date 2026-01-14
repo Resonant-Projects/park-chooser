@@ -20,6 +20,11 @@ export default defineSchema({
     photoRefs: v.array(v.string()), // Google Places photo references
     lastSynced: v.number(), // timestamp
     isRecommended: v.optional(v.boolean()), // Flag for recommended parks (seeding)
+    // Location discovery fields
+    lat: v.optional(v.number()), // Latitude for distance calculations
+    lng: v.optional(v.number()), // Longitude for distance calculations
+    discoveredAt: v.optional(v.number()), // When first discovered via nearby search
+    primaryType: v.optional(v.string()), // e.g., "park", "playground", "dog_park"
   }).index("by_placeId", ["placeId"]),
 
   // User-specific park list (junction table)
@@ -50,4 +55,82 @@ export default defineSchema({
   syncState: defineTable({
     lastSyncedAt: v.number(),
   }),
+
+  // Support tickets from contact form
+  supportTickets: defineTable({
+    email: v.string(),
+    subject: v.union(
+      v.literal("bug"),
+      v.literal("billing"),
+      v.literal("feature"),
+      v.literal("other")
+    ),
+    message: v.string(),
+    userId: v.optional(v.id("users")),
+    status: v.union(
+      v.literal("new"),
+      v.literal("in_progress"),
+      v.literal("resolved"),
+      v.literal("closed")
+    ),
+    referenceId: v.string(), // User-friendly ticket ID
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+    ipHash: v.optional(v.string()), // Hashed IP for rate limiting
+  })
+    .index("by_status", ["status"])
+    .index("by_email", ["email"])
+    .index("by_reference", ["referenceId"])
+    .index("by_created", ["createdAt"]),
+
+  // User feedback submissions
+  feedback: defineTable({
+    userId: v.id("users"),
+    rating: v.number(), // 1-5 stars
+    likesText: v.optional(v.string()),
+    improvementsText: v.optional(v.string()),
+    featureRequestsText: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_created", ["createdAt"]),
+
+  // Rate limiting for spam prevention
+  rateLimits: defineTable({
+    identifier: v.string(), // IP hash or user ID
+    action: v.string(), // "contact", "feedback", etc.
+    count: v.number(),
+    windowStart: v.number(), // Timestamp of window start
+  }).index("by_identifier_action", ["identifier", "action"]),
+
+  // User subscription/entitlement data synced from Clerk Billing
+  userEntitlements: defineTable({
+    userId: v.id("users"),
+    tier: v.union(v.literal("free"), v.literal("premium")),
+    // Clerk Billing identifiers for webhook reconciliation
+    clerkSubscriptionId: v.optional(v.string()),
+    clerkSubscriptionItemId: v.optional(v.string()),
+    clerkPlanId: v.optional(v.string()),
+    // Billing period tracking (for premium users)
+    periodStart: v.optional(v.number()),
+    periodEnd: v.optional(v.number()),
+    // Status tracking
+    status: v.union(
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled"),
+      v.literal("incomplete")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_clerk_subscription_item", ["clerkSubscriptionItemId"]),
+
+  // Daily pick tracking for rate limiting free tier
+  dailyPickCounts: defineTable({
+    userId: v.id("users"),
+    date: v.string(), // ISO date format: "2026-01-14"
+    pickCount: v.number(),
+  }).index("by_user_date", ["userId", "date"]),
 });

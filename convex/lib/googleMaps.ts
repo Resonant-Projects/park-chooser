@@ -205,3 +205,127 @@ export async function getTravelTime(
     return null;
   }
 }
+
+// ============================================================
+// Nearby Search (Location Discovery)
+// ============================================================
+
+export interface NearbySearchResult {
+  placeId: string;
+  name: string;
+  address?: string;
+  lat: number;
+  lng: number;
+  photoRefs: string[];
+  primaryType?: string;
+}
+
+/**
+ * Search for nearby parks using Places API Nearby Search (New).
+ * Returns parks, playgrounds, and dog parks within the specified radius.
+ */
+export async function searchNearbyParks(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  apiKey: string
+): Promise<NearbySearchResult[]> {
+  const url = "https://places.googleapis.com/v1/places:searchNearby";
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask":
+          "places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.primaryType",
+      },
+      body: JSON.stringify({
+        includedPrimaryTypes: ["park", "playground", "dog_park"],
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius: radiusMeters,
+          },
+        },
+        maxResultCount: 20,
+        rankPreference: "DISTANCE",
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Nearby Search API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error details:", errorText);
+      return [];
+    }
+
+    const data = await response.json();
+
+    if (!data.places || data.places.length === 0) {
+      console.log("No nearby parks found");
+      return [];
+    }
+
+    return data.places.map(
+      (place: {
+        id: string;
+        displayName?: { text: string };
+        formattedAddress?: string;
+        location?: { latitude: number; longitude: number };
+        photos?: Array<{ name: string }>;
+        primaryType?: string;
+      }) => ({
+        placeId: place.id,
+        name: place.displayName?.text || "Unknown Park",
+        address: place.formattedAddress,
+        lat: place.location?.latitude || 0,
+        lng: place.location?.longitude || 0,
+        photoRefs: (place.photos || [])
+          .slice(0, 5)
+          .map((p: { name: string }) => p.name),
+        primaryType: place.primaryType,
+      })
+    );
+  } catch (error) {
+    console.error("Error searching nearby parks:", error);
+    return [];
+  }
+}
+
+/**
+ * Calculate straight-line distance between two points using Haversine formula.
+ * Returns distance in miles.
+ */
+export function calculateDistanceMiles(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Generate a simple geohash for caching nearby search results.
+ * Rounds coordinates to create geographic cache cells (~1 mile precision at default).
+ */
+export function simpleGeohash(
+  lat: number,
+  lng: number,
+  precision: number = 2
+): string {
+  const latRounded = lat.toFixed(precision);
+  const lngRounded = lng.toFixed(precision);
+  return `${latRounded},${lngRounded}`;
+}

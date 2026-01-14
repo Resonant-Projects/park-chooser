@@ -1,0 +1,109 @@
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+/**
+ * Create a new support ticket
+ */
+export const createTicket = mutation({
+  args: {
+    email: v.string(),
+    subject: v.union(
+      v.literal("bug"),
+      v.literal("billing"),
+      v.literal("feature"),
+      v.literal("other")
+    ),
+    message: v.string(),
+    userId: v.optional(v.id("users")),
+    ipHash: v.optional(v.string()),
+  },
+  handler: async (ctx, { email, subject, message, userId, ipHash }) => {
+    const referenceId = generateReferenceId();
+
+    const ticketId = await ctx.db.insert("supportTickets", {
+      email,
+      subject,
+      message,
+      userId,
+      status: "new",
+      referenceId,
+      createdAt: Date.now(),
+      ipHash,
+    });
+
+    return { ticketId, referenceId };
+  },
+});
+
+/**
+ * Get a ticket by reference ID (for users to check status)
+ */
+export const getByReference = query({
+  args: {
+    referenceId: v.string(),
+  },
+  handler: async (ctx, { referenceId }) => {
+    return await ctx.db
+      .query("supportTickets")
+      .withIndex("by_reference", (q) => q.eq("referenceId", referenceId))
+      .first();
+  },
+});
+
+/**
+ * List tickets by status (for admin)
+ */
+export const listByStatus = query({
+  args: {
+    status: v.union(
+      v.literal("new"),
+      v.literal("in_progress"),
+      v.literal("resolved"),
+      v.literal("closed")
+    ),
+  },
+  handler: async (ctx, { status }) => {
+    return await ctx.db
+      .query("supportTickets")
+      .withIndex("by_status", (q) => q.eq("status", status))
+      .order("desc")
+      .collect();
+  },
+});
+
+/**
+ * Update ticket status (for admin)
+ */
+export const updateStatus = mutation({
+  args: {
+    ticketId: v.id("supportTickets"),
+    status: v.union(
+      v.literal("new"),
+      v.literal("in_progress"),
+      v.literal("resolved"),
+      v.literal("closed")
+    ),
+  },
+  handler: async (ctx, { ticketId, status }) => {
+    const updates: Record<string, unknown> = { status };
+
+    if (status === "resolved" || status === "closed") {
+      updates.respondedAt = Date.now();
+    }
+
+    await ctx.db.patch(ticketId, updates);
+  },
+});
+
+/**
+ * Generate a user-friendly reference ID
+ * Format: TP-XXXXXX (6 alphanumeric characters)
+ */
+function generateReferenceId(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluding similar chars (0/O, 1/I)
+  let result = "TP-";
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
