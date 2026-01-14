@@ -1,5 +1,6 @@
 ---
 import { getConvexUrl } from "../lib/convexClient";
+import { UserButton } from "@clerk/astro/components";
 import Analytics from "@vercel/analytics/astro";
 import "../styles/starwind.css";
 import "../styles/global.css";
@@ -11,6 +12,10 @@ import CardDescription from "../components/starwind/card/CardDescription.astro";
 import Spinner from "../components/starwind/spinner/Spinner.astro";
 
 const convexUrl = getConvexUrl();
+
+// Get the Clerk token for Convex
+const { getToken } = Astro.locals.auth();
+const convexToken = await getToken({ template: "convex" });
 ---
 
 <!doctype html>
@@ -31,8 +36,15 @@ const convexUrl = getConvexUrl();
   <body>
     <div class="container">
       <header>
-        <h1 class="title">Today's Park</h1>
-        <p class="subtitle">A random adventure awaits</p>
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h1 class="title">Today's Park</h1>
+            <p class="subtitle">A random adventure awaits</p>
+          </div>
+          <div class="mt-1">
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
+        </div>
       </header>
 
       <main id="park-display">
@@ -68,9 +80,33 @@ const convexUrl = getConvexUrl();
       </footer>
     </div>
 
-    <script define:vars={{ convexUrl }}>
+    <script define:vars={{ convexUrl, convexToken }}>
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
+
+      // Store user on page load
+      async function storeUser() {
+        if (!convexToken) return;
+
+        try {
+          await fetch(`${convexUrl}/api/mutation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${convexToken}`,
+            },
+            body: JSON.stringify({
+              path: "users:store",
+              args: {},
+              format: "json",
+            }),
+          });
+        } catch (err) {
+          console.error("Failed to store user:", err);
+        }
+      }
+
+      storeUser();
 
       async function pickNewPark() {
         button.disabled = true;
@@ -78,9 +114,14 @@ const convexUrl = getConvexUrl();
         button.querySelector(".button-spinner").classList.remove("hidden");
 
         try {
+          const headers = { "Content-Type": "application/json" };
+          if (convexToken) {
+            headers["Authorization"] = `Bearer ${convexToken}`;
+          }
+
           const response = await fetch(`${convexUrl}/api/action`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               path: "actions/pickPark:pickPark",
               args: {},
@@ -157,9 +198,14 @@ const convexUrl = getConvexUrl();
       // Track visits when clicking "Open in Google Maps"
       // Uses fetch with keepalive for reliable fire-and-forget tracking that survives navigation
       function trackVisit(parkId) {
+        const headers = { "Content-Type": "application/json" };
+        if (convexToken) {
+          headers["Authorization"] = `Bearer ${convexToken}`;
+        }
+
         fetch(`${convexUrl}/api/action`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             path: "actions/trackVisit:trackVisit",
             args: { parkId },
@@ -211,9 +257,14 @@ const convexUrl = getConvexUrl();
         try {
           const location = await getUserLocation();
 
+          const headers = { "Content-Type": "application/json" };
+          if (convexToken) {
+            headers["Authorization"] = `Bearer ${convexToken}`;
+          }
+
           const response = await fetch(`${convexUrl}/api/action`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               path: "actions/getTravelTime:calculateTravelTime",
               args: {

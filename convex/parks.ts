@@ -108,28 +108,7 @@ export const count = query({
   },
 });
 
-/**
- * Increment the visit count for a park (internal, called by trackVisit action).
- */
-export const incrementVisitCount = internalMutation({
-  args: { parkId: v.id("parks") },
-  handler: async (ctx, args) => {
-    const park = await ctx.db.get(args.parkId);
-    if (park) {
-      await ctx.db.patch(args.parkId, {
-        visitCount: (park.visitCount ?? 0) + 1,
-      });
-    }
-  },
-});
-
-/**
- * Get all parks sorted by visit count (most visited first).
- */
-export const listByVisitCount = query({
-  args: {},
-  handler: async (ctx) => {
-    const parks = await ctx.db.query("parks").collect();
-    return parks.sort((a, b) => (b.visitCount ?? 0) - (a.visitCount ?? 0));
-  },
-});
+// Note: incrementVisitCount and listByVisitCount have been removed.
+// Visit tracking is now per-user via userParks.ts:
+// - incrementUserParkVisit (internal mutation)
+// - listUserParksByVisits (public query)

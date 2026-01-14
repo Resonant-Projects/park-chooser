@@ -51,10 +51,16 @@ export const getLastFivePickIds = internalQuery({
  * Record a new pick (internal).
  */
 export const recordPick = internalMutation({
-  args: { parkId: v.id("parks") },
+  args: {
+    parkId: v.id("parks"),
+    userId: v.id("users"),
+    userParkId: v.optional(v.id("userParks")),
+  },
   handler: async (ctx, args) => {
     await ctx.db.insert("picks", {
       parkId: args.parkId,
+      userId: args.userId,
+      userParkId: args.userParkId,
       chosenAt: Date.now(),
     });
   },

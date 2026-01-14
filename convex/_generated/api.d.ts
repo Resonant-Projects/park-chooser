@@ -10,12 +10,17 @@
 
 import type * as actions_getTravelTime from "../actions/getTravelTime.js";
 import type * as actions_pickPark from "../actions/pickPark.js";
+import type * as actions_seedUser from "../actions/seedUser.js";
 import type * as actions_syncParks from "../actions/syncParks.js";
 import type * as actions_trackVisit from "../actions/trackVisit.js";
 import type * as lib_googleMaps from "../lib/googleMaps.js";
+import type * as migrations_markRecommendedParks from "../migrations/markRecommendedParks.js";
+import type * as migrations_migrateExistingUsers from "../migrations/migrateExistingUsers.js";
 import type * as parks from "../parks.js";
 import type * as picks from "../picks.js";
 import type * as seed from "../seed.js";
+import type * as userParks from "../userParks.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -26,12 +31,17 @@ import type {
 declare const fullApi: ApiFromModules<{
   "actions/getTravelTime": typeof actions_getTravelTime;
   "actions/pickPark": typeof actions_pickPark;
+  "actions/seedUser": typeof actions_seedUser;
   "actions/syncParks": typeof actions_syncParks;
   "actions/trackVisit": typeof actions_trackVisit;
   "lib/googleMaps": typeof lib_googleMaps;
+  "migrations/markRecommendedParks": typeof migrations_markRecommendedParks;
+  "migrations/migrateExistingUsers": typeof migrations_migrateExistingUsers;
   parks: typeof parks;
   picks: typeof picks;
   seed: typeof seed;
+  userParks: typeof userParks;
+  users: typeof users;
 }>;
 
 /**

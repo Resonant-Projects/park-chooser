@@ -2,8 +2,8 @@
 
 import { action } from "../_generated/server";
 import { internal, api } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import { getPhotoUrl } from "../lib/googleMaps";
-import type { Id } from "../_generated/dataModel";
 
 export interface PickedPark {
   _id: string;
@@ -14,65 +14,87 @@ export interface PickedPark {
   placeId: string;
 }
 
+interface UserParkWithDetails {
+  _id: Id<"userParks">;
+  parkId: Id<"parks">;
+  placeId: string;
+  name: string;
+  customName: string | undefined;
+  address: string | undefined;
+  photoRefs: string[];
+}
+
 /**
- * Pick a random park that hasn't been chosen in the last 5 picks.
- * Returns the park with a photo URL.
+ * Pick a random park from the user's list that hasn't been chosen
+ * in the last 5 picks (per-user constraint).
  */
 export const pickPark = action({
   args: {},
   handler: async (ctx): Promise<PickedPark> => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    // Ensure we have parks
-    const parkCount = await ctx.runQuery(api.parks.count);
-    if (parkCount === 0) {
-      // Try to sync from Google if API key is available
-      if (apiKey) {
-        await ctx.runAction(api.actions.syncParks.syncParks, { force: true });
-      } else {
-        throw new Error(
-          "No parks found. Run `npx convex run seed:seedParks` to add sample parks, " +
-            "or set GOOGLE_MAPS_API_KEY to sync from Google Places."
-        );
-      }
+    // Get current user (required for per-user lists)
+    const user = await ctx.runQuery(internal.users.getCurrentUserInternal);
+    if (!user) {
+      throw new Error("Authentication required to pick a park");
     }
 
-    // Get all parks
-    const allParks = await ctx.runQuery(api.parks.list);
-    if (allParks.length === 0) {
-      throw new Error("No parks available. Please sync parks first.");
+    // Check if user needs seeding (new user with no parks)
+    const userParkCount = await ctx.runQuery(api.userParks.getUserParkCount);
+    if (userParkCount === 0) {
+      // Auto-seed with recommended parks
+      await ctx.runAction(api.actions.seedUser.seedUserWithRecommendedParks);
     }
 
-    // Get the last 5 picked park IDs
-    const lastFiveIds = await ctx.runQuery(internal.picks.getLastFivePickIds);
-    const lastFiveSet = new Set(lastFiveIds.map((id) => id.toString()));
-
-    // Filter out recently picked parks
-    const eligibleParks = allParks.filter(
-      (park) => !lastFiveSet.has(park._id.toString())
+    // Get all parks in user's list (cast and filter nulls)
+    const rawUserParks = await ctx.runQuery(
+      internal.userParks.getUserParksWithDetails,
+      { userId: user._id }
+    );
+    const userParks: UserParkWithDetails[] = rawUserParks.filter(
+      (p): p is UserParkWithDetails => p !== null
     );
 
-    // If all parks have been picked recently (fewer parks than constraint),
-    // allow picking from all parks
-    const poolToPickFrom = eligibleParks.length > 0 ? eligibleParks : allParks;
+    if (userParks.length === 0) {
+      throw new Error(
+        "No parks in your list. Add parks from the catalog to get started."
+      );
+    }
+
+    // Get the last 5 picked park IDs for this user
+    const lastFiveIds = await ctx.runQuery(
+      internal.userParks.getLastFivePickIdsForUser,
+      { userId: user._id }
+    );
+    const lastFiveSet = new Set(lastFiveIds.map((id: Id<"parks">) => id.toString()));
+
+    // Filter out recently picked parks
+    const eligibleParks: UserParkWithDetails[] = userParks.filter(
+      (up: UserParkWithDetails) => !lastFiveSet.has(up.parkId.toString())
+    );
+
+    // If all parks have been picked recently, allow picking from all
+    const poolToPickFrom: UserParkWithDetails[] = eligibleParks.length > 0 ? eligibleParks : userParks;
 
     // Randomly select a park
     const randomIndex = Math.floor(Math.random() * poolToPickFrom.length);
-    const selectedPark = poolToPickFrom[randomIndex];
+    const selectedPark: UserParkWithDetails = poolToPickFrom[randomIndex];
 
     // Record this pick
     await ctx.runMutation(internal.picks.recordPick, {
-      parkId: selectedPark._id,
+      parkId: selectedPark.parkId,
+      userId: user._id,
+      userParkId: selectedPark._id,
     });
 
     // Generate photo URL if we have a photo reference
     let photoUrl: string | undefined;
-    if (selectedPark.photoRefs.length > 0 && apiKey) {
+    if (selectedPark.photoRefs && selectedPark.photoRefs.length > 0 && apiKey) {
       photoUrl = getPhotoUrl(selectedPark.photoRefs[0], apiKey, 1200);
     }
 
     return {
-      _id: selectedPark._id,
+      _id: selectedPark.parkId.toString(),
       name: selectedPark.name,
       customName: selectedPark.customName,
       address: selectedPark.address,

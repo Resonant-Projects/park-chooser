@@ -1,5 +1,6 @@
 ---
-import { getParkStats } from "../lib/convexClient";
+import { getUserParkStats } from "../lib/convexClient";
+import { UserButton } from "@clerk/astro/components";
 import "../styles/starwind.css";
 import "../styles/global.css";
 import Card from "../components/starwind/card/Card.astro";
@@ -11,14 +12,26 @@ import TableCell from "../components/starwind/table/TableCell.astro";
 import TableHead from "../components/starwind/table/TableHead.astro";
 import TableHeader from "../components/starwind/table/TableHeader.astro";
 import TableRow from "../components/starwind/table/TableRow.astro";
-import Separator from "../components/starwind/separator/Separator.astro";
 
-let parks: Awaited<ReturnType<typeof getParkStats>> = [];
+// Get Clerk auth
+const { userId, getToken } = Astro.locals.auth();
+
+// Redirect to sign-in if not authenticated
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const convexToken = await getToken({ template: "convex" });
+
+let parks: Awaited<ReturnType<typeof getUserParkStats>> = [];
 let error: string | null = null;
 
 try {
-  const rawParks = await getParkStats();
-  // Sort by visit count (highest first), then alphabetically by name
+  if (!convexToken) {
+    throw new Error("Unable to get authentication token");
+  }
+  const rawParks = await getUserParkStats(convexToken);
+  // Already sorted by visit count from backend, but sort alphabetically as secondary
   parks = rawParks.sort((a, b) => {
     const visitsA = a.visitCount ?? 0;
     const visitsB = b.visitCount ?? 0;
@@ -53,8 +66,15 @@ const totalVisits = parks.reduce(
   <body>
     <div class="container">
       <header>
-        <h1 class="title">Park Stats</h1>
-        <p class="subtitle">Track your park adventures</p>
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h1 class="title">Your Park Stats</h1>
+            <p class="subtitle">Track your park adventures</p>
+          </div>
+          <div class="mt-1">
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
+        </div>
       </header>
 
       <main class="flex-1 flex flex-col">
@@ -62,7 +82,7 @@ const totalVisits = parks.reduce(
         <Card class="bg-white/10 backdrop-blur-xl border-white/15 mb-4">
           <CardContent class="flex justify-between items-center p-4">
             <a href="/" class="text-[0.9375rem] font-semibold text-gold hover:text-cream transition-colors">← Back to Today's Park</a>
-            <Badge variant="outline" class="bg-white/10 text-mist border-none">{totalVisits} total visits</Badge>
+            <Badge variant="outline" class="bg-white/10 text-mist border-none">{totalVisits} visits</Badge>
           </CardContent>
         </Card>
 
@@ -77,7 +97,8 @@ const totalVisits = parks.reduce(
           ) : parks.length === 0 ? (
             <Card class="bg-white/10 backdrop-blur-xl border-white/15">
               <CardContent class="py-12 px-8 text-center">
-                <p class="text-mist">No parks found. Visit some parks to see stats!</p>
+                <div class="text-4xl mb-4">🌲</div>
+                <p class="text-mist">No parks in your list yet. Pick some parks to get started!</p>
               </CardContent>
             </Card>
           ) : (
