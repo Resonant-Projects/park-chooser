@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /pricing
+Allow: /help
+Allow: /help/contact
+Allow: /legal/
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /stats
+Disallow: /manage
+Disallow: /discover
+Disallow: /account
+Disallow: /help/feedback
+Disallow: /api/
+Disallow: /r/
+
+Sitemap: https://todayspark.app/sitemap-index.xml

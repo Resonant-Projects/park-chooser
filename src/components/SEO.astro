@@ -1,0 +1,47 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  image?: string;
+  type?: "website" | "article";
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonical,
+  image = "/og-default.png",
+  type = "website",
+  noindex = false,
+} = Astro.props;
+
+// Use site URL from env or default - allows domain flexibility
+const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
+const imageUrl = image.startsWith("http") ? image : new URL(image, siteUrl).href;
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<!-- Open Graph -->
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:site_name" content="Today's Park" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+
+<!-- JSON-LD structured data slot -->
+<slot />

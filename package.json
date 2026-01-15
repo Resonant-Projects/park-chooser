@@ -11,6 +11,7 @@
     "sync:prod": "npx convex run --prod actions/syncParks:syncParks '{\"force\": true}'"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.6.1",
     "@astrojs/vercel": "^9.0.3",
     "@clerk/astro": "^2.16.12",
     "@tabler/icons": "^3.36.1",
