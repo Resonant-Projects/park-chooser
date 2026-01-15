@@ -3,6 +3,7 @@
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 import {
   searchNearbyParks as searchNearbyParksApi,
   calculateDistanceMiles,
@@ -79,8 +80,8 @@ export const searchNearbyParks = action({
     );
 
     // Create a map of placeId -> database _id
-    const placeIdToDbId = new Map(
-      upsertedParks.map((p) => [p.placeId, p._id])
+    const placeIdToDbId = new Map<string, Id<"parks">>(
+      upsertedParks.map((p: { placeId: string; _id: Id<"parks"> }) => [p.placeId, p._id])
     );
 
     // Get current user's park list (if authenticated)
@@ -96,6 +97,7 @@ export const searchNearbyParks = action({
     // Build results with distances and user flags
     const results: NearbyParkResult[] = nearbyParks.map((park) => {
       const dbId = placeIdToDbId.get(park.placeId);
+      const dbIdStr = dbId?.toString() ?? "";
       const distance = calculateDistanceMiles(
         args.lat,
         args.lng,
@@ -110,13 +112,13 @@ export const searchNearbyParks = action({
       }
 
       return {
-        _id: dbId ?? "",
+        _id: dbIdStr,
         placeId: park.placeId,
         name: park.name,
         address: park.address,
         photoUrl,
         distanceMiles: Math.round(distance * 10) / 10, // Round to 1 decimal
-        isInUserList: userParkIdSet.has(dbId ?? ""),
+        isInUserList: userParkIdSet.has(dbIdStr),
         primaryType: park.primaryType,
       };
     });

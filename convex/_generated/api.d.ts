@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actions_backfillEntitlements from "../actions/backfillEntitlements.js";
 import type * as actions_getTravelTime from "../actions/getTravelTime.js";
 import type * as actions_pickPark from "../actions/pickPark.js";
 import type * as actions_searchNearbyParks from "../actions/searchNearbyParks.js";
@@ -16,6 +17,7 @@ import type * as actions_submitFeedback from "../actions/submitFeedback.js";
 import type * as actions_submitSupportTicket from "../actions/submitSupportTicket.js";
 import type * as actions_syncParks from "../actions/syncParks.js";
 import type * as actions_trackVisit from "../actions/trackVisit.js";
+import type * as backfillHelpers from "../backfillHelpers.js";
 import type * as entitlements from "../entitlements.js";
 import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
@@ -38,6 +40,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actions/backfillEntitlements": typeof actions_backfillEntitlements;
   "actions/getTravelTime": typeof actions_getTravelTime;
   "actions/pickPark": typeof actions_pickPark;
   "actions/searchNearbyParks": typeof actions_searchNearbyParks;
@@ -46,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "actions/submitSupportTicket": typeof actions_submitSupportTicket;
   "actions/syncParks": typeof actions_syncParks;
   "actions/trackVisit": typeof actions_trackVisit;
+  backfillHelpers: typeof backfillHelpers;
   entitlements: typeof entitlements;
   feedback: typeof feedback;
   http: typeof http;

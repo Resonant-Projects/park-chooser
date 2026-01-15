@@ -75,7 +75,7 @@ export const pickPark = action({
       { userId: user._id }
     );
     const userParks: UserParkWithDetails[] = rawUserParks.filter(
-      (p): p is UserParkWithDetails => p !== null
+      (p: UserParkWithDetails | null): p is UserParkWithDetails => p !== null
     );
 
     if (userParks.length === 0) {

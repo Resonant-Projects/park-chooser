@@ -1,36 +1,25 @@
-import { action, internalMutation, internalQuery } from "../_generated/server";
+"use node";
+
+import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { Doc } from "../_generated/dataModel";
 
-/**
- * Internal query: Get all users without entitlements.
- */
-export const getUsersWithoutEntitlements = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    // Get all users
-    const users = await ctx.db.query("users").collect();
+interface BackfillResult {
+  success: boolean;
+  message: string;
+  created: number;
+  total?: number;
+  errors?: string[];
+}
 
-    // Get all entitlements
-    const entitlements = await ctx.db.query("userEntitlements").collect();
-    const usersWithEntitlements = new Set(
-      entitlements.map((e) => e.userId.toString())
-    );
-
-    // Filter to users without entitlements
-    return users.filter((u) => !usersWithEntitlements.has(u._id.toString()));
-  },
-});
-
-/**
- * Internal mutation: Create entitlement for a single user.
- */
-export const createEntitlementForUser = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    // This is called per user - the user ID is passed via the scheduler
-    // For backfill, we use createDefaultEntitlement from entitlements.ts
-  },
-});
+interface EntitlementStatusResult {
+  usersNeedingBackfill: number;
+  users: Array<{
+    id: Doc<"users">["_id"];
+    email: string | undefined;
+    name: string | undefined;
+  }>;
+}
 
 /**
  * Backfill action: Create default free entitlements for all existing users
@@ -41,10 +30,10 @@ export const createEntitlementForUser = internalMutation({
  */
 export const backfillEntitlements = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<BackfillResult> => {
     // Get users without entitlements
-    const usersWithoutEntitlements = await ctx.runQuery(
-      internal.actions.backfillEntitlements.getUsersWithoutEntitlements
+    const usersWithoutEntitlements: Doc<"users">[] = await ctx.runQuery(
+      internal.backfillHelpers.getUsersWithoutEntitlements
     );
 
     console.log(
@@ -101,14 +90,14 @@ export const backfillEntitlements = action({
  */
 export const checkEntitlementStatus = action({
   args: {},
-  handler: async (ctx) => {
-    const usersWithoutEntitlements = await ctx.runQuery(
-      internal.actions.backfillEntitlements.getUsersWithoutEntitlements
+  handler: async (ctx): Promise<EntitlementStatusResult> => {
+    const usersWithoutEntitlements: Doc<"users">[] = await ctx.runQuery(
+      internal.backfillHelpers.getUsersWithoutEntitlements
     );
 
     return {
       usersNeedingBackfill: usersWithoutEntitlements.length,
-      users: usersWithoutEntitlements.map((u) => ({
+      users: usersWithoutEntitlements.map((u: Doc<"users">) => ({
         id: u._id,
         email: u.email,
         name: u.name,

@@ -5,6 +5,7 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get all parks from the database.
@@ -133,7 +134,7 @@ export const upsertDiscoveredParks = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const upsertedIds: Array<{ placeId: string; _id: string }> = [];
+    const upsertedIds: Array<{ placeId: string; _id: Id<"parks"> }> = [];
 
     for (const park of args.parks) {
       const existing = await ctx.db
