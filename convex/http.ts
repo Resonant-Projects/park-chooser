@@ -56,6 +56,26 @@ http.route({
           );
 
           console.log("Entitlement sync result:", result);
+
+          // Process referral conversion for new active subscriptions
+          if (data.status === "active") {
+            const user = await ctx.runQuery(
+              internal.users.getUserByTokenInternal,
+              { tokenIdentifier }
+            );
+
+            if (user) {
+              const referralResult = await ctx.runAction(
+                internal.actions.processReferralConversion.processReferralConversion,
+                {
+                  refereeId: user._id,
+                  subscriptionStatus: data.status,
+                }
+              );
+              console.log("Referral conversion result:", referralResult);
+            }
+          }
+
           break;
         }
 

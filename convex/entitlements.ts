@@ -3,6 +3,7 @@ import {
   internalQuery,
   internalMutation,
 } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import {
   TIER_LIMITS,
@@ -34,8 +35,20 @@ export const getUserEntitlements = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
 
-    // Default to free tier if no entitlement record
-    const tier: Tier = entitlement?.tier ?? "free";
+    // Check for active bonus days from referral rewards
+    const now = Date.now();
+    const activeBonus = await ctx.db
+      .query("referralRewards")
+      .withIndex("by_user_active", (q) =>
+        q.eq("userId", user._id).gt("bonusDaysEnd", now)
+      )
+      .first();
+
+    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+
+    // Determine effective tier: premium if subscribed OR has active bonus days
+    const subscriptionTier: Tier = entitlement?.tier ?? "free";
+    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
     const limits = TIER_LIMITS[tier];
 
     // Get current park count
@@ -70,6 +83,8 @@ export const getUserEntitlements = query({
       canAddPark: currentParks < limits.maxParks,
       canPick: picksToday < limits.picksPerDay,
       periodEnd: entitlement?.periodEnd,
+      // Bonus days info for UI display
+      activeBonusDaysUntil: hasActiveBonusDays ? activeBonus.bonusDaysEnd : null,
     };
   },
 });
@@ -86,7 +101,18 @@ export const checkCanAddPark = internalQuery({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .unique();
 
-    const tier: Tier = entitlement?.tier ?? "free";
+    // Check for active bonus days
+    const now = Date.now();
+    const activeBonus = await ctx.db
+      .query("referralRewards")
+      .withIndex("by_user_active", (q) =>
+        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
+      )
+      .first();
+
+    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+    const subscriptionTier: Tier = entitlement?.tier ?? "free";
+    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
     const limit = TIER_LIMITS[tier].maxParks;
 
     const userParks = await ctx.db
@@ -115,7 +141,18 @@ export const checkCanPickToday = internalQuery({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .unique();
 
-    const tier: Tier = entitlement?.tier ?? "free";
+    // Check for active bonus days
+    const now = Date.now();
+    const activeBonus = await ctx.db
+      .query("referralRewards")
+      .withIndex("by_user_active", (q) =>
+        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
+      )
+      .first();
+
+    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+    const subscriptionTier: Tier = entitlement?.tier ?? "free";
+    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
     const limit = TIER_LIMITS[tier].picksPerDay;
 
     const today = getTodayDateString();
@@ -272,6 +309,20 @@ export const createDefaultEntitlement = internalMutation({
     }
 
     return { created: false };
+  },
+});
+
+/**
+ * Internal: Get user's entitlement by userId.
+ * Used for referral reward processing.
+ */
+export const getEntitlementByUserId = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userEntitlements")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .unique();
   },
 });
 

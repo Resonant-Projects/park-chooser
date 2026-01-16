@@ -30,6 +30,9 @@ if (convexToken) {
 // Calculate limit status for display
 const isFreeUser = entitlements?.tier === "free";
 const canPick = entitlements?.canPick ?? true;
+
+// Get referral code from cookie (for new user signups)
+const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 ---
 
 <!doctype html>
@@ -148,7 +151,7 @@ const canPick = entitlements?.canPick ?? true;
       </footer>
     </div>
 
-    <script define:vars={{ convexUrl, convexToken, canPick, isFreeUser }}>
+    <script define:vars={{ convexUrl, convexToken, canPick, isFreeUser, referralCode }}>
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
       const limitBanner = document.getElementById("limit-banner");
@@ -193,12 +196,17 @@ const canPick = entitlements?.canPick ?? true;
         }
       }
 
-      // Store user on page load
+      // Store user on page load (with optional referral code)
       async function storeUser() {
         if (!convexToken) return;
 
         try {
-          await fetch(`${convexUrl}/api/mutation`, {
+          const args = {};
+          if (referralCode) {
+            args.referralCode = referralCode;
+          }
+
+          const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -206,10 +214,18 @@ const canPick = entitlements?.canPick ?? true;
             },
             body: JSON.stringify({
               path: "users:store",
-              args: {},
+              args,
               format: "json",
             }),
           });
+
+          // Clear referral cookie after successful store (via API endpoint)
+          if (response.ok && referralCode) {
+            fetch("/api/clear-referral-cookie", {
+              method: "POST",
+              credentials: "include",
+            }).catch(() => {}); // Fire and forget
+          }
         } catch (err) {
           console.error("Failed to store user:", err);
         }

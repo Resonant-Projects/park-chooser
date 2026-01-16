@@ -47,6 +47,7 @@ export interface UserEntitlements {
   canAddPark: boolean;
   canPick: boolean;
   periodEnd?: number;
+  activeBonusDaysUntil?: number | null; // Timestamp when bonus days expire
 }
 
 /**
@@ -248,15 +249,21 @@ export async function getUserParkStats(token: string): Promise<UserParkStats[]> 
 
 /**
  * Store/update user after authentication.
+ * Optionally pass a referral code for new user signups.
  */
-export async function storeUser(token: string): Promise<string> {
+export async function storeUser(token: string, referralCode?: string): Promise<string> {
   const convexUrl = import.meta.env.CONVEX_URL;
 
   if (!convexUrl) {
     throw new Error("CONVEX_URL environment variable is not set");
   }
 
-  return callMutation<string>(convexUrl, "users:store", {}, token);
+  const args: Record<string, unknown> = {};
+  if (referralCode) {
+    args.referralCode = referralCode;
+  }
+
+  return callMutation<string>(convexUrl, "users:store", args, token);
 }
 
 /**
@@ -351,6 +358,96 @@ export function formatResetTime(resetsAt: number): string {
     return `${hours}h ${minutes}m`;
   }
   return `${minutes}m`;
+}
+
+/**
+ * Validate a referral code (no auth required).
+ */
+export interface ReferralValidation {
+  valid: boolean;
+  reason?: string;
+  referrerName?: string;
+}
+
+export async function validateReferralCode(
+  code: string
+): Promise<ReferralValidation> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery<ReferralValidation>(
+    convexUrl,
+    "referralCodes:validateCode",
+    { code }
+  );
+}
+
+/**
+ * User's referral code info.
+ */
+export interface MyReferralCode {
+  code: string;
+  totalReferrals: number;
+  createdAt: number;
+}
+
+/**
+ * Get current user's referral code.
+ */
+export async function getMyReferralCode(
+  token: string
+): Promise<MyReferralCode | null> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery<MyReferralCode | null>(
+    convexUrl,
+    "referralCodes:getMyCode",
+    {},
+    token
+  );
+}
+
+/**
+ * Get or create user's referral code.
+ */
+export async function getOrCreateMyReferralCode(
+  token: string
+): Promise<MyReferralCode> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callMutation<MyReferralCode>(
+    convexUrl,
+    "referralCodes:getOrCreateMyCode",
+    {},
+    token
+  );
+}
+
+/**
+ * User's referral stats.
+ */
+export interface MyReferralStats {
+  totalReferrals: number;
+  pending: number;
+  converted: number;
+  rewarded: number;
+  totalRewardsEarned: number;
+  activeBonusDaysUntil: number | null;
+}
+
+/**
+ * Get current user's referral stats.
+ */
+export async function getMyReferralStats(
+  token: string
+): Promise<MyReferralStats | null> {
+  const convexUrl = import.meta.env.CONVEX_URL;
+  if (!convexUrl) throw new Error("CONVEX_URL not set");
+  return callQuery<MyReferralStats | null>(
+    convexUrl,
+    "referralCodes:getMyReferralStats",
+    {},
+    token
+  );
 }
 
 export { callAction, callQuery, callMutation };

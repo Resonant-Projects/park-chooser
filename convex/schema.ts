@@ -133,4 +133,76 @@ export default defineSchema({
     date: v.string(), // ISO date format: "2026-01-14"
     pickCount: v.number(),
   }).index("by_user_date", ["userId", "date"]),
+
+  // Share links for referrals and park list sharing
+  shareLinks: defineTable({
+    userId: v.id("users"),
+    token: v.string(), // Unique token for the share link
+    type: v.union(v.literal("referral"), v.literal("park_list")),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()), // Optional expiration for park list shares
+    accessCount: v.number(), // Track how many times link was accessed
+  })
+    .index("by_token", ["token"])
+    .index("by_user_type", ["userId", "type"]),
+
+  // Referral codes for user-friendly sharing (e.g., KEITH-A7X2)
+  referralCodes: defineTable({
+    userId: v.id("users"),
+    code: v.string(), // User-friendly code format: USERNAME-XXXX
+    isActive: v.boolean(),
+    totalReferrals: v.number(), // Count of successful referrals
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_code", ["code"]),
+
+  // Track referral relationships
+  referrals: defineTable({
+    referrerId: v.id("users"), // User who shared the code
+    refereeId: v.id("users"), // User who signed up with the code
+    referralCodeId: v.id("referralCodes"),
+    status: v.union(
+      v.literal("pending"), // Signed up, not subscribed
+      v.literal("converted"), // First payment made
+      v.literal("rewarded"), // Referrer got free month
+      v.literal("expired"), // Never converted (90 days)
+      v.literal("fraudulent") // Blocked for suspicious activity
+    ),
+    signupAt: v.number(),
+    convertedAt: v.optional(v.number()),
+    rewardGrantedAt: v.optional(v.number()),
+    // Fraud detection signals
+    signupIpHash: v.optional(v.string()),
+    signupDeviceFingerprint: v.optional(v.string()),
+  })
+    .index("by_referrer", ["referrerId"])
+    .index("by_referee", ["refereeId"])
+    .index("by_status", ["status"]),
+
+  // Track referral rewards (bonus days or discount codes)
+  referralRewards: defineTable({
+    userId: v.id("users"),
+    referralId: v.id("referrals"),
+    rewardType: v.literal("free_month"),
+    grantedAt: v.number(),
+    // Bonus days approach (for existing subscribers)
+    bonusDaysStart: v.optional(v.number()),
+    bonusDaysEnd: v.optional(v.number()), // 30 days after start
+    // Discount code approach (for free-tier referrers)
+    discountCode: v.optional(v.string()),
+    discountUsedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "bonusDaysEnd"]),
+
+  // Fraud detection signals for rate limiting referral abuse
+  referralFraudSignals: defineTable({
+    identifier: v.string(), // IP hash or device fingerprint
+    signalType: v.string(), // "ip_multiple_signups", "device_multiple_signups", etc.
+    count: v.number(),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+  }).index("by_identifier_type", ["identifier", "signalType"]),
 });
