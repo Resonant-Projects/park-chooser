@@ -1,9 +1,4 @@
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
+import { query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -13,11 +8,7 @@ export const getRecentPicks = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 5;
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .take(limit);
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").take(limit);
 
     // Fetch the associated parks
     const picksWithParks = await Promise.all(
@@ -37,11 +28,7 @@ export const getRecentPicks = query({
 export const getLastFivePickIds = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .take(5);
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").take(5);
 
     return picks.map((p) => p.parkId);
   },
@@ -72,11 +59,7 @@ export const recordPick = internalMutation({
 export const listAll = query({
   args: {},
   handler: async (ctx) => {
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .collect();
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").collect();
 
     const picksWithParks = await Promise.all(
       picks.map(async (pick) => {
@@ -88,4 +71,3 @@ export const listAll = query({
     return picksWithParks;
   },
 });
-

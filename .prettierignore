@@ -1,0 +1,6 @@
+dist/
+.astro/
+node_modules/
+convex/_generated/
+.vercel/
+bun.lockb

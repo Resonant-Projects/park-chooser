@@ -56,10 +56,7 @@ export const SRQ_PARKS: ParkEntry[] = [
 /**
  * Search for a place using Text Search API (New) and return the place ID.
  */
-export async function searchPlace(
-  query: string,
-  apiKey: string
-): Promise<string | null> {
+export async function searchPlace(query: string, apiKey: string): Promise<string | null> {
   const url = "https://places.googleapis.com/v1/places:searchText";
 
   try {
@@ -128,9 +125,7 @@ export async function fetchPlaceDetails(
       placeId: data.id || placeId,
       name: data.displayName?.text || "Unknown Park",
       address: data.formattedAddress,
-      photoRefs: (data.photos || [])
-        .slice(0, 5)
-        .map((p: { name: string }) => p.name),
+      photoRefs: (data.photos || []).slice(0, 5).map((p: { name: string }) => p.name),
     };
   } catch (error) {
     console.error(`Error fetching place details for ${placeId}:`, error);
@@ -142,11 +137,7 @@ export async function fetchPlaceDetails(
  * Generate a photo URL from a Places API photo reference.
  * The photo name format from Places API (New) is: places/{placeId}/photos/{photoRef}
  */
-export function getPhotoUrl(
-  photoName: string,
-  apiKey: string,
-  maxWidth = 800
-): string {
+export function getPhotoUrl(photoName: string, apiKey: string, maxWidth = 800): string {
   // Places API (New) photo media endpoint
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${apiKey}`;
 }
@@ -166,9 +157,7 @@ export async function getTravelTime(
   destinationPlaceId: string,
   apiKey: string
 ): Promise<TravelTimeResult | null> {
-  const url = new URL(
-    "https://maps.googleapis.com/maps/api/distancematrix/json"
-  );
+  const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
   url.searchParams.set("origins", `${originLat},${originLng}`);
   url.searchParams.set("destinations", `place_id:${destinationPlaceId}`);
   url.searchParams.set("mode", "driving");
@@ -270,12 +259,8 @@ export async function searchNearbyParks(
 
     return data.places
       .filter(
-        (place: {
-          id: string;
-          location?: { latitude: number; longitude: number };
-        }) =>
-          place.location?.latitude !== undefined &&
-          place.location?.longitude !== undefined
+        (place: { id: string; location?: { latitude: number; longitude: number } }) =>
+          place.location?.latitude !== undefined && place.location?.longitude !== undefined
       )
       .map(
         (place: {
@@ -291,9 +276,7 @@ export async function searchNearbyParks(
           address: place.formattedAddress,
           lat: place.location.latitude,
           lng: place.location.longitude,
-          photoRefs: (place.photos || [])
-            .slice(0, 5)
-            .map((p: { name: string }) => p.name),
+          photoRefs: (place.photos || []).slice(0, 5).map((p: { name: string }) => p.name),
           primaryType: place.primaryType,
         })
       );
@@ -318,9 +301,7 @@ export function calculateDistanceMiles(
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -329,11 +310,7 @@ export function calculateDistanceMiles(
  * Generate a simple geohash for caching nearby search results.
  * Rounds coordinates to create geographic cache cells (~1 mile precision at default).
  */
-export function simpleGeohash(
-  lat: number,
-  lng: number,
-  precision: number = 2
-): string {
+export function simpleGeohash(lat: number, lng: number, precision: number = 2): string {
   const latRounded = lat.toFixed(precision);
   const lngRounded = lng.toFixed(precision);
   return `${latRounded},${lngRounded}`;

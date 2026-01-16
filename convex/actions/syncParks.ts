@@ -3,12 +3,7 @@
 import { action } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import {
-  fetchPlaceDetails,
-  searchPlace,
-  SRQ_PARKS,
-  type PlaceDetails,
-} from "../lib/googleMaps";
+import { fetchPlaceDetails, searchPlace, SRQ_PARKS, type PlaceDetails } from "../lib/googleMaps";
 
 // Sync interval: 24 hours
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -31,11 +26,7 @@ export const syncParks = action({
     const syncState = await ctx.runQuery(internal.parks.getSyncState);
     const now = Date.now();
 
-    if (
-      !args.force &&
-      syncState &&
-      now - syncState.lastSyncedAt < SYNC_INTERVAL_MS
-    ) {
+    if (!args.force && syncState && now - syncState.lastSyncedAt < SYNC_INTERVAL_MS) {
       console.log("Skipping sync - last synced recently");
       return { synced: false, count: 0 };
     }
@@ -63,9 +54,7 @@ export const syncParks = action({
 
       if (details) {
         parks.push(details);
-        console.log(
-          `Fetched details for: ${details.name} (${details.photoRefs.length} photos)`
-        );
+        console.log(`Fetched details for: ${details.name} (${details.photoRefs.length} photos)`);
       }
 
       // Small delay to avoid rate limiting

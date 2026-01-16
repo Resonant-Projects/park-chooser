@@ -4,11 +4,7 @@ import { action } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { getPhotoUrl } from "../lib/googleMaps";
-import {
-  ENTITLEMENT_ERRORS,
-  createLimitError,
-  getNextMidnightUTC,
-} from "../lib/entitlements";
+import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
 
 export interface PickedPark {
   _id: string;
@@ -70,25 +66,21 @@ export const pickPark = action({
     }
 
     // Get all parks in user's list (cast and filter nulls)
-    const rawUserParks = await ctx.runQuery(
-      internal.userParks.getUserParksWithDetails,
-      { userId: user._id }
-    );
+    const rawUserParks = await ctx.runQuery(internal.userParks.getUserParksWithDetails, {
+      userId: user._id,
+    });
     const userParks: UserParkWithDetails[] = rawUserParks.filter(
       (p: UserParkWithDetails | null): p is UserParkWithDetails => p !== null
     );
 
     if (userParks.length === 0) {
-      throw new Error(
-        "No parks in your list. Add parks from the catalog to get started."
-      );
+      throw new Error("No parks in your list. Add parks from the catalog to get started.");
     }
 
     // Get the last 5 picked park IDs for this user
-    const lastFiveIds = await ctx.runQuery(
-      internal.userParks.getLastFivePickIdsForUser,
-      { userId: user._id }
-    );
+    const lastFiveIds = await ctx.runQuery(internal.userParks.getLastFivePickIdsForUser, {
+      userId: user._id,
+    });
     const lastFiveSet = new Set(lastFiveIds.map((id: Id<"parks">) => id.toString()));
 
     // Filter out recently picked parks
@@ -97,7 +89,8 @@ export const pickPark = action({
     );
 
     // If all parks have been picked recently, allow picking from all
-    const poolToPickFrom: UserParkWithDetails[] = eligibleParks.length > 0 ? eligibleParks : userParks;
+    const poolToPickFrom: UserParkWithDetails[] =
+      eligibleParks.length > 0 ? eligibleParks : userParks;
 
     // Randomly select a park
     const randomIndex = Math.floor(Math.random() * poolToPickFrom.length);

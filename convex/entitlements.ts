@@ -1,15 +1,6 @@
-import {
-  query,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
-import { internal } from "./_generated/api";
+import { query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import {
-  TIER_LIMITS,
-  type Tier,
-  getTodayDateString,
-} from "./lib/entitlements";
+import { TIER_LIMITS, type Tier, getTodayDateString } from "./lib/entitlements";
 
 /**
  * Get user's current entitlements, limits, and usage.
@@ -23,9 +14,7 @@ export const getUserEntitlements = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (!user) return null;
@@ -39,12 +28,11 @@ export const getUserEntitlements = query({
     const now = Date.now();
     const activeBonus = await ctx.db
       .query("referralRewards")
-      .withIndex("by_user_active", (q) =>
-        q.eq("userId", user._id).gt("bonusDaysEnd", now)
-      )
+      .withIndex("by_user_active", (q) => q.eq("userId", user._id).gt("bonusDaysEnd", now))
       .first();
 
-    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+    const hasActiveBonusDays =
+      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
 
     // Determine effective tier: premium if subscribed OR has active bonus days
     const subscriptionTier: Tier = entitlement?.tier ?? "free";
@@ -61,9 +49,7 @@ export const getUserEntitlements = query({
     const today = getTodayDateString();
     const dailyPicks = await ctx.db
       .query("dailyPickCounts")
-      .withIndex("by_user_date", (q) =>
-        q.eq("userId", user._id).eq("date", today)
-      )
+      .withIndex("by_user_date", (q) => q.eq("userId", user._id).eq("date", today))
       .unique();
 
     const currentParks = userParks.length;
@@ -105,12 +91,11 @@ export const checkCanAddPark = internalQuery({
     const now = Date.now();
     const activeBonus = await ctx.db
       .query("referralRewards")
-      .withIndex("by_user_active", (q) =>
-        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
-      )
+      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
       .first();
 
-    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+    const hasActiveBonusDays =
+      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
     const subscriptionTier: Tier = entitlement?.tier ?? "free";
     const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
     const limit = TIER_LIMITS[tier].maxParks;
@@ -145,12 +130,11 @@ export const checkCanPickToday = internalQuery({
     const now = Date.now();
     const activeBonus = await ctx.db
       .query("referralRewards")
-      .withIndex("by_user_active", (q) =>
-        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
-      )
+      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
       .first();
 
-    const hasActiveBonusDays = activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
+    const hasActiveBonusDays =
+      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
     const subscriptionTier: Tier = entitlement?.tier ?? "free";
     const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
     const limit = TIER_LIMITS[tier].picksPerDay;
@@ -158,9 +142,7 @@ export const checkCanPickToday = internalQuery({
     const today = getTodayDateString();
     const dailyPicks = await ctx.db
       .query("dailyPickCounts")
-      .withIndex("by_user_date", (q) =>
-        q.eq("userId", args.userId).eq("date", today)
-      )
+      .withIndex("by_user_date", (q) => q.eq("userId", args.userId).eq("date", today))
       .unique();
 
     const currentCount = dailyPicks?.pickCount ?? 0;
@@ -184,9 +166,7 @@ export const incrementDailyPickCount = internalMutation({
 
     const existing = await ctx.db
       .query("dailyPickCounts")
-      .withIndex("by_user_date", (q) =>
-        q.eq("userId", args.userId).eq("date", today)
-      )
+      .withIndex("by_user_date", (q) => q.eq("userId", args.userId).eq("date", today))
       .unique();
 
     if (existing) {
@@ -218,25 +198,22 @@ export const upsertFromClerkWebhook = internalMutation({
     // Find user by Clerk token identifier
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", args.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
       .unique();
 
     if (!user) {
       // Truncate token identifier to avoid logging PII
-      const truncatedId = args.tokenIdentifier.length > 16
-        ? `${args.tokenIdentifier.slice(0, 8)}...${args.tokenIdentifier.slice(-4)}`
-        : "[redacted]";
+      const truncatedId =
+        args.tokenIdentifier.length > 16
+          ? `${args.tokenIdentifier.slice(0, 8)}...${args.tokenIdentifier.slice(-4)}`
+          : "[redacted]";
       console.warn(`User not found for token identifier: ${truncatedId}`);
       return { success: false, reason: "user_not_found" };
     }
 
     // Determine tier from plan ID
     // Configure plan IDs in Clerk dashboard with "premium" in the ID for premium tier
-    const tier: Tier = args.clerkPlanId.toLowerCase().includes("premium")
-      ? "premium"
-      : "free";
+    const tier: Tier = args.clerkPlanId.toLowerCase().includes("premium") ? "premium" : "free";
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";

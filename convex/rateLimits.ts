@@ -16,9 +16,7 @@ export const checkRateLimit = query({
   handler: async (ctx, { identifier, action }) => {
     const record = await ctx.db
       .query("rateLimits")
-      .withIndex("by_identifier_action", (q) =>
-        q.eq("identifier", identifier).eq("action", action)
-      )
+      .withIndex("by_identifier_action", (q) => q.eq("identifier", identifier).eq("action", action))
       .first();
 
     if (!record) {
@@ -55,9 +53,7 @@ export const incrementRateLimit = mutation({
 
     const record = await ctx.db
       .query("rateLimits")
-      .withIndex("by_identifier_action", (q) =>
-        q.eq("identifier", identifier).eq("action", action)
-      )
+      .withIndex("by_identifier_action", (q) => q.eq("identifier", identifier).eq("action", action))
       .first();
 
     if (!record) {

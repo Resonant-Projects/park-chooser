@@ -1,16 +1,16 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
-import clerk from '@clerk/astro'
-import tailwindcss from '@tailwindcss/vite';
-import vercel from '@astrojs/vercel';
-import sitemap from '@astrojs/sitemap';
+import { defineConfig } from "astro/config";
+import clerk from "@clerk/astro";
+import tailwindcss from "@tailwindcss/vite";
+import vercel from "@astrojs/vercel";
+import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
-  site: process.env.SITE_URL || 'https://todayspark.app',
-  output: 'server',
+  site: process.env.SITE_URL || "https://todayspark.app",
+  output: "server",
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
   },
   integrations: [
     clerk(),
@@ -18,19 +18,19 @@ export default defineConfig({
       filter: (page) => {
         // Exclude auth, protected, and API pages from sitemap
         const excludePatterns = [
-          '/sign-in',
-          '/sign-up',
-          '/stats',
-          '/manage',
-          '/discover',
-          '/account',
-          '/help/feedback',
-          '/api/',
-          '/r/',
+          "/sign-in",
+          "/sign-up",
+          "/stats",
+          "/manage",
+          "/discover",
+          "/account",
+          "/help/feedback",
+          "/api/",
+          "/r/",
         ];
-        return !excludePatterns.some(pattern => page.includes(pattern));
+        return !excludePatterns.some((pattern) => page.includes(pattern));
       },
     }),
   ],
-  adapter: vercel()
+  adapter: vercel(),
 });

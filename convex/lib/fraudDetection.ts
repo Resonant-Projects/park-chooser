@@ -36,9 +36,7 @@ export async function checkSelfReferral(
 
   // Check if any recent referral came from same IP
   if (signupIpHash) {
-    const sameIpReferrals = referrerReferrals.filter(
-      (r) => r.signupIpHash === signupIpHash
-    );
+    const sameIpReferrals = referrerReferrals.filter((r) => r.signupIpHash === signupIpHash);
     if (sameIpReferrals.length > 0) {
       return { isSuspicious: true, reason: "ip_match_existing_referral" };
     }
@@ -95,9 +93,7 @@ export async function checkAndUpdateFraudSignals(
 
     // Check limits based on signal type
     const limit =
-      signalType === "ip_signup"
-        ? LIMITS.maxSignupsPerIp7Days
-        : LIMITS.maxSignupsPerDevice7Days;
+      signalType === "ip_signup" ? LIMITS.maxSignupsPerIp7Days : LIMITS.maxSignupsPerDevice7Days;
 
     return { blocked: newCount > limit, count: newCount };
   }

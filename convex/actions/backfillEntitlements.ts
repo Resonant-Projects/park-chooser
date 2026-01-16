@@ -36,9 +36,7 @@ export const backfillEntitlements = internalAction({
       internal.backfillHelpers.getUsersWithoutEntitlements
     );
 
-    console.log(
-      `Found ${usersWithoutEntitlements.length} users without entitlements`
-    );
+    console.log(`Found ${usersWithoutEntitlements.length} users without entitlements`);
 
     if (usersWithoutEntitlements.length === 0) {
       return {
@@ -54,10 +52,9 @@ export const backfillEntitlements = internalAction({
 
     for (const user of usersWithoutEntitlements) {
       try {
-        const result = await ctx.runMutation(
-          internal.entitlements.createDefaultEntitlement,
-          { userId: user._id }
-        );
+        const result = await ctx.runMutation(internal.entitlements.createDefaultEntitlement, {
+          userId: user._id,
+        });
 
         if (result.created) {
           created++;

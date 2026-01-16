@@ -62,6 +62,7 @@ syncState (metadata):
 ### Key Constraint
 
 **No park repeats within the last 5 selections.** The `pickPark` action:
+
 1. Queries all parks
 2. Gets the last 5 picked park IDs
 3. Filters out recently picked parks
@@ -161,11 +162,13 @@ syncState (metadata):
 ### Normal Development
 
 Terminal 1:
+
 ```bash
 npx convex dev
 ```
 
 Terminal 2:
+
 ```bash
 bun dev
 ```
@@ -194,11 +197,13 @@ Use the Convex dashboard to edit a park's `customName` field. This displays abov
 ### Google APIs Required
 
 **Places API (New)** - for park details and photos:
+
 - Photo references are full resource names: `places/{placeId}/photos/{photoRef}`
 - Use `X-Goog-FieldMask` header to specify requested fields
 - Media endpoint: `https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={width}&key={apiKey}`
 
 **Distance Matrix API** - for travel time calculation:
+
 - Calculates driving duration/distance from user location to park
 - Uses imperial units (miles, minutes)
 - Requires user to grant browser geolocation permission
@@ -206,6 +211,7 @@ Use the Convex dashboard to edit a park's `customName` field. This displays abov
 ### Convex HTTP Calls
 
 Both server-side (Astro) and client-side (browser) call Convex actions/queries via HTTP:
+
 - **Server**: `/api/action` and `/api/query` endpoints (used in `convexClient.ts`)
 - **Client**: Same endpoints from `index.astro` inline script
 - No authentication needed for dev/preview (Convex dev mode is open)
@@ -228,6 +234,7 @@ The photo URL is generated on-demand in `pickPark` action (not stored). This ens
 ## Stats Page
 
 The `/stats` page displays all parks in a table sorted by visit count (highest first). Features:
+
 - Uses Starwind Table components for consistent styling
 - Shows total visit count in header badge
 - Parks with visits are highlighted with gold background

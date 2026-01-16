@@ -1,7 +1,4 @@
-import {
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -101,7 +98,9 @@ export const markReferralRewarded = internalMutation({
       throw new Error("Referral not found");
     }
     if (referral.status !== "converted") {
-      throw new Error(`Cannot mark referral as rewarded: current status is "${referral.status}", expected "converted"`);
+      throw new Error(
+        `Cannot mark referral as rewarded: current status is "${referral.status}", expected "converted"`
+      );
     }
 
     const now = Date.now();

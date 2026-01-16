@@ -1,16 +1,6 @@
-import {
-  query,
-  mutation,
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import {
-  TIER_LIMITS,
-  type Tier,
-  ENTITLEMENT_ERRORS,
-  createLimitError,
-} from "./lib/entitlements";
+import { TIER_LIMITS, type Tier, ENTITLEMENT_ERRORS, createLimitError } from "./lib/entitlements";
 
 /**
  * List all parks in the current user's list with merged park details.
@@ -117,9 +107,7 @@ export const addParkToUserList = mutation({
     // Check if user already has this park
     const existing = await ctx.db
       .query("userParks")
-      .withIndex("by_user_park", (q) =>
-        q.eq("userId", user._id).eq("parkId", args.parkId)
-      )
+      .withIndex("by_user_park", (q) => q.eq("userId", user._id).eq("parkId", args.parkId))
       .unique();
 
     if (existing) {
@@ -163,9 +151,7 @@ export const removeParkFromUserList = mutation({
 
     const userPark = await ctx.db
       .query("userParks")
-      .withIndex("by_user_park", (q) =>
-        q.eq("userId", user._id).eq("parkId", args.parkId)
-      )
+      .withIndex("by_user_park", (q) => q.eq("userId", user._id).eq("parkId", args.parkId))
       .unique();
 
     if (!userPark) {
@@ -369,9 +355,7 @@ export const incrementUserParkVisit = internalMutation({
   handler: async (ctx, args) => {
     const userPark = await ctx.db
       .query("userParks")
-      .withIndex("by_user_park", (q) =>
-        q.eq("userId", args.userId).eq("parkId", args.parkId)
-      )
+      .withIndex("by_user_park", (q) => q.eq("userId", args.userId).eq("parkId", args.parkId))
       .unique();
 
     if (userPark) {
@@ -399,9 +383,7 @@ export const seedUserParksInternal = internalMutation({
       // Check if user already has this park
       const existing = await ctx.db
         .query("userParks")
-        .withIndex("by_user_park", (q) =>
-          q.eq("userId", args.userId).eq("parkId", parkId)
-        )
+        .withIndex("by_user_park", (q) => q.eq("userId", args.userId).eq("parkId", parkId))
         .unique();
 
       if (!existing) {

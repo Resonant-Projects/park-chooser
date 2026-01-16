@@ -38,31 +38,27 @@ http.route({
             return new Response("Missing user_id", { status: 400 });
           }
 
-          const result = await ctx.runMutation(
-            internal.entitlements.upsertFromClerkWebhook,
-            {
-              tokenIdentifier,
-              clerkSubscriptionId: data.subscription_id,
-              clerkSubscriptionItemId: data.id,
-              clerkPlanId: data.plan_id,
-              status: data.status,
-              periodStart: data.current_period_start
-                ? new Date(data.current_period_start).getTime()
-                : undefined,
-              periodEnd: data.current_period_end
-                ? new Date(data.current_period_end).getTime()
-                : undefined,
-            }
-          );
+          const result = await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+            tokenIdentifier,
+            clerkSubscriptionId: data.subscription_id,
+            clerkSubscriptionItemId: data.id,
+            clerkPlanId: data.plan_id,
+            status: data.status,
+            periodStart: data.current_period_start
+              ? new Date(data.current_period_start).getTime()
+              : undefined,
+            periodEnd: data.current_period_end
+              ? new Date(data.current_period_end).getTime()
+              : undefined,
+          });
 
           console.log("Entitlement sync result:", result);
 
           // Process referral conversion for new active subscriptions
           if (data.status === "active") {
-            const user = await ctx.runQuery(
-              internal.users.getUserByTokenInternal,
-              { tokenIdentifier }
-            );
+            const user = await ctx.runQuery(internal.users.getUserByTokenInternal, {
+              tokenIdentifier,
+            });
 
             if (user) {
               const referralResult = await ctx.runAction(
@@ -116,9 +112,7 @@ http.route({
 /**
  * Validate Svix webhook signature.
  */
-async function validateRequest(
-  req: Request
-): Promise<ClerkWebhookEvent | null> {
+async function validateRequest(req: Request): Promise<ClerkWebhookEvent | null> {
   const payloadString = await req.text();
 
   const svixId = req.headers.get("svix-id");

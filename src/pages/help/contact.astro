@@ -37,7 +37,7 @@ const convexToken = await getToken({ template: "convex" });
       </header>
 
       <main class="flex-1">
-        <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
           <CardContent class="p-6">
             <form id="contact-form" class="space-y-4">
               <!-- Honeypot field (hidden from users, catches bots) -->
@@ -47,7 +47,7 @@ const convexToken = await getToken({ template: "convex" });
               </div>
 
               <div>
-                <label for="email" class="block text-sm font-medium text-cream mb-1">
+                <label for="email" class="text-cream mb-1 block text-sm font-medium">
                   Email Address <span class="text-sunset">*</span>
                 </label>
                 <input
@@ -55,20 +55,20 @@ const convexToken = await getToken({ template: "convex" });
                   id="email"
                   name="email"
                   required
-                  class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-cream placeholder-mist/60 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold"
+                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
                   placeholder="your@email.com"
                 />
               </div>
 
               <div>
-                <label for="subject" class="block text-sm font-medium text-cream mb-1">
+                <label for="subject" class="text-cream mb-1 block text-sm font-medium">
                   Subject <span class="text-sunset">*</span>
                 </label>
                 <select
                   id="subject"
                   name="subject"
                   required
-                  class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-cream focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold"
+                  class="text-cream focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
                 >
                   <option value="" disabled selected>Select a topic...</option>
                   <option value="bug">Bug Report</option>
@@ -79,7 +79,7 @@ const convexToken = await getToken({ template: "convex" });
               </div>
 
               <div>
-                <label for="message" class="block text-sm font-medium text-cream mb-1">
+                <label for="message" class="text-cream mb-1 block text-sm font-medium">
                   Message <span class="text-sunset">*</span>
                 </label>
                 <textarea
@@ -89,48 +89,40 @@ const convexToken = await getToken({ template: "convex" });
                   minlength="20"
                   maxlength="2000"
                   rows="5"
-                  class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-cream placeholder-mist/60 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold resize-none"
-                  placeholder="Please describe your issue or question in detail..."
-                ></textarea>
-                <p class="text-xs text-mist mt-1">
+                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+                  placeholder="Please describe your issue or question in detail..."></textarea>
+                <p class="text-mist mt-1 text-xs">
                   <span id="char-count">0</span>/2000 characters (minimum 20)
                 </p>
               </div>
 
-              <div id="form-error" class="hidden text-sunset text-sm"></div>
+              <div id="form-error" class="text-sunset hidden text-sm"></div>
 
-              <Button
-                type="submit"
-                id="submit-btn"
-                variant="primary"
-                class="w-full"
-              >
+              <Button type="submit" id="submit-btn" variant="primary" class="w-full">
                 <span class="button-text">Send Message</span>
                 <Spinner class="button-spinner hidden size-5" />
               </Button>
             </form>
 
             <!-- Success state (hidden initially) -->
-            <div id="success-state" class="hidden text-center py-6">
-              <div class="text-4xl mb-4">✅</div>
-              <h2 class="font-[Fraunces] text-xl font-semibold text-cream mb-2">Message Sent!</h2>
+            <div id="success-state" class="hidden py-6 text-center">
+              <div class="mb-4 text-4xl">✅</div>
+              <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Message Sent!</h2>
               <p class="text-mist mb-4">We've received your message and will respond soon.</p>
-              <p class="text-sm text-mist">
-                Your reference ID: <span id="reference-id" class="font-mono text-gold"></span>
+              <p class="text-mist text-sm">
+                Your reference ID: <span id="reference-id" class="text-gold font-mono"></span>
               </p>
-              <p class="text-xs text-mist mt-4">Save this ID to track your request.</p>
+              <p class="text-mist mt-4 text-xs">Save this ID to track your request.</p>
               <div class="mt-6">
-                <Button as="a" href="/help" variant="secondary">
-                  Back to Help Center
-                </Button>
+                <Button as="a" href="/help" variant="secondary"> Back to Help Center </Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </main>
 
-      <footer class="mt-8 pt-4 border-t border-white/10">
-        <nav class="flex justify-center gap-6 text-sm text-mist">
+      <footer class="mt-8 border-t border-white/10 pt-4">
+        <nav class="text-mist flex justify-center gap-6 text-sm">
           <a href="/" class="hover:text-cream transition-colors">Home</a>
           <a href="/about" class="hover:text-cream transition-colors">About</a>
           <a href="/help" class="hover:text-cream transition-colors">Help</a>
@@ -169,7 +161,10 @@ const convexToken = await getToken({ template: "convex" });
           const encoder = new TextEncoder();
           const buffer = await crypto.subtle.digest("SHA-256", encoder.encode(data));
           const hashArray = Array.from(new Uint8Array(buffer));
-          return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+          return hashArray
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("")
+            .slice(0, 16);
         } catch {
           return "anonymous";
         }
@@ -241,7 +236,6 @@ const convexToken = await getToken({ template: "convex" });
           form.classList.add("hidden");
           referenceIdSpan.textContent = result.value.referenceId;
           successState.classList.remove("hidden");
-
         } catch (err) {
           errorDiv.textContent = err.message || "Something went wrong. Please try again.";
           errorDiv.classList.remove("hidden");

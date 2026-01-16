@@ -1,7 +1,4 @@
-import {
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -20,9 +17,7 @@ export const grantBonusDays = internalMutation({
     // Check for existing active bonus days to stack
     const existingBonus = await ctx.db
       .query("referralRewards")
-      .withIndex("by_user_active", (q) =>
-        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
-      )
+      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
       .first();
 
     let bonusDaysStart: number;
@@ -125,9 +120,7 @@ export const hasActiveBonusDays = internalQuery({
 
     const activeBonus = await ctx.db
       .query("referralRewards")
-      .withIndex("by_user_active", (q) =>
-        q.eq("userId", args.userId).gt("bonusDaysEnd", now)
-      )
+      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
       .first();
 
     if (activeBonus && activeBonus.bonusDaysEnd) {
@@ -151,10 +144,7 @@ export const getUnusedDiscountCodes = internalQuery({
       .query("referralRewards")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .filter((q) =>
-        q.and(
-          q.neq(q.field("discountCode"), undefined),
-          q.eq(q.field("discountUsedAt"), undefined)
-        )
+        q.and(q.neq(q.field("discountCode"), undefined), q.eq(q.field("discountUsedAt"), undefined))
       )
       .collect();
 

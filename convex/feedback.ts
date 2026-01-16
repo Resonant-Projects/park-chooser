@@ -11,10 +11,7 @@ export const submit = mutation({
     improvementsText: v.optional(v.string()),
     featureRequestsText: v.optional(v.string()),
   },
-  handler: async (
-    ctx,
-    { rating, likesText, improvementsText, featureRequestsText }
-  ) => {
+  handler: async (ctx, { rating, likesText, improvementsText, featureRequestsText }) => {
     // Verify the caller is authenticated
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -24,9 +21,7 @@ export const submit = mutation({
     // Get user from database
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (!user) {

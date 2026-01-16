@@ -43,10 +43,7 @@ try {
   console.error("Error loading stats:", e);
 }
 
-const totalVisits = parks.reduce(
-  (sum, park) => sum + (park.visitCount ?? 0),
-  0
-);
+const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0);
 ---
 
 <!doctype html>
@@ -66,7 +63,7 @@ const totalVisits = parks.reduce(
   <body>
     <div class="container">
       <header>
-        <div class="flex justify-between items-start mb-2">
+        <div class="mb-2 flex items-start justify-between">
           <div>
             <h1 class="title">Your Park Stats</h1>
             <p class="subtitle">Track your park adventures</p>
@@ -77,27 +74,33 @@ const totalVisits = parks.reduce(
         </div>
       </header>
 
-      <main class="flex-1 flex flex-col">
+      <main class="flex flex-1 flex-col">
         <!-- Navigation header -->
-        <Card class="bg-white/10 backdrop-blur-xl border-white/15 mb-4">
-          <CardContent class="flex justify-between items-center p-4">
-            <a href="/" class="text-[0.9375rem] font-semibold text-gold hover:text-cream transition-colors">← Back to Today's Park</a>
-            <Badge variant="outline" class="bg-white/10 text-mist border-none">{totalVisits} visits</Badge>
+        <Card class="mb-4 border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="flex items-center justify-between p-4">
+            <a
+              href="/"
+              class="text-gold hover:text-cream text-[0.9375rem] font-semibold transition-colors"
+              >← Back to Today's Park</a
+            >
+            <Badge variant="outline" class="text-mist border-none bg-white/10"
+              >{totalVisits} visits</Badge
+            >
           </CardContent>
         </Card>
 
         {
           error ? (
-            <Card class="bg-white/10 backdrop-blur-xl border-white/15">
+            <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
               <CardContent class="p-10 text-center">
-                <div class="text-4xl mb-4">⚠️</div>
-                <p class="text-lg text-cream font-medium">{error}</p>
+                <div class="mb-4 text-4xl">⚠️</div>
+                <p class="text-cream text-lg font-medium">{error}</p>
               </CardContent>
             </Card>
           ) : parks.length === 0 ? (
-            <Card class="bg-white/10 backdrop-blur-xl border-white/15">
-              <CardContent class="py-12 px-8 text-center">
-                <div class="text-4xl mb-4">🌲</div>
+            <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+              <CardContent class="px-8 py-12 text-center">
+                <div class="mb-4 text-4xl">🌲</div>
                 <p class="text-mist">No parks in your list yet. Pick some parks to get started!</p>
               </CardContent>
             </Card>
@@ -105,9 +108,11 @@ const totalVisits = parks.reduce(
             <Card class="overflow-hidden">
               <Table class="table-fixed">
                 <TableHeader>
-                  <TableRow class="bg-mist/30 border-b border-sage/30">
-                    <TableHead class="text-forest font-semibold text-sm py-3 px-3">Park</TableHead>
-                    <TableHead class="text-forest font-semibold text-sm py-3 px-2 text-center w-14">Visits</TableHead>
+                  <TableRow class="bg-mist/30 border-sage/30 border-b">
+                    <TableHead class="text-forest px-3 py-3 text-sm font-semibold">Park</TableHead>
+                    <TableHead class="text-forest w-14 px-2 py-3 text-center text-sm font-semibold">
+                      Visits
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -115,25 +120,25 @@ const totalVisits = parks.reduce(
                     const hasVisits = (park.visitCount ?? 0) > 0;
                     return (
                       <TableRow
-                        class={`border-b border-sage/20 transition-colors animate-card-appear ${hasVisits ? 'bg-gold/5' : ''}`}
+                        class={`border-sage/20 animate-card-appear border-b transition-colors ${hasVisits ? "bg-gold/5" : ""}`}
                         style={`animation-delay: ${index * 0.03}s`}
                       >
-                        <TableCell class="py-3 px-3">
-                          <div class="font-[Fraunces] font-semibold text-forest text-[0.9375rem] leading-tight truncate">
+                        <TableCell class="px-3 py-3">
+                          <div class="text-forest truncate font-[Fraunces] text-[0.9375rem] leading-tight font-semibold">
                             {park.name}
                           </div>
                           {park.address && (
-                            <div class="text-xs text-moss mt-0.5 truncate">
-                              {park.address}
-                            </div>
+                            <div class="text-moss mt-0.5 truncate text-xs">{park.address}</div>
                           )}
                         </TableCell>
-                        <TableCell class="text-center align-top py-3 px-2 w-14">
+                        <TableCell class="w-14 px-2 py-3 text-center align-top">
                           <div class="flex flex-col items-center">
-                            <span class={`font-[Fraunces] text-lg font-bold ${hasVisits ? 'text-sunset' : 'text-sage'}`}>
+                            <span
+                              class={`font-[Fraunces] text-lg font-bold ${hasVisits ? "text-sunset" : "text-sage"}`}
+                            >
                               {park.visitCount ?? 0}
                             </span>
-                            <span class="text-[0.5625rem] text-sage uppercase tracking-wide">
+                            <span class="text-sage text-[0.5625rem] tracking-wide uppercase">
                               visits
                             </span>
                           </div>
@@ -149,8 +154,10 @@ const totalVisits = parks.reduce(
       </main>
 
       <footer class="mt-8 text-center">
-        <p class="text-sm text-mist opacity-80">Stats update each time you open a park in Google Maps.</p>
-        <nav class="flex justify-center gap-6 text-sm text-mist mt-4 pt-4 border-t border-white/10">
+        <p class="text-mist text-sm opacity-80">
+          Stats update each time you open a park in Google Maps.
+        </p>
+        <nav class="text-mist mt-4 flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
           <a href="/about" class="hover:text-cream transition-colors">About</a>
           <a href="/help" class="hover:text-cream transition-colors">Help</a>
           <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>

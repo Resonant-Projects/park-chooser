@@ -42,7 +42,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Today's Park - Random Park Picker for Families</title>
-    <meta name="description" content="Discover your next park adventure. Random park picker for families exploring local parks." />
+    <meta
+      name="description"
+      content="Discover your next park adventure. Random park picker for families exploring local parks."
+    />
     <!-- Font preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -67,7 +70,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
   <body>
     <div class="container">
       <header>
-        <div class="flex justify-between items-start mb-2">
+        <div class="mb-2 flex items-start justify-between">
           <div>
             <h1 class="title">Today's Park</h1>
             <p class="subtitle">A random adventure awaits</p>
@@ -84,7 +87,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
                     width="16"
                     height="16"
                   >
-                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z" />
+                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z"></path>
                   </svg>
                 </UserButton.Link>
               </UserButton.MenuItems>
@@ -94,31 +97,36 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       </header>
 
       {/* Upgrade prompt when limit reached */}
-      {!canPick && isFreeUser && (
-        <div id="limit-banner" class="bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center">
-          <p class="text-cream font-medium mb-2">You've used your daily pick!</p>
-          <p class="text-mist text-sm mb-3">Upgrade to Premium for unlimited picks and parks.</p>
-          <a
-            href="/pricing"
-            class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+      {
+        !canPick && isFreeUser && (
+          <div
+            id="limit-banner"
+            class="from-sunset/20 to-gold/20 border-sunset/30 mb-4 rounded-2xl border bg-gradient-to-r p-4 text-center"
           >
-            <span>⭐</span>
-            <span>Upgrade to Premium</span>
-          </a>
-        </div>
-      )}
+            <p class="text-cream mb-2 font-medium">You've used your daily pick!</p>
+            <p class="text-mist mb-3 text-sm">Upgrade to Premium for unlimited picks and parks.</p>
+            <a
+              href="/pricing"
+              class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold transition-colors"
+            >
+              <span>⭐</span>
+              <span>Upgrade to Premium</span>
+            </a>
+          </div>
+        )
+      }
 
       <main id="park-display">
-        <Card class="bg-white/10 backdrop-blur-xl border border-white/15 text-center w-full">
-          <CardContent class="py-12 px-8">
-            <div class="text-5xl mb-4">🌲</div>
-            <CardTitle class="font-[Fraunces] text-2xl text-cream mb-3">
+        <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
+          <CardContent class="px-8 py-12">
+            <div class="mb-4 text-5xl">🌲</div>
+            <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
               Ready for an adventure?
             </CardTitle>
             <CardDescription class="text-mist mb-6">
               Click below to discover your park for today!
             </CardDescription>
-            <div class="text-3xl text-gold animate-bounce">↓</div>
+            <div class="text-gold animate-bounce text-3xl">↓</div>
           </CardContent>
         </Card>
       </main>
@@ -128,7 +136,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           id="pick-again"
           variant="primary"
           size="toddler"
-          class="rounded-full shadow-2xl hover:shadow-3xl transition-all hover:-translate-y-1 active:scale-95 active:shadow-lg"
+          class="hover:shadow-3xl rounded-full shadow-2xl transition-all hover:-translate-y-1 active:scale-95 active:shadow-lg"
         >
           <span class="button-text">Pick a Park</span>
           <Spinner class="button-spinner hidden size-5" />
@@ -136,13 +144,19 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       </div>
 
       <footer class="mt-8 text-center">
-        <p class="text-sm text-mist opacity-80">Parks are chosen randomly, with no repeats in the last 5 picks.</p>
-        <p class="text-sm text-mist opacity-80 mt-2">
-          <a href="/manage" class="text-gold font-semibold hover:text-cream transition-colors">Manage parks</a>
-          <span class="mx-2 text-mist/50">·</span>
-          <a href="/stats" class="text-gold font-semibold hover:text-cream transition-colors">View stats</a>
+        <p class="text-mist text-sm opacity-80">
+          Parks are chosen randomly, with no repeats in the last 5 picks.
         </p>
-        <nav class="flex justify-center gap-6 text-sm text-mist mt-4 pt-4 border-t border-white/10">
+        <p class="text-mist mt-2 text-sm opacity-80">
+          <a href="/manage" class="text-gold hover:text-cream font-semibold transition-colors"
+            >Manage parks</a
+          >
+          <span class="text-mist/50 mx-2">·</span>
+          <a href="/stats" class="text-gold hover:text-cream font-semibold transition-colors"
+            >View stats</a
+          >
+        </p>
+        <nav class="text-mist mt-4 flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
           <a href="/about" class="hover:text-cream transition-colors">About</a>
           <a href="/help" class="hover:text-cream transition-colors">Help</a>
           <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
@@ -165,8 +179,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       // Helper to check if error is a limit error
       function isLimitError(errorMessage) {
-        return errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
-               errorMessage.includes("Daily pick limit reached");
+        return (
+          errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
+          errorMessage.includes("Daily pick limit reached")
+        );
       }
 
       // Show limit reached UI
@@ -180,7 +196,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         if (!limitBanner) {
           const banner = document.createElement("div");
           banner.id = "limit-banner";
-          banner.className = "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
+          banner.className =
+            "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
           banner.innerHTML = `
             <p class="text-cream font-medium mb-2">You've used your daily pick!</p>
             <p class="text-mist text-sm mb-3">Upgrade to Premium for unlimited picks and parks.</p>
@@ -210,7 +227,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${convexToken}`,
+              Authorization: `Bearer ${convexToken}`,
             },
             body: JSON.stringify({
               path: "users:store",
@@ -241,8 +258,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       async function pickNewPark() {
         // Debounce guard - prevent rapid clicks
         const now = Date.now();
-        if (isPickingPark || (now - lastClickTime) < DEBOUNCE_MS) {
-          console.log('Pick request debounced');
+        if (isPickingPark || now - lastClickTime < DEBOUNCE_MS) {
+          console.log("Pick request debounced");
           return;
         }
 
@@ -250,7 +267,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         isPickingPark = true;
 
         button.disabled = true;
-        button.classList.add('button-loading');
+        button.classList.add("button-loading");
         button.querySelector(".button-text").textContent = "Finding park...";
         button.querySelector(".button-spinner").classList.remove("hidden");
 
@@ -321,7 +338,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
             // Show a friendly message in the display area
             const limitCard = document.createElement("div");
-            limitCard.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            limitCard.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
             limitCard.innerHTML = `
               <div class="text-5xl mb-4">⏰</div>
               <h2 class="font-[Fraunces] text-2xl text-cream mb-3">Daily Limit Reached</h2>
@@ -337,7 +355,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             display.replaceChildren(limitCard);
           } else {
             const errorContainer = document.createElement("div");
-            errorContainer.className = "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            errorContainer.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
 
             const icon = document.createElement("div");
             icon.className = "text-4xl mb-4";
@@ -353,7 +372,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           }
         } finally {
           isPickingPark = false;
-          button.classList.remove('button-loading');
+          button.classList.remove("button-loading");
           button.querySelector(".button-spinner").classList.add("hidden");
 
           // Only re-enable if not at limit
@@ -484,6 +503,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       // Re-attach after picking a new park
       const originalPickNewPark = pickNewPark;
+      // eslint-disable-next-line no-func-assign
       pickNewPark = async function () {
         await originalPickNewPark();
         attachMapsLinkHandlers();
@@ -493,12 +513,16 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       button.addEventListener("click", pickNewPark);
 
       // Touch event handler to prevent double-tap zoom on mobile
-      button.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Prevent double-tap zoom
-        if (!isPickingPark) {
-          pickNewPark();
-        }
-      }, { passive: false });
+      button.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault(); // Prevent double-tap zoom
+          if (!isPickingPark) {
+            pickNewPark();
+          }
+        },
+        { passive: false }
+      );
     </script>
   </body>
 </html>

@@ -13,9 +13,7 @@ export const getUsersWithoutEntitlements = internalQuery({
 
     // Get all entitlements
     const entitlements = await ctx.db.query("userEntitlements").collect();
-    const usersWithEntitlements = new Set(
-      entitlements.map((e) => e.userId.toString())
-    );
+    const usersWithEntitlements = new Set(entitlements.map((e) => e.userId.toString()));
 
     // Filter to users without entitlements
     return users.filter((u) => !usersWithEntitlements.has(u._id.toString()));

@@ -1,6 +1,8 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Store or update user from Clerk identity.
@@ -20,9 +22,7 @@ export const store = mutation({
     // Check if user already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (existingUser) {
@@ -74,17 +74,12 @@ export const store = mutation({
  * Process referral code for new user signup.
  * Creates a pending referral if the code is valid.
  */
-async function processReferralCode(
-  ctx: { db: any; scheduler: any; runQuery: any; runMutation: any },
-  newUserId: any,
-  code: string
-) {
+async function processReferralCode(ctx: MutationCtx, newUserId: Id<"users">, code: string) {
   try {
     // Look up the referral code
-    const referralCode = await ctx.runQuery(
-      internal.referralCodes.getCodeByString,
-      { code: code.toUpperCase() }
-    );
+    const referralCode = await ctx.runQuery(internal.referralCodes.getCodeByString, {
+      code: code.toUpperCase(),
+    });
 
     if (!referralCode || !referralCode.isActive) {
       console.log(`Invalid or inactive referral code: ${code}`);
@@ -151,9 +146,7 @@ export const getCurrentUser = query({
 
     return await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
   },
 });
@@ -171,9 +164,7 @@ export const getCurrentUserInternal = internalQuery({
 
     return await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
   },
 });

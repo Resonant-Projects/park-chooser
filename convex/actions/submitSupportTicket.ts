@@ -61,9 +61,7 @@ export const submitSupportTicket = action({
     });
 
     if (rateCheck.isLimited) {
-      throw new Error(
-        "Too many submissions. Please wait an hour before trying again."
-      );
+      throw new Error("Too many submissions. Please wait an hour before trying again.");
     }
 
     // 5. Get user ID if authenticated

@@ -29,17 +29,14 @@ export const processReferralConversion = internalAction({
   handler: async (ctx, args): Promise<ProcessResult> => {
     // Only process for active subscriptions (not trialing, incomplete, etc.)
     if (args.subscriptionStatus !== "active") {
-      console.log(
-        `Skipping referral conversion - subscription status: ${args.subscriptionStatus}`
-      );
+      console.log(`Skipping referral conversion - subscription status: ${args.subscriptionStatus}`);
       return { processed: false, reason: "subscription_not_active" };
     }
 
     // Check for pending referral
-    const pendingReferral = await ctx.runQuery(
-      internal.referrals.getPendingReferralByReferee,
-      { refereeId: args.refereeId }
-    );
+    const pendingReferral = await ctx.runQuery(internal.referrals.getPendingReferralByReferee, {
+      refereeId: args.refereeId,
+    });
 
     if (!pendingReferral) {
       console.log("No pending referral for user:", args.refereeId);
@@ -49,10 +46,9 @@ export const processReferralConversion = internalAction({
     console.log("Processing referral conversion:", pendingReferral._id);
 
     // Mark as converted (validates 48hr delay)
-    const convertResult = await ctx.runMutation(
-      internal.referrals.markReferralConverted,
-      { referralId: pendingReferral._id }
-    );
+    const convertResult = await ctx.runMutation(internal.referrals.markReferralConverted, {
+      referralId: pendingReferral._id,
+    });
 
     if (!convertResult.success) {
       console.log("Conversion failed:", convertResult.reason);
@@ -77,32 +73,25 @@ export const processReferralConversion = internalAction({
     }
 
     // Get referrer's current entitlement to determine reward type
-    const referrerEntitlement = await ctx.runQuery(
-      internal.entitlements.getEntitlementByUserId,
-      { userId: referrerId }
-    );
+    const referrerEntitlement = await ctx.runQuery(internal.entitlements.getEntitlementByUserId, {
+      userId: referrerId,
+    });
 
     const referrerTier: "free" | "premium" = referrerEntitlement?.tier ?? "free";
 
     if (referrerTier === "premium") {
       // Premium subscriber gets bonus days
-      const rewardResult = await ctx.runMutation(
-        internal.referralRewards.grantBonusDays,
-        {
-          userId: referrerId,
-          referralId: pendingReferral._id,
-        }
-      );
+      const rewardResult = await ctx.runMutation(internal.referralRewards.grantBonusDays, {
+        userId: referrerId,
+        referralId: pendingReferral._id,
+      });
       console.log("Granted bonus days to referrer:", rewardResult);
     } else {
       // Free tier user gets discount code for future upgrade
-      const rewardResult = await ctx.runMutation(
-        internal.referralRewards.grantDiscountCode,
-        {
-          userId: referrerId,
-          referralId: pendingReferral._id,
-        }
-      );
+      const rewardResult = await ctx.runMutation(internal.referralRewards.grantDiscountCode, {
+        userId: referrerId,
+        referralId: pendingReferral._id,
+      });
       console.log("Granted discount code to referrer:", rewardResult);
     }
 

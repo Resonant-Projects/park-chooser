@@ -52,32 +52,24 @@ export const searchNearbyParks = action({
     const radiusMeters = radiusMiles * MILES_TO_METERS;
 
     // Call Google Places API
-    const nearbyParks = await searchNearbyParksApi(
-      args.lat,
-      args.lng,
-      radiusMeters,
-      apiKey
-    );
+    const nearbyParks = await searchNearbyParksApi(args.lat, args.lng, radiusMeters, apiKey);
 
     if (nearbyParks.length === 0) {
       return [];
     }
 
     // Upsert discovered parks into database
-    const upsertedParks = await ctx.runMutation(
-      internal.parks.upsertDiscoveredParks,
-      {
-        parks: nearbyParks.map((p) => ({
-          placeId: p.placeId,
-          name: p.name,
-          address: p.address,
-          photoRefs: p.photoRefs,
-          lat: p.lat,
-          lng: p.lng,
-          primaryType: p.primaryType,
-        })),
-      }
-    );
+    const upsertedParks = await ctx.runMutation(internal.parks.upsertDiscoveredParks, {
+      parks: nearbyParks.map((p) => ({
+        placeId: p.placeId,
+        name: p.name,
+        address: p.address,
+        photoRefs: p.photoRefs,
+        lat: p.lat,
+        lng: p.lng,
+        primaryType: p.primaryType,
+      })),
+    });
 
     // Create a map of placeId -> database _id
     const placeIdToDbId = new Map<string, Id<"parks">>(
@@ -98,12 +90,7 @@ export const searchNearbyParks = action({
     const results: NearbyParkResult[] = nearbyParks.map((park) => {
       const dbId = placeIdToDbId.get(park.placeId);
       const dbIdStr = dbId?.toString() ?? "";
-      const distance = calculateDistanceMiles(
-        args.lat,
-        args.lng,
-        park.lat,
-        park.lng
-      );
+      const distance = calculateDistanceMiles(args.lat, args.lng, park.lat, park.lng);
 
       // Generate photo URL if available
       let photoUrl: string | undefined;

@@ -1,9 +1,4 @@
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -43,9 +38,7 @@ export const getOrCreateMyCode = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (!user) {
@@ -122,9 +115,7 @@ export const getMyCode = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (!user) {
@@ -215,9 +206,7 @@ export const getMyReferralStats = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
     if (!user) {
@@ -243,9 +232,7 @@ export const getMyReferralStats = query({
 
     // Check for active bonus days
     const now = Date.now();
-    const activeBonusDays = rewards.find(
-      (r) => r.bonusDaysEnd && r.bonusDaysEnd > now
-    );
+    const activeBonusDays = rewards.find((r) => r.bonusDaysEnd && r.bonusDaysEnd > now);
 
     return {
       totalReferrals: referrals.length,
