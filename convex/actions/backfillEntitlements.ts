@@ -21,6 +21,12 @@ interface EntitlementStatusResult {
   }>;
 }
 
+interface PaginatedUsersResult {
+  users: Doc<"users">[];
+  nextCursor: string;
+  isDone: boolean;
+}
+
 /**
  * Backfill action: Create default free entitlements for all existing users
  * who don't have one yet.
@@ -31,14 +37,50 @@ interface EntitlementStatusResult {
 export const backfillEntitlements = internalAction({
   args: {},
   handler: async (ctx): Promise<BackfillResult> => {
-    // Get users without entitlements
-    const usersWithoutEntitlements: Doc<"users">[] = await ctx.runQuery(
-      internal.backfillHelpers.getUsersWithoutEntitlements
-    );
+    let created = 0;
+    let totalFound = 0;
+    const errors: string[] = [];
+    let cursor: string | undefined = undefined;
 
-    console.log(`Found ${usersWithoutEntitlements.length} users without entitlements`);
+    // Process users in paginated batches for memory safety
+    do {
+      const result: PaginatedUsersResult = await ctx.runQuery(
+        internal.backfillHelpers.getUsersWithoutEntitlements,
+        { cursor, limit: 100 }
+      );
 
-    if (usersWithoutEntitlements.length === 0) {
+      const usersWithoutEntitlements = result.users;
+      totalFound += usersWithoutEntitlements.length;
+
+      console.log(
+        `Processing batch: ${usersWithoutEntitlements.length} users without entitlements`
+      );
+
+      // Create entitlements for each user in this batch
+      for (const user of usersWithoutEntitlements) {
+        try {
+          const createResult = await ctx.runMutation(
+            internal.entitlements.createDefaultEntitlement,
+            { userId: user._id }
+          );
+
+          if (createResult.created) {
+            created++;
+            console.log(`Created entitlement for user: ${user._id}`);
+          } else {
+            console.log(`Entitlement already exists for user: ${user._id}`);
+          }
+        } catch (error) {
+          const message = `Failed to create entitlement for user ${user._id}: ${error}`;
+          console.error(message);
+          errors.push(message);
+        }
+      }
+
+      cursor = result.isDone ? undefined : result.nextCursor;
+    } while (cursor);
+
+    if (totalFound === 0) {
       return {
         success: true,
         message: "No users need entitlement backfill",
@@ -46,34 +88,11 @@ export const backfillEntitlements = internalAction({
       };
     }
 
-    // Create entitlements for each user
-    let created = 0;
-    const errors: string[] = [];
-
-    for (const user of usersWithoutEntitlements) {
-      try {
-        const result = await ctx.runMutation(internal.entitlements.createDefaultEntitlement, {
-          userId: user._id,
-        });
-
-        if (result.created) {
-          created++;
-          console.log(`Created entitlement for user: ${user._id}`);
-        } else {
-          console.log(`Entitlement already exists for user: ${user._id}`);
-        }
-      } catch (error) {
-        const message = `Failed to create entitlement for user ${user._id}: ${error}`;
-        console.error(message);
-        errors.push(message);
-      }
-    }
-
     return {
       success: errors.length === 0,
-      message: `Created ${created} entitlements out of ${usersWithoutEntitlements.length} users`,
+      message: `Created ${created} entitlements out of ${totalFound} users`,
       created,
-      total: usersWithoutEntitlements.length,
+      total: totalFound,
       errors: errors.length > 0 ? errors : undefined,
     };
   },
@@ -88,17 +107,34 @@ export const backfillEntitlements = internalAction({
 export const checkEntitlementStatus = internalAction({
   args: {},
   handler: async (ctx): Promise<EntitlementStatusResult> => {
-    const usersWithoutEntitlements: Doc<"users">[] = await ctx.runQuery(
-      internal.backfillHelpers.getUsersWithoutEntitlements
-    );
+    const allUsers: Array<{
+      id: Doc<"users">["_id"];
+      email: string | undefined;
+      name: string | undefined;
+    }> = [];
+    let cursor: string | undefined = undefined;
+
+    // Collect all users without entitlements (paginated)
+    do {
+      const result: PaginatedUsersResult = await ctx.runQuery(
+        internal.backfillHelpers.getUsersWithoutEntitlements,
+        { cursor, limit: 100 }
+      );
+
+      for (const user of result.users) {
+        allUsers.push({
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        });
+      }
+
+      cursor = result.isDone ? undefined : result.nextCursor;
+    } while (cursor);
 
     return {
-      usersNeedingBackfill: usersWithoutEntitlements.length,
-      users: usersWithoutEntitlements.map((u: Doc<"users">) => ({
-        id: u._id,
-        email: u.email,
-        name: u.name,
-      })),
+      usersNeedingBackfill: allUsers.length,
+      users: allUsers,
     };
   },
 });

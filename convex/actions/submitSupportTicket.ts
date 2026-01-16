@@ -53,14 +53,14 @@ export const submitSupportTicket = action({
       throw new Error("Please enter a valid email address");
     }
 
-    // 4. Rate limit check
+    // 4. Atomic rate limit check and increment (prevents TOCTOU race condition)
     const identifier = ipHash || "anonymous";
-    const rateCheck = await ctx.runQuery(api.rateLimits.checkRateLimit, {
+    const rateResult = await ctx.runMutation(api.rateLimits.checkAndIncrementRateLimit, {
       identifier,
       action: "contact",
     });
 
-    if (rateCheck.isLimited) {
+    if (!rateResult.allowed) {
       throw new Error("Too many submissions. Please wait an hour before trying again.");
     }
 
@@ -85,11 +85,7 @@ export const submitSupportTicket = action({
       ipHash: identifier,
     });
 
-    // 7. Increment rate limit
-    await ctx.runMutation(api.rateLimits.incrementRateLimit, {
-      identifier,
-      action: "contact",
-    });
+    // Rate limit already incremented atomically in step 4
 
     // TODO: Send email notifications via Resend
     // - Admin notification with ticket details

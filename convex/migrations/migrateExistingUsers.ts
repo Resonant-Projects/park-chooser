@@ -1,22 +1,34 @@
 import { internalMutation } from "../_generated/server";
+import { v } from "convex/values";
 
 /**
- * One-time migration: Seed existing users with all current parks.
+ * One-time migration: Seed existing users with all current parks (paginated for memory safety).
  * Run with: npx convex run migrations/migrateExistingUsers:migrateExistingUsers
+ * For large datasets, run multiple times with cursor until isDone is true.
  */
 export const migrateExistingUsers = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+  args: {
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, { cursor, batchSize = 50 }) => {
+    // Get parks (usually a small set, safe to collect)
     const parks = await ctx.db.query("parks").collect();
 
     if (parks.length === 0) {
-      return { migratedUsers: 0, totalParks: 0, message: "No parks to migrate" };
+      return { migratedUsers: 0, totalParks: 0, message: "No parks to migrate", isDone: true };
     }
 
-    let migratedUsers = 0;
+    // Paginated user query
+    const paginatedResult = await ctx.db.query("users").paginate({
+      cursor: cursor ?? null,
+      numItems: batchSize,
+    });
 
-    for (const user of users) {
+    let migratedUsers = 0;
+    const now = Date.now();
+
+    for (const user of paginatedResult.page) {
       // Check if user already has parks
       const existingUserPark = await ctx.db
         .query("userParks")
@@ -25,7 +37,6 @@ export const migrateExistingUsers = internalMutation({
 
       if (!existingUserPark) {
         // Add all parks to this user's list
-        const now = Date.now();
         for (const park of parks) {
           await ctx.db.insert("userParks", {
             userId: user._id,
@@ -41,7 +52,9 @@ export const migrateExistingUsers = internalMutation({
     return {
       migratedUsers,
       totalParks: parks.length,
-      totalUsers: users.length,
+      processedInBatch: paginatedResult.page.length,
+      nextCursor: paginatedResult.continueCursor,
+      isDone: paginatedResult.isDone,
     };
   },
 });

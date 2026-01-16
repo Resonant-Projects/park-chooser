@@ -241,6 +241,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             fetch("/api/clear-referral-cookie", {
               method: "POST",
               credentials: "include",
+              keepalive: true, // Ensure request completes even if page navigates
             }).catch(() => {}); // Fire and forget
           }
         } catch (err) {
@@ -510,13 +511,21 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         updateTravelTime();
       };
 
-      button.addEventListener("click", pickNewPark);
+      // Track touch events to prevent double invocation
+      let lastTouchTime = 0;
+
+      button.addEventListener("click", () => {
+        // Skip if this click came from a touch event (within 300ms)
+        if (Date.now() - lastTouchTime < 300) return;
+        pickNewPark();
+      });
 
       // Touch event handler to prevent double-tap zoom on mobile
       button.addEventListener(
         "touchstart",
         (e) => {
           e.preventDefault(); // Prevent double-tap zoom
+          lastTouchTime = Date.now();
           if (!isPickingPark) {
             pickNewPark();
           }

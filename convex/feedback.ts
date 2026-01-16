@@ -47,9 +47,37 @@ export const submit = mutation({
 });
 
 /**
- * Get feedback by user (to check if they already submitted)
+ * Get feedback for the current authenticated user (to check if they already submitted)
  */
-export const getByUser = query({
+export const getByCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) {
+      return null;
+    }
+
+    return await ctx.db
+      .query("feedback")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .first();
+  },
+});
+
+/**
+ * Get feedback by user ID (internal only - for admin purposes)
+ */
+export const getByUser = internalQuery({
   args: {
     userId: v.id("users"),
   },

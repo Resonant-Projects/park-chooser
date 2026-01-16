@@ -1,6 +1,51 @@
 import { query, internalQuery, internalMutation } from "./_generated/server";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { TIER_LIMITS, type Tier, getTodayDateString } from "./lib/entitlements";
+
+/**
+ * Helper: Get effective tier for a user, considering both subscription and bonus days.
+ * This centralizes the tier calculation logic used throughout entitlements.
+ */
+async function getEffectiveTier(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users">
+): Promise<{
+  tier: Tier;
+  hasActiveBonusDays: boolean;
+  activeBonusDaysEnd: number | null;
+  entitlementStatus: "active" | "past_due" | "canceled" | "incomplete";
+  periodEnd?: number;
+}> {
+  const entitlement = await ctx.db
+    .query("userEntitlements")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .unique();
+
+  // Check for active bonus days from referral rewards
+  const now = Date.now();
+  const activeBonus = await ctx.db
+    .query("referralRewards")
+    .withIndex("by_user_active", (q) => q.eq("userId", userId).gt("bonusDaysEnd", now))
+    .first();
+
+  const hasActiveBonusDays = Boolean(
+    activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now
+  );
+
+  // Determine effective tier: premium if subscribed OR has active bonus days
+  const subscriptionTier: Tier = entitlement?.tier ?? "free";
+  const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
+
+  return {
+    tier,
+    hasActiveBonusDays,
+    activeBonusDaysEnd: hasActiveBonusDays ? (activeBonus?.bonusDaysEnd ?? null) : null,
+    entitlementStatus: entitlement?.status ?? "active",
+    periodEnd: entitlement?.periodEnd,
+  };
+}
 
 /**
  * Get user's current entitlements, limits, and usage.
@@ -19,24 +64,9 @@ export const getUserEntitlements = query({
 
     if (!user) return null;
 
-    const entitlement = await ctx.db
-      .query("userEntitlements")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .unique();
-
-    // Check for active bonus days from referral rewards
-    const now = Date.now();
-    const activeBonus = await ctx.db
-      .query("referralRewards")
-      .withIndex("by_user_active", (q) => q.eq("userId", user._id).gt("bonusDaysEnd", now))
-      .first();
-
-    const hasActiveBonusDays =
-      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
-
-    // Determine effective tier: premium if subscribed OR has active bonus days
-    const subscriptionTier: Tier = entitlement?.tier ?? "free";
-    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
+    // Use shared helper for tier calculation
+    const { tier, hasActiveBonusDays, activeBonusDaysEnd, entitlementStatus, periodEnd } =
+      await getEffectiveTier(ctx, user._id);
     const limits = TIER_LIMITS[tier];
 
     // Get current park count
@@ -57,7 +87,7 @@ export const getUserEntitlements = query({
 
     return {
       tier,
-      status: entitlement?.status ?? "active",
+      status: entitlementStatus,
       limits: {
         maxParks: limits.maxParks === Infinity ? -1 : limits.maxParks,
         picksPerDay: limits.picksPerDay === Infinity ? -1 : limits.picksPerDay,
@@ -68,9 +98,9 @@ export const getUserEntitlements = query({
       },
       canAddPark: currentParks < limits.maxParks,
       canPick: picksToday < limits.picksPerDay,
-      periodEnd: entitlement?.periodEnd,
+      periodEnd,
       // Bonus days info for UI display
-      activeBonusDaysUntil: hasActiveBonusDays ? activeBonus.bonusDaysEnd : null,
+      activeBonusDaysUntil: hasActiveBonusDays ? activeBonusDaysEnd : null,
     };
   },
 });
@@ -82,22 +112,8 @@ export const getUserEntitlements = query({
 export const checkCanAddPark = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const entitlement = await ctx.db
-      .query("userEntitlements")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .unique();
-
-    // Check for active bonus days
-    const now = Date.now();
-    const activeBonus = await ctx.db
-      .query("referralRewards")
-      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
-      .first();
-
-    const hasActiveBonusDays =
-      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
-    const subscriptionTier: Tier = entitlement?.tier ?? "free";
-    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
+    // Use shared helper for tier calculation
+    const { tier } = await getEffectiveTier(ctx, args.userId);
     const limit = TIER_LIMITS[tier].maxParks;
 
     const userParks = await ctx.db
@@ -121,22 +137,8 @@ export const checkCanAddPark = internalQuery({
 export const checkCanPickToday = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const entitlement = await ctx.db
-      .query("userEntitlements")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .unique();
-
-    // Check for active bonus days
-    const now = Date.now();
-    const activeBonus = await ctx.db
-      .query("referralRewards")
-      .withIndex("by_user_active", (q) => q.eq("userId", args.userId).gt("bonusDaysEnd", now))
-      .first();
-
-    const hasActiveBonusDays =
-      activeBonus && activeBonus.bonusDaysEnd && activeBonus.bonusDaysEnd > now;
-    const subscriptionTier: Tier = entitlement?.tier ?? "free";
-    const tier: Tier = subscriptionTier === "premium" || hasActiveBonusDays ? "premium" : "free";
+    // Use shared helper for tier calculation
+    const { tier } = await getEffectiveTier(ctx, args.userId);
     const limit = TIER_LIMITS[tier].picksPerDay;
 
     const today = getTodayDateString();
@@ -213,13 +215,8 @@ export const upsertFromClerkWebhook = internalMutation({
     }
 
     // Determine tier from plan slug
-    // Any plan that's not explicitly free is considered premium
-    // This handles: "free_user" -> free, "monthly" -> premium, "yearly" -> premium
-    const FREE_PLAN_SLUGS = ["free", "free_user", "trial"];
-    const slugLower = args.clerkPlanSlug?.toLowerCase() ?? "";
-    const tier: Tier = FREE_PLAN_SLUGS.some((slug) => slugLower.includes(slug))
-      ? "free"
-      : "premium";
+    // Clerk sends "free_user" or "monthly" - only monthly is premium
+    const tier: Tier = args.clerkPlanSlug === "monthly" ? "premium" : "free";
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";

@@ -3,6 +3,15 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Webhook } from "svix";
 
+/**
+ * Build a Clerk token identifier from a user ID.
+ */
+function buildTokenIdentifier(userId: string | undefined): string | null {
+  if (!userId) return null;
+  const env = process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] ?? "accounts";
+  return `https://clerk.${env}.dev|${userId}`;
+}
+
 const http = httpRouter();
 
 /**
@@ -28,14 +37,10 @@ http.route({
         case "subscriptionItem.updated": {
           const data = event.data as ClerkSubscriptionItemData;
 
-          // Extract user_id from payer object (Clerk Billing webhook structure)
-          const userId = data.payer?.user_id;
-          const tokenIdentifier = userId
-            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${userId}`
-            : null;
+          const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
 
           if (!tokenIdentifier) {
-            console.warn("No user_id in subscription item:", data.id, "payer:", data.payer);
+            console.warn("No user_id in subscription item:", data.id);
             return new Response("Missing user_id", { status: 400 });
           }
 
@@ -80,11 +85,7 @@ http.route({
         case "subscriptionItem.deleted": {
           const data = event.data as ClerkSubscriptionItemData;
 
-          // Extract user_id from payer object
-          const userId = data.payer?.user_id;
-          const tokenIdentifier = userId
-            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${userId}`
-            : null;
+          const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
 
           if (tokenIdentifier) {
             // Set status to canceled, which will trigger downgrade logic
@@ -96,7 +97,7 @@ http.route({
               clerkPlanSlug: data.plan?.slug,
               status: "canceled",
             });
-            console.log("Subscription canceled for user:", userId);
+            console.log("Subscription canceled for user:", data.payer?.user_id);
           }
           break;
         }

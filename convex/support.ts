@@ -56,16 +56,49 @@ export const createTicket = mutation({
 
 /**
  * Get a ticket by reference ID (for users to check status)
+ * Returns limited information to protect sensitive data.
+ * Full details only returned if the authenticated user owns the ticket.
  */
 export const getByReference = query({
   args: {
     referenceId: v.string(),
   },
   handler: async (ctx, { referenceId }) => {
-    return await ctx.db
+    const ticket = await ctx.db
       .query("supportTickets")
       .withIndex("by_reference", (q) => q.eq("referenceId", referenceId))
       .first();
+
+    if (!ticket) {
+      return null;
+    }
+
+    // Check if current user owns this ticket
+    const identity = await ctx.auth.getUserIdentity();
+    let isOwner = false;
+
+    if (identity && ticket.userId) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .unique();
+
+      isOwner = user?._id === ticket.userId;
+    }
+
+    // Return full details to owner, limited info to others
+    if (isOwner) {
+      return ticket;
+    }
+
+    // Return only non-sensitive fields for public status check
+    return {
+      referenceId: ticket.referenceId,
+      subject: ticket.subject,
+      status: ticket.status,
+      createdAt: ticket.createdAt,
+      respondedAt: ticket.respondedAt,
+    };
   },
 });
 

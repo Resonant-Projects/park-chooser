@@ -180,7 +180,11 @@ export default defineSchema({
   })
     .index("by_referrer", ["referrerId"])
     .index("by_referee", ["refereeId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_ip_hash", ["signupIpHash"])
+    .index("by_device_fingerprint", ["signupDeviceFingerprint"])
+    .index("by_status_signupAt", ["status", "signupAt"])
+    .index("by_referral_code", ["referralCodeId"]),
 
   // Track referral rewards (bonus days or discount codes)
   referralRewards: defineTable({
@@ -196,7 +200,8 @@ export default defineSchema({
     discountUsedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
-    .index("by_user_active", ["userId", "bonusDaysEnd"]),
+    .index("by_user_active", ["userId", "bonusDaysEnd"])
+    .index("by_discount_code", ["discountCode"]),
 
   // Fraud detection signals for rate limiting referral abuse
   referralFraudSignals: defineTable({

@@ -248,6 +248,17 @@ const availableParks = await getAvailableParks(token);
       const nearbyEmpty = document.getElementById("nearby-empty");
       const fallbackSection = document.getElementById("fallback-section");
 
+      // HTML escape utility to prevent XSS when inserting user/API data into innerHTML
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
       // Request geolocation on load
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -351,7 +362,7 @@ const availableParks = await getAvailableParks(token);
 
           // Photo thumbnail (if available)
           const photoHtml = park.photoUrl
-            ? `<img src="${park.photoUrl}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0" loading="lazy" />`
+            ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0" loading="lazy" />`
             : `<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
                  <svg class="w-8 h-8 text-mist/50" fill="currentColor" viewBox="0 0 24 24">
                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -361,7 +372,7 @@ const availableParks = await getAvailableParks(token);
           // Type badge
           const typeLabel = formatParkType(park.primaryType);
           const typeBadge = typeLabel
-            ? `<span class="inline-block text-xs bg-white/10 text-mist px-2 py-0.5 rounded-full">${typeLabel}</span>`
+            ? `<span class="inline-block text-xs bg-white/10 text-mist px-2 py-0.5 rounded-full">${escapeHtml(typeLabel)}</span>`
             : "";
 
           // Already added indicator
@@ -374,8 +385,8 @@ const availableParks = await getAvailableParks(token);
                </div>`
             : `<button
                  class="add-nearby-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/20 hover:bg-gold/30 text-gold transition-colors"
-                 data-add-nearby="${park._id}"
-                 aria-label="Add ${park.name}"
+                 data-add-nearby="${escapeHtml(park._id)}"
+                 aria-label="Add ${escapeHtml(park.name)}"
                >
                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -386,10 +397,10 @@ const availableParks = await getAvailableParks(token);
             ${photoHtml}
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-2">
-                <h3 class="font-[Fraunces] text-cream font-semibold truncate">${park.name}</h3>
-                <span class="shrink-0 text-sm text-gold font-medium">${park.distanceMiles} mi</span>
+                <h3 class="font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
+                <span class="shrink-0 text-sm text-gold font-medium">${escapeHtml(park.distanceMiles)} mi</span>
               </div>
-              ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${park.address}</p>` : ""}
+              ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${escapeHtml(park.address)}</p>` : ""}
               <div class="flex items-center gap-2 mt-2">
                 ${typeBadge}
                 ${isAdded ? '<span class="text-xs text-gold/70">In your list</span>' : ""}

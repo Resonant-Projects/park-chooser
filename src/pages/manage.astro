@@ -25,13 +25,16 @@ const convexUrl = getConvexUrl();
 const [userParks, availableParks, entitlements] = await Promise.all([
   getUserParks(token),
   getAvailableParks(token),
-  getUserEntitlements(token).catch(() => null),
+  getUserEntitlements(token).catch((err) => {
+    console.error("Failed to fetch entitlements:", err);
+    return null;
+  }),
 ]);
 
 // Calculate limits for display
 const isFreeUser = entitlements?.tier === "free";
 const maxParks = entitlements?.limits.maxParks ?? -1;
-const currentParkCount = (userParks as any[]).length;
+const currentParkCount = userParks.length;
 const canAddPark = entitlements?.canAddPark ?? true;
 const isAtLimit = !canAddPark && isFreeUser;
 ---
@@ -402,7 +405,7 @@ const isAtLimit = !canAddPark && isFreeUser;
             '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
 
           try {
-            await fetch(`${convexUrl}/api/mutation`, {
+            const response = await fetch(`${convexUrl}/api/mutation`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -414,6 +417,12 @@ const isAtLimit = !canAddPark && isFreeUser;
                 format: "json",
               }),
             });
+
+            const result = await response.json();
+
+            if (result.status === "error") {
+              throw new Error(result.errorMessage || "Failed to remove park");
+            }
 
             // Optimistic UI: fade out and remove card
             card.style.opacity = "0";

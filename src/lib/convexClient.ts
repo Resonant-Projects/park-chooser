@@ -31,6 +31,35 @@ interface UserParkStats {
 }
 
 /**
+ * User's park list item (from listUserParks query).
+ */
+export interface UserPark {
+  _id: string;
+  parkId: string;
+  placeId: string;
+  name: string;
+  customName?: string;
+  address?: string;
+  photoRefs: string[];
+  visitCount: number;
+  lastVisitedAt?: number;
+  notes?: string;
+  addedAt: number;
+}
+
+/**
+ * Available park (from getAvailableParks query).
+ */
+export interface AvailablePark {
+  _id: string;
+  placeId: string;
+  name: string;
+  customName?: string;
+  address?: string;
+  photoRefs: string[];
+}
+
+/**
  * User entitlements (tier, limits, usage).
  */
 export interface UserEntitlements {
@@ -269,19 +298,19 @@ export async function storeUser(token: string, referralCode?: string): Promise<s
 /**
  * Get user's parks (for manage page).
  */
-export async function getUserParks(token: string) {
+export async function getUserParks(token: string): Promise<UserPark[]> {
   const convexUrl = import.meta.env.CONVEX_URL;
   if (!convexUrl) throw new Error("CONVEX_URL not set");
-  return callQuery(convexUrl, "userParks:listUserParks", {}, token);
+  return callQuery<UserPark[]>(convexUrl, "userParks:listUserParks", {}, token);
 }
 
 /**
  * Get parks available to add (not in user's list).
  */
-export async function getAvailableParks(token: string) {
+export async function getAvailableParks(token: string): Promise<AvailablePark[]> {
   const convexUrl = import.meta.env.CONVEX_URL;
   if (!convexUrl) throw new Error("CONVEX_URL not set");
-  return callQuery(convexUrl, "parks:getAvailableParks", {}, token);
+  return callQuery<AvailablePark[]>(convexUrl, "parks:getAvailableParks", {}, token);
 }
 
 /**

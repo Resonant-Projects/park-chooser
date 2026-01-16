@@ -43,13 +43,13 @@ export const submitFeedback = action({
       throw new Error("Rating must be between 1 and 5");
     }
 
-    // 4. Rate limit check (use user ID as identifier)
-    const rateCheck = await ctx.runQuery(api.rateLimits.checkRateLimit, {
+    // 4. Atomic rate limit check and increment (prevents TOCTOU race condition)
+    const rateResult = await ctx.runMutation(api.rateLimits.checkAndIncrementRateLimit, {
       identifier: user._id,
       action: "feedback",
     });
 
-    if (rateCheck.isLimited) {
+    if (!rateResult.allowed) {
       throw new Error(
         "You've already submitted feedback recently. Please wait before submitting again."
       );
@@ -69,11 +69,7 @@ export const submitFeedback = action({
       featureRequestsText: sanitize(featureRequestsText, 1000),
     });
 
-    // 7. Increment rate limit
-    await ctx.runMutation(api.rateLimits.incrementRateLimit, {
-      identifier: user._id,
-      action: "feedback",
-    });
+    // Rate limit already incremented atomically in step 4
 
     return {
       success: true,

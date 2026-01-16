@@ -147,7 +147,7 @@ const convexToken = await getToken({ template: "convex" });
       });
 
       // Simple hash function for IP anonymization (client-side approximation)
-      async function getIpHash() {
+      async function getBrowserFingerprintHash() {
         try {
           // Use a combination of browser fingerprinting for rate limiting
           const data = [
@@ -203,7 +203,7 @@ const convexToken = await getToken({ template: "convex" });
         submitBtn.querySelector(".button-spinner").classList.remove("hidden");
 
         try {
-          const ipHash = await getIpHash();
+          const ipHash = await getBrowserFingerprintHash();
 
           const headers = { "Content-Type": "application/json" };
           if (convexToken) {
@@ -239,7 +239,7 @@ const convexToken = await getToken({ template: "convex" });
         } catch (err) {
           errorDiv.textContent = err.message || "Something went wrong. Please try again.";
           errorDiv.classList.remove("hidden");
-        } finally {
+          // Only reset button on error (success hides the form anyway)
           submitBtn.disabled = false;
           submitBtn.querySelector(".button-text").textContent = "Send Message";
           submitBtn.querySelector(".button-spinner").classList.add("hidden");

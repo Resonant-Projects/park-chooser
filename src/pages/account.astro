@@ -25,19 +25,33 @@ if (!token) {
   return Astro.redirect("/sign-in");
 }
 
-// Fetch entitlements and referral data in parallel
+// Fetch entitlements and referral data in parallel (using allSettled for resilience)
 let entitlements: UserEntitlements | null = null;
 let referralCode: MyReferralCode | null = null;
 let referralStats: MyReferralStats | null = null;
 
-try {
-  [entitlements, referralCode, referralStats] = await Promise.all([
-    getUserEntitlements(token),
-    getMyReferralCode(token),
-    getMyReferralStats(token),
-  ]);
-} catch (error) {
-  console.error("Failed to fetch account data:", error);
+const [entitlementsResult, referralCodeResult, referralStatsResult] = await Promise.allSettled([
+  getUserEntitlements(token),
+  getMyReferralCode(token),
+  getMyReferralStats(token),
+]);
+
+if (entitlementsResult.status === "fulfilled") {
+  entitlements = entitlementsResult.value;
+} else {
+  console.error("Failed to fetch entitlements:", entitlementsResult.reason);
+}
+
+if (referralCodeResult.status === "fulfilled") {
+  referralCode = referralCodeResult.value;
+} else {
+  console.error("Failed to fetch referral code:", referralCodeResult.reason);
+}
+
+if (referralStatsResult.status === "fulfilled") {
+  referralStats = referralStatsResult.value;
+} else {
+  console.error("Failed to fetch referral stats:", referralStatsResult.reason);
 }
 
 // Build referral link

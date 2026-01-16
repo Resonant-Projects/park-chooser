@@ -58,13 +58,15 @@ const convexToken = await getToken({ template: "convex" });
                 <label class="text-cream mb-3 block text-sm font-medium">
                   Overall Rating <span class="text-sunset">*</span>
                 </label>
-                <div id="star-rating" class="flex gap-2">
+                <div id="star-rating" class="flex gap-2" role="radiogroup" aria-label="Rating">
                   {
                     [1, 2, 3, 4, 5].map((star) => (
                       <button
                         type="button"
                         class="star-btn text-3xl transition-transform hover:scale-110 focus:outline-none"
                         data-value={star}
+                        role="radio"
+                        aria-checked="false"
                         aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
                       >
                         <span class="star-empty">☆</span>
@@ -200,6 +202,11 @@ const convexToken = await getToken({ template: "convex" });
 
       function updateStars() {
         highlightStars(selectedRating);
+        // Update aria-checked for accessibility
+        starButtons.forEach((btn) => {
+          const value = parseInt(btn.dataset.value);
+          btn.setAttribute("aria-checked", value === selectedRating ? "true" : "false");
+        });
       }
 
       form.addEventListener("submit", async (e) => {
@@ -261,7 +268,7 @@ const convexToken = await getToken({ template: "convex" });
         } catch (err) {
           errorDiv.textContent = err.message || "Something went wrong. Please try again.";
           errorDiv.classList.remove("hidden");
-        } finally {
+          // Only reset button on error (success hides the form anyway)
           submitBtn.disabled = false;
           submitBtn.querySelector(".button-text").textContent = "Submit Feedback";
           submitBtn.querySelector(".button-spinner").classList.add("hidden");
