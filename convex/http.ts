@@ -28,13 +28,14 @@ http.route({
         case "subscriptionItem.updated": {
           const data = event.data as ClerkSubscriptionItemData;
 
-          // Extract user identifier from metadata or subscription
-          const tokenIdentifier = data.user_id
-            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${data.user_id}`
+          // Extract user_id from payer object (Clerk Billing webhook structure)
+          const userId = data.payer?.user_id;
+          const tokenIdentifier = userId
+            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${userId}`
             : null;
 
           if (!tokenIdentifier) {
-            console.warn("No user_id in subscription item:", data.id);
+            console.warn("No user_id in subscription item:", data.id, "payer:", data.payer);
             return new Response("Missing user_id", { status: 400 });
           }
 
@@ -43,6 +44,7 @@ http.route({
             clerkSubscriptionId: data.subscription_id,
             clerkSubscriptionItemId: data.id,
             clerkPlanId: data.plan_id,
+            clerkPlanSlug: data.plan?.slug,
             status: data.status,
             periodStart: data.current_period_start
               ? new Date(data.current_period_start).getTime()
@@ -78,9 +80,10 @@ http.route({
         case "subscriptionItem.deleted": {
           const data = event.data as ClerkSubscriptionItemData;
 
-          // Find user by subscription item ID and downgrade
-          const tokenIdentifier = data.user_id
-            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${data.user_id}`
+          // Extract user_id from payer object
+          const userId = data.payer?.user_id;
+          const tokenIdentifier = userId
+            ? `https://clerk.${process.env.CLERK_PUBLISHABLE_KEY?.split("_")[1] || "accounts"}.dev|${userId}`
             : null;
 
           if (tokenIdentifier) {
@@ -90,9 +93,10 @@ http.route({
               clerkSubscriptionId: data.subscription_id,
               clerkSubscriptionItemId: data.id,
               clerkPlanId: data.plan_id,
+              clerkPlanSlug: data.plan?.slug,
               status: "canceled",
             });
-            console.log("Subscription canceled for user:", data.user_id);
+            console.log("Subscription canceled for user:", userId);
           }
           break;
         }
@@ -155,7 +159,14 @@ interface ClerkSubscriptionItemData {
   id: string;
   subscription_id: string;
   plan_id: string;
-  user_id?: string;
+  payer?: {
+    user_id?: string;
+    email?: string;
+  };
+  plan?: {
+    slug?: string;
+    name?: string;
+  };
   status: string;
   current_period_start?: string;
   current_period_end?: string;

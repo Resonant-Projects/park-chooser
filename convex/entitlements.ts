@@ -190,6 +190,7 @@ export const upsertFromClerkWebhook = internalMutation({
     clerkSubscriptionId: v.string(),
     clerkSubscriptionItemId: v.string(),
     clerkPlanId: v.string(),
+    clerkPlanSlug: v.optional(v.string()),
     status: v.string(),
     periodStart: v.optional(v.number()),
     periodEnd: v.optional(v.number()),
@@ -211,9 +212,14 @@ export const upsertFromClerkWebhook = internalMutation({
       return { success: false, reason: "user_not_found" };
     }
 
-    // Determine tier from plan ID
-    // Configure plan IDs in Clerk dashboard with "premium" in the ID for premium tier
-    const tier: Tier = args.clerkPlanId.toLowerCase().includes("premium") ? "premium" : "free";
+    // Determine tier from plan slug
+    // Any plan that's not explicitly free is considered premium
+    // This handles: "free_user" -> free, "monthly" -> premium, "yearly" -> premium
+    const FREE_PLAN_SLUGS = ["free", "free_user", "trial"];
+    const slugLower = args.clerkPlanSlug?.toLowerCase() ?? "";
+    const tier: Tier = FREE_PLAN_SLUGS.some((slug) => slugLower.includes(slug))
+      ? "free"
+      : "premium";
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";
