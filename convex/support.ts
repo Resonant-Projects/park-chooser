@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -18,7 +18,26 @@ export const createTicket = mutation({
     ipHash: v.optional(v.string()),
   },
   handler: async (ctx, { email, subject, message, userId, ipHash }) => {
-    const referenceId = generateReferenceId();
+    // Generate unique reference ID with retry logic
+    const maxAttempts = 5;
+    let referenceId: string | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const candidateId = generateReferenceId();
+      const existing = await ctx.db
+        .query("supportTickets")
+        .withIndex("by_reference", (q) => q.eq("referenceId", candidateId))
+        .first();
+
+      if (!existing) {
+        referenceId = candidateId;
+        break;
+      }
+    }
+
+    if (!referenceId) {
+      throw new Error("Failed to generate unique reference ID. Please try again.");
+    }
 
     const ticketId = await ctx.db.insert("supportTickets", {
       email,
@@ -51,9 +70,9 @@ export const getByReference = query({
 });
 
 /**
- * List tickets by status (for admin)
+ * List tickets by status (for admin - internal only)
  */
-export const listByStatus = query({
+export const listByStatus = internalQuery({
   args: {
     status: v.union(
       v.literal("new"),
@@ -72,9 +91,9 @@ export const listByStatus = query({
 });
 
 /**
- * Update ticket status (for admin)
+ * Update ticket status (for admin - internal only)
  */
-export const updateStatus = mutation({
+export const updateStatus = internalMutation({
   args: {
     ticketId: v.id("supportTickets"),
     status: v.union(

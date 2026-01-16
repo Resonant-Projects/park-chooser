@@ -1,6 +1,6 @@
 "use node";
 
-import { action } from "../_generated/server";
+import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Doc } from "../_generated/dataModel";
 
@@ -28,7 +28,7 @@ interface EntitlementStatusResult {
  * Run this once after deploying the entitlements feature:
  * npx convex run actions/backfillEntitlements:backfillEntitlements
  */
-export const backfillEntitlements = action({
+export const backfillEntitlements = internalAction({
   args: {},
   handler: async (ctx): Promise<BackfillResult> => {
     // Get users without entitlements
@@ -88,7 +88,7 @@ export const backfillEntitlements = action({
  * Run to check before/after backfill:
  * npx convex run actions/backfillEntitlements:checkEntitlementStatus
  */
-export const checkEntitlementStatus = action({
+export const checkEntitlementStatus = internalAction({
   args: {},
   handler: async (ctx): Promise<EntitlementStatusResult> => {
     const usersWithoutEntitlements: Doc<"users">[] = await ctx.runQuery(

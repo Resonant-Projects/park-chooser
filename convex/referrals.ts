@@ -95,6 +95,15 @@ export const markReferralConverted = internalMutation({
 export const markReferralRewarded = internalMutation({
   args: { referralId: v.id("referrals") },
   handler: async (ctx, args) => {
+    // Validate referral exists and is in correct status
+    const referral = await ctx.db.get(args.referralId);
+    if (!referral) {
+      throw new Error("Referral not found");
+    }
+    if (referral.status !== "converted") {
+      throw new Error(`Cannot mark referral as rewarded: current status is "${referral.status}", expected "converted"`);
+    }
+
     const now = Date.now();
     await ctx.db.patch(args.referralId, {
       status: "rewarded",
@@ -112,8 +121,15 @@ export const markReferralFraudulent = internalMutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Validate referral exists
+    const referral = await ctx.db.get(args.referralId);
+    if (!referral) {
+      throw new Error("Referral not found");
+    }
+
     await ctx.db.patch(args.referralId, {
       status: "fraudulent",
+      fraudReason: args.reason,
     });
   },
 });

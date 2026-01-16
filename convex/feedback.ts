@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -6,7 +6,6 @@ import { v } from "convex/values";
  */
 export const submit = mutation({
   args: {
-    userId: v.id("users"),
     rating: v.number(),
     likesText: v.optional(v.string()),
     improvementsText: v.optional(v.string()),
@@ -14,15 +13,33 @@ export const submit = mutation({
   },
   handler: async (
     ctx,
-    { userId, rating, likesText, improvementsText, featureRequestsText }
+    { rating, likesText, improvementsText, featureRequestsText }
   ) => {
-    // Validate rating is 1-5
-    if (rating < 1 || rating > 5) {
-      throw new Error("Rating must be between 1 and 5");
+    // Verify the caller is authenticated
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Must be authenticated to submit feedback");
+    }
+
+    // Get user from database
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Validate rating is an integer between 1-5
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new Error("Rating must be an integer between 1 and 5");
     }
 
     const feedbackId = await ctx.db.insert("feedback", {
-      userId,
+      userId: user._id,
       rating,
       likesText,
       improvementsText,
@@ -51,19 +68,19 @@ export const getByUser = query({
 });
 
 /**
- * List all feedback (for admin)
+ * List all feedback (for admin - internal only)
  */
-export const list = query({
+export const list = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit }) => {
-    const query = ctx.db.query("feedback").withIndex("by_created").order("desc");
+    const q = ctx.db.query("feedback").withIndex("by_created").order("desc");
 
     if (limit) {
-      return await query.take(limit);
+      return await q.take(limit);
     }
-    return await query.collect();
+    return await q.collect();
   },
 });
 

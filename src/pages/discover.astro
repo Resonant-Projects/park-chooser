@@ -11,10 +11,13 @@ if (!userId) {
 }
 
 const token = await getToken({ template: "convex" });
+if (!token) {
+  return Astro.redirect("/sign-in");
+}
 const convexUrl = getConvexUrl();
 
 // Pre-fetch available parks for fallback (Sarasota recommended)
-const availableParks = await getAvailableParks(token!);
+const availableParks = await getAvailableParks(token);
 ---
 
 <!doctype html>

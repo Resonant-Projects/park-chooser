@@ -268,26 +268,35 @@ export async function searchNearbyParks(
       return [];
     }
 
-    return data.places.map(
-      (place: {
-        id: string;
-        displayName?: { text: string };
-        formattedAddress?: string;
-        location?: { latitude: number; longitude: number };
-        photos?: Array<{ name: string }>;
-        primaryType?: string;
-      }) => ({
-        placeId: place.id,
-        name: place.displayName?.text || "Unknown Park",
-        address: place.formattedAddress,
-        lat: place.location?.latitude || 0,
-        lng: place.location?.longitude || 0,
-        photoRefs: (place.photos || [])
-          .slice(0, 5)
-          .map((p: { name: string }) => p.name),
-        primaryType: place.primaryType,
-      })
-    );
+    return data.places
+      .filter(
+        (place: {
+          id: string;
+          location?: { latitude: number; longitude: number };
+        }) =>
+          place.location?.latitude !== undefined &&
+          place.location?.longitude !== undefined
+      )
+      .map(
+        (place: {
+          id: string;
+          displayName?: { text: string };
+          formattedAddress?: string;
+          location: { latitude: number; longitude: number };
+          photos?: Array<{ name: string }>;
+          primaryType?: string;
+        }) => ({
+          placeId: place.id,
+          name: place.displayName?.text || "Unknown Park",
+          address: place.formattedAddress,
+          lat: place.location.latitude,
+          lng: place.location.longitude,
+          photoRefs: (place.photos || [])
+            .slice(0, 5)
+            .map((p: { name: string }) => p.name),
+          primaryType: place.primaryType,
+        })
+      );
   } catch (error) {
     console.error("Error searching nearby parks:", error);
     return [];

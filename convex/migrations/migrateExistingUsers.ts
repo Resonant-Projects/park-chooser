@@ -1,10 +1,10 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 
 /**
  * One-time migration: Seed existing users with all current parks.
  * Run with: npx convex run migrations/migrateExistingUsers:migrateExistingUsers
  */
-export const migrateExistingUsers = mutation({
+export const migrateExistingUsers = internalMutation({
   args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();

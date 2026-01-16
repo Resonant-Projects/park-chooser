@@ -1,4 +1,6 @@
 import { internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { v } from "convex/values";
 
 /**
  * Internal query: Get all users without entitlements.
@@ -24,9 +26,21 @@ export const getUsersWithoutEntitlements = internalQuery({
  * Internal mutation: Create entitlement for a single user.
  */
 export const createEntitlementForUser = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    // This is called per user - the user ID is passed via the scheduler
-    // For backfill, we use createDefaultEntitlement from entitlements.ts
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<{ created: boolean }> => {
+    // Validate user ID is provided
+    if (!args.userId) {
+      throw new Error("userId is required");
+    }
+
+    // Create default entitlement using the existing function
+    const result: { created: boolean } = await ctx.runMutation(
+      internal.entitlements.createDefaultEntitlement,
+      { userId: args.userId }
+    );
+
+    return result;
   },
 });

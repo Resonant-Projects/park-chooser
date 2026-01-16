@@ -21,6 +21,9 @@ if (!userId) {
 }
 
 const token = await getToken({ template: "convex" });
+if (!token) {
+  return Astro.redirect("/sign-in");
+}
 
 // Fetch entitlements and referral data in parallel
 let entitlements: UserEntitlements | null = null;
@@ -29,9 +32,9 @@ let referralStats: MyReferralStats | null = null;
 
 try {
   [entitlements, referralCode, referralStats] = await Promise.all([
-    getUserEntitlements(token!),
-    getMyReferralCode(token!),
-    getMyReferralStats(token!),
+    getUserEntitlements(token),
+    getMyReferralCode(token),
+    getMyReferralStats(token),
   ]);
 } catch (error) {
   console.error("Failed to fetch account data:", error);

@@ -62,12 +62,32 @@ export const grantDiscountCode = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-
-    // Generate a unique discount code
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let discountCode = "REF-";
-    for (let i = 0; i < 8; i++) {
-      discountCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    const maxAttempts = 10;
+
+    // Generate a unique discount code with collision check
+    let discountCode: string | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let candidateCode = "REF-";
+      for (let i = 0; i < 8; i++) {
+        candidateCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      // Check if code already exists
+      const existing = await ctx.db
+        .query("referralRewards")
+        .filter((q) => q.eq(q.field("discountCode"), candidateCode))
+        .first();
+
+      if (!existing) {
+        discountCode = candidateCode;
+        break;
+      }
+    }
+
+    if (!discountCode) {
+      throw new Error("Failed to generate unique discount code. Please try again.");
     }
 
     const rewardId = await ctx.db.insert("referralRewards", {

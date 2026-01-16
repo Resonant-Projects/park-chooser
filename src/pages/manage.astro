@@ -12,13 +12,16 @@ if (!userId) {
 }
 
 const token = await getToken({ template: "convex" });
+if (!token) {
+  return Astro.redirect("/sign-in");
+}
 const convexUrl = getConvexUrl();
 
 // Fetch parks and entitlements server-side
 const [userParks, availableParks, entitlements] = await Promise.all([
-  getUserParks(token!),
-  getAvailableParks(token!),
-  getUserEntitlements(token!).catch(() => null),
+  getUserParks(token),
+  getAvailableParks(token),
+  getUserEntitlements(token).catch(() => null),
 ]);
 
 // Calculate limits for display

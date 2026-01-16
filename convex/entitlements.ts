@@ -224,9 +224,11 @@ export const upsertFromClerkWebhook = internalMutation({
       .unique();
 
     if (!user) {
-      console.warn(
-        `User not found for token identifier: ${args.tokenIdentifier}`
-      );
+      // Truncate token identifier to avoid logging PII
+      const truncatedId = args.tokenIdentifier.length > 16
+        ? `${args.tokenIdentifier.slice(0, 8)}...${args.tokenIdentifier.slice(-4)}`
+        : "[redacted]";
+      console.warn(`User not found for token identifier: ${truncatedId}`);
       return { success: false, reason: "user_not_found" };
     }
 

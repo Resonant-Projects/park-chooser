@@ -176,6 +176,7 @@ export default defineSchema({
     // Fraud detection signals
     signupIpHash: v.optional(v.string()),
     signupDeviceFingerprint: v.optional(v.string()),
+    fraudReason: v.optional(v.string()), // Reason when marked as fraudulent
   })
     .index("by_referrer", ["referrerId"])
     .index("by_referee", ["refereeId"])

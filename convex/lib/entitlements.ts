@@ -6,14 +6,17 @@
  * - premium: Unlimited parks and picks
  */
 
+// Use Number.MAX_SAFE_INTEGER instead of Infinity for JSON serialization compatibility
+export const UNLIMITED = Number.MAX_SAFE_INTEGER;
+
 export const TIER_LIMITS = {
   free: {
     maxParks: 5,
     picksPerDay: 1,
   },
   premium: {
-    maxParks: Infinity,
-    picksPerDay: Infinity,
+    maxParks: UNLIMITED,
+    picksPerDay: UNLIMITED,
   },
 } as const;
 

@@ -61,9 +61,8 @@ export const submitFeedback = action({
       return text.slice(0, maxLen);
     };
 
-    // 6. Submit feedback
+    // 6. Submit feedback (mutation handles auth internally)
     const result = await ctx.runMutation(api.feedback.submit, {
-      userId: user._id,
       rating,
       likesText: sanitize(likesText, 1000),
       improvementsText: sanitize(improvementsText, 1000),
