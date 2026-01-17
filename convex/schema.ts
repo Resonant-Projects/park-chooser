@@ -5,11 +5,14 @@ export default defineSchema({
   // Users from Clerk
   users: defineTable({
     tokenIdentifier: v.string(),
+    clerkUserId: v.optional(v.string()), // Clerk user ID (e.g., user_2g7np...) for webhook lookups
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     seededAt: v.optional(v.number()), // Track when user was seeded with parks
-  }).index("by_token", ["tokenIdentifier"]),
+  })
+    .index("by_token", ["tokenIdentifier"])
+    .index("by_clerk_user_id", ["clerkUserId"]),
 
   // Master park catalog (shared reference data)
   parks: defineTable({

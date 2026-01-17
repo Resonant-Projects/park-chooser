@@ -5,6 +5,18 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 
 /**
+ * Extract Clerk user ID from token identifier.
+ * Format: https://....clerk.accounts.dev|user_xxx
+ */
+function extractClerkUserId(tokenIdentifier: string): string | undefined {
+  const parts = tokenIdentifier.split("|");
+  if (parts.length === 2 && parts[1].startsWith("user_")) {
+    return parts[1];
+  }
+  return undefined;
+}
+
+/**
  * Store or update user from Clerk identity.
  * Called after successful authentication.
  * Optionally processes a referral code for new signups.
@@ -19,11 +31,22 @@ export const store = mutation({
       throw new Error("Called store without authentication");
     }
 
-    // Check if user already exists
-    const existingUser = await ctx.db
+    // Extract Clerk user ID from token identifier
+    const clerkUserId = extractClerkUserId(identity.tokenIdentifier);
+
+    // Check if user already exists by tokenIdentifier
+    let existingUser = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
+
+    // If not found by tokenIdentifier, check if user was created via webhook (has placeholder)
+    if (!existingUser && clerkUserId) {
+      existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", clerkUserId))
+        .unique();
+    }
 
     if (existingUser) {
       // Update if name/email changed
@@ -37,15 +60,25 @@ export const store = mutation({
       if (existingUser.imageUrl !== identity.pictureUrl) {
         updates.imageUrl = identity.pictureUrl ?? undefined;
       }
+
+      // If user was created via webhook, link the proper tokenIdentifier and clerkUserId
+      if (existingUser.tokenIdentifier?.startsWith("clerk_pending|")) {
+        updates.tokenIdentifier = identity.tokenIdentifier;
+      }
+      if (!existingUser.clerkUserId && clerkUserId) {
+        updates.clerkUserId = clerkUserId;
+      }
+
       if (Object.keys(updates).length > 0) {
         await ctx.db.patch(existingUser._id, updates);
       }
       return existingUser._id;
     }
 
-    // Create new user
+    // Create new user with clerkUserId extracted from tokenIdentifier
     const userId = await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
+      clerkUserId,
       name: identity.name ?? undefined,
       email: identity.email ?? undefined,
       imageUrl: identity.pictureUrl ?? undefined,
@@ -190,5 +223,73 @@ export const getUserByTokenInternal = internalQuery({
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
       .unique();
+  },
+});
+
+/**
+ * Get user by Clerk user ID (internal).
+ * Used by webhook handlers to look up user from subscription events.
+ */
+export const getUserByClerkId = internalQuery({
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .unique();
+  },
+});
+
+/**
+ * Create or update user from Clerk user.created webhook.
+ * This handles user creation before the user authenticates in-app.
+ */
+export const upsertFromClerkWebhook = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    email: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Check if user already exists by clerkUserId
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .unique();
+
+    const name = [args.firstName, args.lastName].filter(Boolean).join(" ") || undefined;
+
+    if (existingUser) {
+      // Update existing user with new info
+      await ctx.db.patch(existingUser._id, {
+        email: args.email ?? existingUser.email,
+        name: name ?? existingUser.name,
+        imageUrl: args.imageUrl ?? existingUser.imageUrl,
+      });
+      return { userId: existingUser._id, created: false };
+    }
+
+    // Create new user with placeholder tokenIdentifier (will be set on first auth)
+    const userId = await ctx.db.insert("users", {
+      clerkUserId: args.clerkUserId,
+      tokenIdentifier: `clerk_pending|${args.clerkUserId}`,
+      email: args.email,
+      name,
+      imageUrl: args.imageUrl,
+    });
+
+    // Create default free tier entitlement
+    const now = Date.now();
+    await ctx.db.insert("userEntitlements", {
+      userId,
+      tier: "free",
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { userId, created: true };
   },
 });

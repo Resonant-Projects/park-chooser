@@ -2,7 +2,7 @@ import { query, internalQuery, internalMutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { TIER_LIMITS, type Tier, getTodayDateString } from "./lib/entitlements";
+import { TIER_LIMITS, type Tier, getTodayDateString, UNLIMITED } from "./lib/entitlements";
 
 /**
  * Helper: Get effective tier for a user, considering both subscription and bonus days.
@@ -89,8 +89,8 @@ export const getUserEntitlements = query({
       tier,
       status: entitlementStatus,
       limits: {
-        maxParks: limits.maxParks === Infinity ? -1 : limits.maxParks,
-        picksPerDay: limits.picksPerDay === Infinity ? -1 : limits.picksPerDay,
+        maxParks: limits.maxParks === UNLIMITED ? -1 : limits.maxParks,
+        picksPerDay: limits.picksPerDay === UNLIMITED ? -1 : limits.picksPerDay,
       },
       usage: {
         currentParks,
@@ -124,7 +124,7 @@ export const checkCanAddPark = internalQuery({
     return {
       canAdd: userParks.length < limit,
       currentCount: userParks.length,
-      limit: limit === Infinity ? -1 : limit,
+      limit: limit === UNLIMITED ? -1 : limit,
       tier,
     };
   },
@@ -152,7 +152,7 @@ export const checkCanPickToday = internalQuery({
     return {
       canPick: currentCount < limit,
       currentCount,
-      limit: limit === Infinity ? -1 : limit,
+      limit: limit === UNLIMITED ? -1 : limit,
       tier,
     };
   },
@@ -185,10 +185,11 @@ export const incrementDailyPickCount = internalMutation({
 
 /**
  * Internal: Create or update entitlement from Clerk webhook.
+ * Now accepts userId directly (looked up via getUserByClerkId in http.ts).
  */
 export const upsertFromClerkWebhook = internalMutation({
   args: {
-    tokenIdentifier: v.string(),
+    userId: v.id("users"),
     clerkSubscriptionId: v.string(),
     clerkSubscriptionItemId: v.string(),
     clerkPlanId: v.string(),
@@ -198,35 +199,25 @@ export const upsertFromClerkWebhook = internalMutation({
     periodEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Find user by Clerk token identifier
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
-      .unique();
-
-    if (!user) {
-      // Truncate token identifier to avoid logging PII
-      const truncatedId =
-        args.tokenIdentifier.length > 16
-          ? `${args.tokenIdentifier.slice(0, 8)}...${args.tokenIdentifier.slice(-4)}`
-          : "[redacted]";
-      console.warn(`User not found for token identifier: ${truncatedId}`);
-      return { success: false, reason: "user_not_found" };
-    }
-
     // Log webhook data for debugging
-    console.log("Webhook data:", {
+    console.log("Webhook entitlement update:", {
+      userId: args.userId,
       status: args.status,
       planSlug: args.clerkPlanSlug,
       subscriptionId: args.clerkSubscriptionId,
     });
 
-    // Determine tier from subscription status and plan slug
-    // If status is "active" and we have subscription IDs, user has a paid subscription
-    // Fall back to plan slug check for backwards compatibility
-    const hasPaidSubscription = args.status === "active" && args.clerkSubscriptionId;
-    const isPremiumBySlug = args.clerkPlanSlug === "monthly";
-    const tier: Tier = hasPaidSubscription || isPremiumBySlug ? "premium" : "free";
+    // Only grant premium when ALL conditions are met:
+    // 1. Status is active or past_due (valid subscription states)
+    // 2. Subscription ID exists
+    // 3. Plan slug is "monthly" (the premium plan, not "free_user")
+    const validPaidStatuses = ["active", "past_due"];
+    const isPremiumPlan = args.clerkPlanSlug === "monthly";
+    const hasPaidSubscription =
+      validPaidStatuses.includes(args.status) && Boolean(args.clerkSubscriptionId) && isPremiumPlan;
+    const tier: Tier = hasPaidSubscription ? "premium" : "free";
+
+    console.log("Computed tier:", { tier, isPremiumPlan, hasPaidSubscription });
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";
@@ -242,7 +233,7 @@ export const upsertFromClerkWebhook = internalMutation({
 
     const existing = await ctx.db
       .query("userEntitlements")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .unique();
 
     const now = Date.now();
@@ -260,7 +251,7 @@ export const upsertFromClerkWebhook = internalMutation({
       });
     } else {
       await ctx.db.insert("userEntitlements", {
-        userId: user._id,
+        userId: args.userId,
         tier,
         clerkSubscriptionId: args.clerkSubscriptionId,
         clerkSubscriptionItemId: args.clerkSubscriptionItemId,
