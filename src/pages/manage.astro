@@ -280,6 +280,143 @@ const isAtLimit = !canAddPark && isFreeUser;
         );
       }
 
+      // Helper to escape HTML for safe insertion
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Create a card element for "My Parks" section
+      function createMyParkCard(park) {
+        const article = document.createElement("article");
+        article.className =
+          "park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200";
+        article.dataset.parkId = park.parkId;
+
+        // Build inner HTML
+        let html = `
+          <div class="min-w-0 flex-1">
+            <h3 class="text-forest truncate font-[Fraunces] font-semibold">${escapeHtml(park.name)}</h3>`;
+
+        if (park.customName) {
+          html += `<p class="text-sunset truncate text-sm">${escapeHtml(park.customName)}</p>`;
+        }
+        if (park.address) {
+          html += `<p class="text-moss truncate text-sm">${escapeHtml(park.address)}</p>`;
+        }
+        // New parks have visitCount = 0, so no badge needed
+
+        html += `</div>
+          <button
+            class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+            data-remove="${park.parkId}"
+            aria-label="Remove ${escapeHtml(park.name)}"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>`;
+
+        article.innerHTML = html;
+        return article;
+      }
+
+      // Add a park card to the "My Parks" section with animation
+      function addParkToMyParksSection(park) {
+        const myParksSection = document.querySelector("section:first-of-type");
+        if (!myParksSection) return;
+
+        // Check if there's an "empty" message div and remove it
+        const emptyMessage = myParksSection.querySelector(".rounded-2xl.border.border-white\\/15");
+        if (emptyMessage && emptyMessage.textContent.includes("No parks yet")) {
+          // Replace with a grid container
+          const grid = document.createElement("div");
+          grid.className = "grid gap-3";
+          emptyMessage.replaceWith(grid);
+        }
+
+        // Find the grid container
+        let grid = myParksSection.querySelector(".grid");
+        if (!grid) {
+          grid = document.createElement("div");
+          grid.className = "grid gap-3";
+          const h2 = myParksSection.querySelector("h2");
+          if (h2) {
+            h2.after(grid);
+          } else {
+            myParksSection.appendChild(grid);
+          }
+        }
+
+        // Create and animate the new card
+        const card = createMyParkCard(park);
+        card.style.opacity = "0";
+        card.style.transform = "translateX(-20px)";
+        grid.prepend(card);
+
+        // Attach remove handler to the new button
+        const removeBtn = card.querySelector(".remove-btn");
+        if (removeBtn) {
+          attachRemoveHandler(removeBtn);
+        }
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+          card.style.transition = "opacity 200ms, transform 200ms";
+          card.style.opacity = "1";
+          card.style.transform = "translateX(0)";
+        });
+      }
+
+      // Attach remove handler to a button (extracted for reuse)
+      function attachRemoveHandler(btn) {
+        btn.addEventListener("click", async (e) => {
+          const button = e.currentTarget;
+          const parkId = button.dataset.remove;
+          const card = button.closest(".park-card");
+
+          button.disabled = true;
+          button.innerHTML =
+            '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
+
+          try {
+            const response = await fetch(`${convexUrl}/api/mutation`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${convexToken}`,
+              },
+              body: JSON.stringify({
+                path: "userParks:removeParkFromUserList",
+                args: { parkId },
+                format: "json",
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.status === "error") {
+              throw new Error(result.errorMessage || "Failed to remove park");
+            }
+
+            // Optimistic UI: fade out and remove card
+            card.style.opacity = "0";
+            card.style.transform = "translateX(-20px)";
+            setTimeout(() => {
+              card.remove();
+              updateCounts();
+            }, 200);
+          } catch (err) {
+            console.error("Failed to remove park:", err);
+            button.disabled = false;
+            button.innerHTML =
+              '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
+          }
+        });
+      }
+
       // Helper to update section counts
       function updateCounts() {
         const myParksSection = document.querySelector("section:first-of-type");
@@ -370,7 +507,12 @@ const isAtLimit = !canAddPark && isFreeUser;
               throw new Error(result.errorMessage || "Failed to add park");
             }
 
-            // Optimistic UI: fade out and remove card
+            // Add park to "My Parks" section
+            if (result.value && result.value.park) {
+              addParkToMyParksSection(result.value.park);
+            }
+
+            // Optimistic UI: fade out and remove card from "Add Parks" section
             card.style.opacity = "0";
             card.style.transform = "translateX(20px)";
             setTimeout(() => {
@@ -395,49 +537,7 @@ const isAtLimit = !canAddPark && isFreeUser;
 
       // Handle remove park with optimistic UI
       document.querySelectorAll(".remove-btn").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          const button = e.currentTarget;
-          const parkId = button.dataset.remove;
-          const card = button.closest(".park-card");
-
-          button.disabled = true;
-          button.innerHTML =
-            '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
-
-          try {
-            const response = await fetch(`${convexUrl}/api/mutation`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${convexToken}`,
-              },
-              body: JSON.stringify({
-                path: "userParks:removeParkFromUserList",
-                args: { parkId },
-                format: "json",
-              }),
-            });
-
-            const result = await response.json();
-
-            if (result.status === "error") {
-              throw new Error(result.errorMessage || "Failed to remove park");
-            }
-
-            // Optimistic UI: fade out and remove card
-            card.style.opacity = "0";
-            card.style.transform = "translateX(-20px)";
-            setTimeout(() => {
-              card.remove();
-              updateCounts();
-            }, 200);
-          } catch (err) {
-            console.error("Failed to remove park:", err);
-            button.disabled = false;
-            button.innerHTML =
-              '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
-          }
-        });
+        attachRemoveHandler(btn);
       });
     </script>
   </body>

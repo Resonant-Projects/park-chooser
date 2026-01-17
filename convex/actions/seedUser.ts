@@ -65,8 +65,8 @@ export const seedUserWithRecommendedParks = action({
       return { seeded: false, message: "No parks available to seed", count: 0 };
     }
 
-    // Filter to recommended parks if flag is set, otherwise use all
-    const recommendedParks: Park[] = allParks.filter((p: Park) => p.isRecommended !== false);
+    // Filter to only explicitly recommended parks
+    const recommendedParks: Park[] = allParks.filter((p: Park) => p.isRecommended === true);
     const parksToSeed: Park[] = recommendedParks.length > 0 ? recommendedParks : allParks;
 
     const parkIds: Id<"parks">[] = parksToSeed.map((p: Park) => p._id);

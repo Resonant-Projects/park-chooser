@@ -114,16 +114,32 @@ export const addParkToUserList = mutation({
       return { added: false, userParkId: existing._id, message: "Park already in list" };
     }
 
+    const addedAt = Date.now();
     const userParkId = await ctx.db.insert("userParks", {
       userId: user._id,
       parkId: args.parkId,
       customName: args.customName,
       notes: args.notes,
-      addedAt: Date.now(),
+      addedAt,
       visitCount: 0,
     });
 
-    return { added: true, userParkId, message: "Park added to list" };
+    return {
+      added: true,
+      userParkId,
+      message: "Park added to list",
+      park: {
+        _id: userParkId,
+        parkId: park._id,
+        placeId: park.placeId,
+        name: park.name,
+        customName: args.customName ?? park.customName,
+        address: park.address,
+        photoRefs: park.photoRefs,
+        visitCount: 0,
+        addedAt,
+      },
+    };
   },
 });
 
@@ -369,6 +385,7 @@ export const incrementUserParkVisit = internalMutation({
 
 /**
  * Add multiple parks to a user's list (for seeding).
+ * Respects tier limits - only seeds up to remaining capacity.
  */
 export const seedUserParksInternal = internalMutation({
   args: {
@@ -376,10 +393,35 @@ export const seedUserParksInternal = internalMutation({
     parkIds: v.array(v.id("parks")),
   },
   handler: async (ctx, args) => {
+    // Get user's tier and limit
+    const entitlement = await ctx.db
+      .query("userEntitlements")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    const tier: Tier = entitlement?.tier ?? "free";
+    const limit = TIER_LIMITS[tier].maxParks;
+
+    // Get current park count
+    const currentParks = await ctx.db
+      .query("userParks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Calculate remaining capacity
+    const remainingCapacity = Math.max(0, limit - currentParks.length);
+
+    if (remainingCapacity === 0) {
+      return { added: 0, reason: "at_limit" as const };
+    }
+
+    // Only seed up to remaining capacity
+    const parksToSeed = args.parkIds.slice(0, remainingCapacity);
+
     const now = Date.now();
     let added = 0;
 
-    for (const parkId of args.parkIds) {
+    for (const parkId of parksToSeed) {
       // Check if user already has this park
       const existing = await ctx.db
         .query("userParks")
@@ -397,6 +439,9 @@ export const seedUserParksInternal = internalMutation({
       }
     }
 
-    return { added };
+    return {
+      added,
+      reason: added < args.parkIds.length ? ("limited" as const) : ("success" as const),
+    };
   },
 });

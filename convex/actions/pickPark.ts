@@ -1,7 +1,7 @@
 "use node";
 
 import { action } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { getPhotoUrl } from "../lib/googleMaps";
 import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
@@ -58,13 +58,6 @@ export const pickPark = action({
       );
     }
 
-    // Check if user needs seeding (new user with no parks)
-    const userParkCount = await ctx.runQuery(api.userParks.getUserParkCount);
-    if (userParkCount === 0) {
-      // Auto-seed with recommended parks
-      await ctx.runAction(api.actions.seedUser.seedUserWithRecommendedParks);
-    }
-
     // Get all parks in user's list (cast and filter nulls)
     const rawUserParks = await ctx.runQuery(internal.userParks.getUserParksWithDetails, {
       userId: user._id,
@@ -74,7 +67,9 @@ export const pickPark = action({
     );
 
     if (userParks.length === 0) {
-      throw new Error("No parks in your list. Add parks from the catalog to get started.");
+      throw new Error(
+        "NO_PARKS: Add parks to your list first. Visit the Manage page to get started."
+      );
     }
 
     // Get the last 5 picked park IDs for this user

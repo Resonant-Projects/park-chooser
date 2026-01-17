@@ -31,6 +31,9 @@ if (convexToken) {
 const isFreeUser = entitlements?.tier === "free";
 const canPick = entitlements?.canPick ?? true;
 
+// Check if this is a first-time user (no parks in their list)
+const isFirstTimeUser = convexToken && entitlements?.usage.currentParks === 0;
+
 // Get referral code from cookie (for new user signups)
 const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 ---
@@ -98,7 +101,41 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       <main id="park-display">
         {
-          !canPick && isFreeUser ? (
+          isFirstTimeUser ? (
+            <Card
+              id="onboarding-card"
+              class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl"
+            >
+              <CardContent class="px-8 py-12">
+                <div class="mb-4 text-5xl">🎉</div>
+                <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
+                  Welcome to Today's Park!
+                </CardTitle>
+                <CardDescription class="text-mist mb-6">
+                  Get started by adding parks to your list. You can add our curated recommendations
+                  or browse the full catalog.
+                </CardDescription>
+                <div class="flex flex-col items-center gap-4">
+                  <Button
+                    id="seed-recommended"
+                    variant="primary"
+                    size="default"
+                    class="rounded-full"
+                  >
+                    <span class="seed-text">Add Recommended Parks</span>
+                    <Spinner class="seed-spinner hidden size-5" />
+                  </Button>
+                  <div class="text-mist text-sm">or</div>
+                  <a
+                    href="/manage"
+                    class="text-gold hover:text-cream font-semibold transition-colors"
+                  >
+                    Browse park catalog →
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          ) : !canPick && isFreeUser ? (
             <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
               <div class="mb-4 text-5xl">⏰</div>
               <h2 class="text-cream mb-3 font-[Fraunces] text-2xl">Daily Limit Reached</h2>
@@ -130,7 +167,11 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         }
       </main>
 
-      <div class="actions">
+      <div
+        class="actions"
+        id="pick-button-container"
+        style={isFirstTimeUser ? "display: none;" : ""}
+      >
         <Button
           id="pick-again"
           variant="primary"
@@ -164,7 +205,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       </footer>
     </div>
 
-    <script define:vars={{ convexUrl, convexToken, canPick, isFreeUser, referralCode }}>
+    <script
+      define:vars={{ convexUrl, convexToken, canPick, isFreeUser, isFirstTimeUser, referralCode }}
+    >
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
 
@@ -181,6 +224,11 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
           errorMessage.includes("Daily pick limit reached")
         );
+      }
+
+      // Helper to check if error is a "no parks" error
+      function isNoParksError(errorMessage) {
+        return errorMessage.includes("NO_PARKS");
       }
 
       // Show limit reached UI
@@ -228,6 +276,53 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       }
 
       storeUser();
+
+      // Handle "Add Recommended Parks" button for first-time users
+      const seedButton = document.getElementById("seed-recommended");
+      if (seedButton && isFirstTimeUser) {
+        seedButton.addEventListener("click", async () => {
+          seedButton.disabled = true;
+          seedButton.querySelector(".seed-text").textContent = "Adding parks...";
+          seedButton.querySelector(".seed-spinner").classList.remove("hidden");
+
+          try {
+            const headers = { "Content-Type": "application/json" };
+            if (convexToken) {
+              headers["Authorization"] = `Bearer ${convexToken}`;
+            }
+
+            const response = await fetch(`${convexUrl}/api/action`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                path: "actions/seedUser:seedUserWithRecommendedParks",
+                args: {},
+                format: "json",
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.status === "error") {
+              throw new Error(result.errorMessage || "Failed to add parks");
+            }
+
+            // Reload the page to show the normal "Pick a Park" UI
+            window.location.reload();
+          } catch (err) {
+            console.error("Failed to seed parks:", err);
+            seedButton.disabled = false;
+            seedButton.querySelector(".seed-text").textContent = "Add Recommended Parks";
+            seedButton.querySelector(".seed-spinner").classList.add("hidden");
+
+            // Show error message
+            const errorDiv = document.createElement("p");
+            errorDiv.className = "text-red-400 text-sm mt-3";
+            errorDiv.textContent = "Failed to add parks. Please try again.";
+            seedButton.parentElement.appendChild(errorDiv);
+          }
+        });
+      }
 
       // Debounce guards to prevent rapid multiple taps
       let isPickingPark = false;
@@ -332,6 +427,23 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
               </a>
             `;
             display.replaceChildren(limitCard);
+          } else if (isNoParksError(err.message)) {
+            // Show helpful UI for users with no parks
+            const noParksCard = document.createElement("div");
+            noParksCard.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            noParksCard.innerHTML = `
+              <div class="text-5xl mb-4">🌲</div>
+              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">No Parks Yet</h2>
+              <p class="text-mist mb-6">Add parks to your list to start picking!</p>
+              <a
+                href="/manage"
+                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
+              >
+                <span>Add Parks</span>
+              </a>
+            `;
+            display.replaceChildren(noParksCard);
           } else {
             const errorContainer = document.createElement("div");
             errorContainer.className =
