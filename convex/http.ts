@@ -18,7 +18,8 @@ const http = httpRouter();
  * Clerk Billing Webhook Endpoint
  *
  * Handles subscription events from Clerk Billing to sync user entitlements.
- * Events: subscriptionItem.created, subscriptionItem.updated, subscriptionItem.deleted
+ * Events: subscriptionItem.created, subscriptionItem.updated, subscriptionItem.active,
+ *         subscriptionItem.deleted, subscriptionItem.canceled, subscriptionItem.ended
  */
 http.route({
   path: "/webhooks/clerk-billing",
@@ -34,7 +35,8 @@ http.route({
     try {
       switch (event.type) {
         case "subscriptionItem.created":
-        case "subscriptionItem.updated": {
+        case "subscriptionItem.updated":
+        case "subscriptionItem.active": {
           const data = event.data as ClerkSubscriptionItemData;
 
           const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
@@ -82,7 +84,9 @@ http.route({
           break;
         }
 
-        case "subscriptionItem.deleted": {
+        case "subscriptionItem.deleted":
+        case "subscriptionItem.canceled":
+        case "subscriptionItem.ended": {
           const data = event.data as ClerkSubscriptionItemData;
 
           const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
