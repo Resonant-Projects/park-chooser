@@ -149,7 +149,10 @@ const isAtLimit = !canAddPark && isFreeUser;
 
           {
             userParks.length === 0 ? (
-              <div class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl">
+              <div
+                data-empty-message
+                class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl"
+              >
                 <p class="text-mist">No parks yet. Add some below to get started.</p>
               </div>
             ) : (
@@ -329,8 +332,8 @@ const isAtLimit = !canAddPark && isFreeUser;
         if (!myParksSection) return;
 
         // Check if there's an "empty" message div and remove it
-        const emptyMessage = myParksSection.querySelector(".rounded-2xl.border.border-white\\/15");
-        if (emptyMessage && emptyMessage.textContent.includes("No parks yet")) {
+        const emptyMessage = myParksSection.querySelector("[data-empty-message]");
+        if (emptyMessage) {
           // Replace with a grid container
           const grid = document.createElement("div");
           grid.className = "grid gap-3";

@@ -203,7 +203,7 @@ const convexToken = await getToken({ template: "convex" });
         submitBtn.querySelector(".button-spinner").classList.remove("hidden");
 
         try {
-          const ipHash = await getBrowserFingerprintHash();
+          const fingerprintHash = await getBrowserFingerprintHash();
 
           const headers = { "Content-Type": "application/json" };
           if (convexToken) {
@@ -220,7 +220,7 @@ const convexToken = await getToken({ template: "convex" });
                 subject,
                 message,
                 honeypot: honeypot || "",
-                ipHash,
+                ipHash: fingerprintHash,
               },
               format: "json",
             }),

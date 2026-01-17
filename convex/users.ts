@@ -85,14 +85,7 @@ export const store = mutation({
     });
 
     // Create default free tier entitlement for new user
-    const now = Date.now();
-    await ctx.db.insert("userEntitlements", {
-      userId,
-      tier: "free",
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
+    await ctx.runMutation(internal.entitlements.createDefaultEntitlement, { userId });
 
     // Process referral code if provided (new user only)
     if (args.referralCode) {
@@ -281,14 +274,7 @@ export const upsertFromClerkWebhook = internalMutation({
     });
 
     // Create default free tier entitlement
-    const now = Date.now();
-    await ctx.db.insert("userEntitlements", {
-      userId,
-      tier: "free",
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
+    await ctx.runMutation(internal.entitlements.createDefaultEntitlement, { userId });
 
     return { userId, created: true };
   },

@@ -21,34 +21,42 @@ import Button from "../../components/starwind/button/Button.astro";
   <main class="flex flex-1 flex-col gap-4">
     <!-- Quick Links -->
     <div class="grid grid-cols-2 gap-3">
-      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-        <CardContent class="p-4 text-center">
-          <div class="mb-2 text-2xl" aria-hidden="true">🚀</div>
-          <h3 class="text-cream text-sm font-semibold">Getting Started</h3>
-          <p class="text-mist mt-1 text-xs">New here? Start with the basics.</p>
-        </CardContent>
-      </Card>
-      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-        <CardContent class="p-4 text-center">
-          <div class="mb-2 text-2xl" aria-hidden="true">🌲</div>
-          <h3 class="text-cream text-sm font-semibold">Managing Parks</h3>
-          <p class="text-mist mt-1 text-xs">Add, remove, discover parks.</p>
-        </CardContent>
-      </Card>
-      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-        <CardContent class="p-4 text-center">
-          <div class="mb-2 text-2xl" aria-hidden="true">📊</div>
-          <h3 class="text-cream text-sm font-semibold">Stats & History</h3>
-          <p class="text-mist mt-1 text-xs">Track your adventures.</p>
-        </CardContent>
-      </Card>
-      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-        <CardContent class="p-4 text-center">
-          <div class="mb-2 text-2xl" aria-hidden="true">💳</div>
-          <h3 class="text-cream text-sm font-semibold">Account & Billing</h3>
-          <p class="text-mist mt-1 text-xs">Manage your subscription.</p>
-        </CardContent>
-      </Card>
+      <a href="/about" class="block transition-transform hover:scale-[1.02]">
+        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="p-4 text-center">
+            <div class="mb-2 text-2xl" aria-hidden="true">🚀</div>
+            <h3 class="text-cream text-sm font-semibold">Getting Started</h3>
+            <p class="text-mist mt-1 text-xs">New here? Start with the basics.</p>
+          </CardContent>
+        </Card>
+      </a>
+      <a href="/manage" class="block transition-transform hover:scale-[1.02]">
+        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="p-4 text-center">
+            <div class="mb-2 text-2xl" aria-hidden="true">🌲</div>
+            <h3 class="text-cream text-sm font-semibold">Managing Parks</h3>
+            <p class="text-mist mt-1 text-xs">Add, remove, discover parks.</p>
+          </CardContent>
+        </Card>
+      </a>
+      <a href="/stats" class="block transition-transform hover:scale-[1.02]">
+        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="p-4 text-center">
+            <div class="mb-2 text-2xl" aria-hidden="true">📊</div>
+            <h3 class="text-cream text-sm font-semibold">Stats & History</h3>
+            <p class="text-mist mt-1 text-xs">Track your adventures.</p>
+          </CardContent>
+        </Card>
+      </a>
+      <a href="/account" class="block transition-transform hover:scale-[1.02]">
+        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="p-4 text-center">
+            <div class="mb-2 text-2xl" aria-hidden="true">💳</div>
+            <h3 class="text-cream text-sm font-semibold">Account & Billing</h3>
+            <p class="text-mist mt-1 text-xs">Manage your subscription.</p>
+          </CardContent>
+        </Card>
+      </a>
     </div>
 
     <!-- FAQ -->

@@ -1,5 +1,6 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Create a new support ticket
@@ -74,17 +75,8 @@ export const getByReference = query({
     }
 
     // Check if current user owns this ticket
-    const identity = await ctx.auth.getUserIdentity();
-    let isOwner = false;
-
-    if (identity && ticket.userId) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
-
-      isOwner = user?._id === ticket.userId;
-    }
+    const user = await getUserFromIdentity(ctx);
+    const isOwner = ticket.userId !== undefined && user?._id === ticket.userId;
 
     // Return full details to owner, limited info to others
     if (isOwner) {

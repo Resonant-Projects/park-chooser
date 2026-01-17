@@ -14,7 +14,7 @@ interface BackfillResult {
 
 interface EntitlementStatusResult {
   usersNeedingBackfill: number;
-  users: Array<{
+  sampleUsers: Array<{
     id: Doc<"users">["_id"];
     email: string | undefined;
     name: string | undefined;
@@ -23,7 +23,7 @@ interface EntitlementStatusResult {
 
 interface PaginatedUsersResult {
   users: Doc<"users">[];
-  nextCursor: string;
+  nextCursor: string | null;
   isDone: boolean;
 }
 
@@ -40,13 +40,13 @@ export const backfillEntitlements = internalAction({
     let created = 0;
     let totalFound = 0;
     const errors: string[] = [];
-    let cursor: string | undefined = undefined;
+    let cursor: string | null = null;
 
     // Process users in paginated batches for memory safety
     do {
       const result: PaginatedUsersResult = await ctx.runQuery(
         internal.backfillHelpers.getUsersWithoutEntitlements,
-        { cursor, limit: 100 }
+        { cursor: cursor ?? undefined, limit: 100 }
       );
 
       const usersWithoutEntitlements = result.users;
@@ -77,7 +77,7 @@ export const backfillEntitlements = internalAction({
         }
       }
 
-      cursor = result.isDone ? undefined : result.nextCursor;
+      cursor = result.isDone ? null : result.nextCursor;
     } while (cursor);
 
     if (totalFound === 0) {
@@ -100,6 +100,7 @@ export const backfillEntitlements = internalAction({
 
 /**
  * Check status: How many users are missing entitlements?
+ * Returns count and a sample of up to 10 users to avoid OOM on large datasets.
  *
  * Run to check before/after backfill:
  * npx convex run actions/backfillEntitlements:checkEntitlementStatus
@@ -107,34 +108,40 @@ export const backfillEntitlements = internalAction({
 export const checkEntitlementStatus = internalAction({
   args: {},
   handler: async (ctx): Promise<EntitlementStatusResult> => {
-    const allUsers: Array<{
+    const sampleUsers: Array<{
       id: Doc<"users">["_id"];
       email: string | undefined;
       name: string | undefined;
     }> = [];
-    let cursor: string | undefined = undefined;
+    let totalCount = 0;
+    let cursor: string | null = null;
 
-    // Collect all users without entitlements (paginated)
+    // Count users without entitlements and collect a sample (max 10)
     do {
       const result: PaginatedUsersResult = await ctx.runQuery(
         internal.backfillHelpers.getUsersWithoutEntitlements,
-        { cursor, limit: 100 }
+        { cursor: cursor ?? undefined, limit: 100 }
       );
 
+      totalCount += result.users.length;
+
+      // Collect sample (first 10 users only)
       for (const user of result.users) {
-        allUsers.push({
-          id: user._id,
-          email: user.email,
-          name: user.name,
-        });
+        if (sampleUsers.length < 10) {
+          sampleUsers.push({
+            id: user._id,
+            email: user.email,
+            name: user.name,
+          });
+        }
       }
 
-      cursor = result.isDone ? undefined : result.nextCursor;
+      cursor = result.isDone ? null : result.nextCursor;
     } while (cursor);
 
     return {
-      usersNeedingBackfill: allUsers.length,
-      users: allUsers,
+      usersNeedingBackfill: totalCount,
+      sampleUsers,
     };
   },
 });

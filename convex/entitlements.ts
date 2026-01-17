@@ -199,12 +199,10 @@ export const upsertFromClerkWebhook = internalMutation({
     periodEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Log webhook data for debugging
+    // Log webhook event (without sensitive identifiers)
     console.log("Webhook entitlement update:", {
-      userId: args.userId,
       status: args.status,
       planSlug: args.clerkPlanSlug,
-      subscriptionId: args.clerkSubscriptionId,
     });
 
     // Only grant premium when ALL conditions are met:
@@ -217,7 +215,10 @@ export const upsertFromClerkWebhook = internalMutation({
       validPaidStatuses.includes(args.status) && Boolean(args.clerkSubscriptionId) && isPremiumPlan;
     const tier: Tier = hasPaidSubscription ? "premium" : "free";
 
-    console.log("Computed tier:", { tier, isPremiumPlan, hasPaidSubscription });
+    // Debug: tier computation result
+    if (process.env.DEBUG_ENTITLEMENTS) {
+      console.log("Computed tier:", { tier, isPremiumPlan, hasPaidSubscription });
+    }
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";

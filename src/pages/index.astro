@@ -315,6 +315,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             seedButton.querySelector(".seed-text").textContent = "Add Recommended Parks";
             seedButton.querySelector(".seed-spinner").classList.add("hidden");
 
+            // Clear any existing error messages first
+            const existingError = seedButton.parentElement.querySelector(".text-red-400");
+            if (existingError) existingError.remove();
+
             // Show error message
             const errorDiv = document.createElement("p");
             errorDiv.className = "text-red-400 text-sm mt-3";

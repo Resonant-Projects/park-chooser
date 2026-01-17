@@ -1,10 +1,13 @@
 ---
-/* eslint-disable astro/no-set-html-directive -- JSON.stringify safely escapes content */
 interface Props {
   schema: Record<string, unknown>;
 }
 
 const { schema } = Astro.props;
+
+// JSON.stringify escapes quotes/backslashes but not </script> which could break out of the tag.
+// Replace </ with \u003c/ to prevent script tag injection.
+const safeJson = JSON.stringify(schema).replace(/</g, "\\u003c");
 ---
 
-<script type="application/ld+json" set:html={JSON.stringify(schema)} />
+<script type="application/ld+json" set:html={safeJson} />

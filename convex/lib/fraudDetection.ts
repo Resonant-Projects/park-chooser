@@ -28,10 +28,11 @@ export async function checkSelfReferral(
     return { isSuspicious: false };
   }
 
-  // Get referrer's recent referrals to check patterns (limit to 100 for performance)
+  // Get referrer's most recent referrals to check patterns (limit to 100 for performance)
   const referrerReferrals = await db
     .query("referrals")
     .withIndex("by_referrer", (q) => q.eq("referrerId", referrerId))
+    .order("desc")
     .take(100);
 
   // Check if any recent referral came from same IP
@@ -121,10 +122,11 @@ export async function checkCodeVelocity(
   const oneHourAgo = now - 60 * 60 * 1000;
   const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-  // Get referrals for this code (using index for performance)
+  // Get most recent referrals for this code (using index for performance)
   const referrals = await db
     .query("referrals")
     .withIndex("by_referral_code", (q) => q.eq("referralCodeId", codeId))
+    .order("desc")
     .take(100);
 
   // Check hourly limit

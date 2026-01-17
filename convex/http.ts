@@ -125,6 +125,8 @@ http.route({
                 status: "canceled",
               });
               console.log("Subscription canceled for user:", clerkUserId);
+            } else {
+              console.warn("User not found for canceled subscription:", clerkUserId);
             }
           }
           break;
@@ -192,7 +194,7 @@ http.route({
               internal.actions.processReferralConversion.processReferralConversion,
               {
                 refereeId: user._id,
-                subscriptionStatus: activeItem.status,
+                subscriptionStatus: data.status,
               }
             );
             console.log("Referral conversion result:", referralResult);
