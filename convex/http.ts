@@ -18,8 +18,16 @@ const http = httpRouter();
  * Clerk Billing Webhook Endpoint
  *
  * Handles subscription events from Clerk Billing to sync user entitlements.
- * Events: subscriptionItem.created, subscriptionItem.updated, subscriptionItem.active,
- *         subscriptionItem.deleted, subscriptionItem.canceled, subscriptionItem.ended
+ *
+ * Subscription Item Events (subscriptionItem.*):
+ *   - subscriptionItem.created, subscriptionItem.updated, subscriptionItem.active
+ *   - subscriptionItem.deleted, subscriptionItem.canceled, subscriptionItem.ended
+ *
+ * Subscription Events (subscription.*):
+ *   - subscription.created, subscription.updated, subscription.active
+ *   - subscription.canceled, subscription.ended
+ *
+ * Note: subscription.* events have a different payload structure with items[] array.
  */
 http.route({
   path: "/webhooks/clerk-billing",
@@ -106,6 +114,93 @@ http.route({
           break;
         }
 
+        // Handle subscription-level events (different structure than subscriptionItem.* events)
+        case "subscription.created":
+        case "subscription.updated":
+        case "subscription.active": {
+          const data = event.data as ClerkSubscriptionData;
+          const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
+
+          if (!tokenIdentifier) {
+            console.warn("No user_id in subscription:", data.id);
+            return new Response("Missing user_id", { status: 400 });
+          }
+
+          // Find the active subscription item, or fall back to most relevant one
+          const activeItem =
+            data.items.find((item) => item.status === "active") ??
+            data.items.find((item) => item.status !== "ended" && item.status !== "canceled") ??
+            data.items[data.items.length - 1]; // fallback to last item
+
+          if (!activeItem) {
+            console.warn("No subscription items found in subscription:", data.id);
+            return new Response("No subscription items", { status: 400 });
+          }
+
+          console.log("Processing subscription event:", {
+            subscriptionId: data.id,
+            subscriptionStatus: data.status,
+            activeItemId: activeItem.id,
+            activeItemStatus: activeItem.status,
+            planSlug: activeItem.plan?.slug,
+          });
+
+          const result = await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+            tokenIdentifier,
+            clerkSubscriptionId: data.id,
+            clerkSubscriptionItemId: activeItem.id,
+            clerkPlanId: activeItem.plan_id,
+            clerkPlanSlug: activeItem.plan?.slug,
+            status: activeItem.status,
+            periodStart: activeItem.period_start,
+            periodEnd: activeItem.period_end,
+          });
+
+          console.log("Entitlement sync result:", result);
+
+          // Process referral conversion for active subscriptions
+          if (data.status === "active") {
+            const user = await ctx.runQuery(internal.users.getUserByTokenInternal, {
+              tokenIdentifier,
+            });
+
+            if (user) {
+              const referralResult = await ctx.runAction(
+                internal.actions.processReferralConversion.processReferralConversion,
+                {
+                  refereeId: user._id,
+                  subscriptionStatus: activeItem.status,
+                }
+              );
+              console.log("Referral conversion result:", referralResult);
+            }
+          }
+
+          break;
+        }
+
+        case "subscription.canceled":
+        case "subscription.ended": {
+          const data = event.data as ClerkSubscriptionData;
+          const tokenIdentifier = buildTokenIdentifier(data.payer?.user_id);
+
+          if (tokenIdentifier) {
+            // Find any item to get plan info (use first item as reference)
+            const item = data.items[0];
+
+            await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+              tokenIdentifier,
+              clerkSubscriptionId: data.id,
+              clerkSubscriptionItemId: item?.id ?? data.id,
+              clerkPlanId: item?.plan_id ?? "",
+              clerkPlanSlug: item?.plan?.slug,
+              status: "canceled",
+            });
+            console.log("Subscription canceled/ended for user:", data.payer?.user_id);
+          }
+          break;
+        }
+
         default:
           console.log("Ignored Clerk Billing webhook event:", event.type);
       }
@@ -175,6 +270,31 @@ interface ClerkSubscriptionItemData {
   status: string;
   current_period_start?: string;
   current_period_end?: string;
+}
+
+/**
+ * Type definition for subscription-level events (subscription.created, subscription.updated, etc.)
+ * These have a different structure than subscriptionItem.* events
+ */
+interface ClerkSubscriptionData {
+  id: string; // subscription ID (csub_xxx)
+  status: string;
+  items: Array<{
+    id: string;
+    plan_id: string;
+    plan?: {
+      slug?: string;
+      name?: string;
+      amount?: number;
+    };
+    status: string;
+    period_start?: number;
+    period_end?: number;
+  }>;
+  payer?: {
+    user_id?: string;
+    email?: string;
+  };
 }
 
 export default http;

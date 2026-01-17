@@ -96,39 +96,38 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         </div>
       </header>
 
-      {/* Upgrade prompt when limit reached */}
-      {
-        !canPick && isFreeUser && (
-          <div
-            id="limit-banner"
-            class="from-sunset/20 to-gold/20 border-sunset/30 mb-4 rounded-2xl border bg-gradient-to-r p-4 text-center"
-          >
-            <p class="text-cream mb-2 font-medium">You've used your daily pick!</p>
-            <p class="text-mist mb-3 text-sm">Upgrade to Premium for unlimited picks and parks.</p>
-            <a
-              href="/pricing"
-              class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold transition-colors"
-            >
-              <span>⭐</span>
-              <span>Upgrade to Premium</span>
-            </a>
-          </div>
-        )
-      }
-
       <main id="park-display">
-        <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
-          <CardContent class="px-8 py-12">
-            <div class="mb-4 text-5xl">🌲</div>
-            <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
-              Ready for an adventure?
-            </CardTitle>
-            <CardDescription class="text-mist mb-6">
-              Click below to discover your park for today!
-            </CardDescription>
-            <div class="text-gold animate-bounce text-3xl">↓</div>
-          </CardContent>
-        </Card>
+        {
+          !canPick && isFreeUser ? (
+            <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
+              <div class="mb-4 text-5xl">⏰</div>
+              <h2 class="text-cream mb-3 font-[Fraunces] text-2xl">Daily Limit Reached</h2>
+              <p class="text-mist mb-6">
+                Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!
+              </p>
+              <a
+                href="/pricing"
+                class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors"
+              >
+                <span>⭐</span>
+                <span>Upgrade for Unlimited Picks</span>
+              </a>
+            </div>
+          ) : (
+            <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
+              <CardContent class="px-8 py-12">
+                <div class="mb-4 text-5xl">🌲</div>
+                <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
+                  Ready for an adventure?
+                </CardTitle>
+                <CardDescription class="text-mist mb-6">
+                  Click below to discover your park for today!
+                </CardDescription>
+                <div class="text-gold animate-bounce text-3xl">↓</div>
+              </CardContent>
+            </Card>
+          )
+        }
       </main>
 
       <div class="actions">
@@ -168,7 +167,6 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
     <script define:vars={{ convexUrl, convexToken, canPick, isFreeUser, referralCode }}>
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
-      const limitBanner = document.getElementById("limit-banner");
 
       // Disable button if user has reached daily limit
       if (!canPick && isFreeUser) {
@@ -191,26 +189,6 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         button.querySelector(".button-text").textContent = "Daily Limit Reached";
         button.querySelector(".button-spinner").classList.add("hidden");
         button.classList.add("opacity-60", "cursor-not-allowed");
-
-        // Show the upgrade banner if it doesn't exist
-        if (!limitBanner) {
-          const banner = document.createElement("div");
-          banner.id = "limit-banner";
-          banner.className =
-            "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
-          banner.innerHTML = `
-            <p class="text-cream font-medium mb-2">You've used your daily pick!</p>
-            <p class="text-mist text-sm mb-3">Upgrade to Premium for unlimited picks and parks.</p>
-            <a
-              href="/pricing"
-              class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
-            >
-              <span>⭐</span>
-              <span>Upgrade to Premium</span>
-            </a>
-          `;
-          display.parentNode.insertBefore(banner, display);
-        }
       }
 
       // Store user on page load (with optional referral code)
