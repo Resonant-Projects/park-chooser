@@ -1,143 +1,124 @@
 ---
-import "../styles/starwind.css";
-import "../styles/global.css";
+import PageLayout from "../layouts/PageLayout.astro";
+import SEO from "../components/SEO.astro";
 import { PricingTable } from "@clerk/astro/components";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pricing - Today's Park</title>
-    <meta
-      name="description"
-      content="Choose your plan for Today's Park. Simple, affordable pricing for your park adventures."
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1 class="title">Choose Your Plan</h1>
-        <p class="subtitle">Simple pricing for your park adventures</p>
-      </header>
+<PageLayout
+  title="Choose Your Plan"
+  subtitle="Simple pricing for your park adventures"
+  pageTitle="Pricing - Today's Park"
+>
+  <SEO
+    slot="head"
+    title="Pricing - Today's Park"
+    description="Choose your plan for Today's Park. Simple, affordable pricing for your park adventures."
+  />
+  <!-- Pricing Table from Clerk -->
+  <div class="pricing-table-wrapper">
+    <PricingTable />
+  </div>
 
-      <main class="flex flex-1 flex-col gap-6">
-        <!-- Pricing Table from Clerk -->
-        <div class="pricing-table-wrapper">
-          <PricingTable />
-        </div>
+  <!-- FAQ Section -->
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">
+        Frequently Asked Questions
+      </h2>
 
-        <!-- FAQ Section -->
-        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-6">
-            <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">
-              Frequently Asked Questions
-            </h2>
+      <div class="space-y-4">
+        <details class="group" open>
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            What payment methods do you accept?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 text-sm">
+            We accept all major credit cards (Visa, Mastercard, American Express) through our secure
+            payment processor, Stripe.
+          </p>
+        </details>
 
-            <div class="space-y-4">
-              <details class="group" open>
-                <summary
-                  class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-                >
-                  What payment methods do you accept?
-                  <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <p class="text-mist mt-2 text-sm">
-                  We accept all major credit cards (Visa, Mastercard, American Express) through our
-                  secure payment processor, Stripe.
-                </p>
-              </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            Can I change my plan later?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 text-sm">
+            Yes! You can upgrade or downgrade your plan at any time. Changes take effect at the
+            start of your next billing period.
+          </p>
+        </details>
 
-              <details class="group">
-                <summary
-                  class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-                >
-                  Can I change my plan later?
-                  <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <p class="text-mist mt-2 text-sm">
-                  Yes! You can upgrade or downgrade your plan at any time. Changes take effect at
-                  the start of your next billing period.
-                </p>
-              </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            Is there a free trial?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 text-sm">
+            You can try Today's Park with a limited set of features before subscribing. Sign up to
+            see what's available in the free tier.
+          </p>
+        </details>
 
-              <details class="group">
-                <summary
-                  class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-                >
-                  Is there a free trial?
-                  <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <p class="text-mist mt-2 text-sm">
-                  You can try Today's Park with a limited set of features before subscribing. Sign
-                  up to see what's available in the free tier.
-                </p>
-              </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            How do I cancel my subscription?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 text-sm">
+            You can cancel anytime from your account settings. Click your profile icon and select
+            "Manage Account" to access billing options. Your access continues until the end of your
+            current billing period.
+          </p>
+        </details>
 
-              <details class="group">
-                <summary
-                  class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-                >
-                  How do I cancel my subscription?
-                  <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <p class="text-mist mt-2 text-sm">
-                  You can cancel anytime from your account settings. Click your profile icon and
-                  select "Manage Account" to access billing options. Your access continues until the
-                  end of your current billing period.
-                </p>
-              </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            Do you offer refunds?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 text-sm">
+            We don't offer refunds for partial billing periods. However, if you're unsatisfied
+            within the first 7 days, <a href="/help/contact" class="text-gold hover:underline"
+              >contact us</a
+            > and we'll work something out.
+          </p>
+        </details>
+      </div>
+    </CardContent>
+  </Card>
 
-              <details class="group">
-                <summary
-                  class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-                >
-                  Do you offer refunds?
-                  <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <p class="text-mist mt-2 text-sm">
-                  We don't offer refunds for partial billing periods. However, if you're unsatisfied
-                  within the first 7 days, <a href="/help/contact" class="text-gold hover:underline"
-                    >contact us</a
-                  > and we'll work something out.
-                </p>
-              </details>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
+    <nav class="text-mist flex justify-center gap-6 text-sm">
+      <a href="/" class="hover:text-cream transition-colors">Home</a>
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/help" class="hover:text-cream transition-colors">Help</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
+</PageLayout>
 
-      <footer class="mt-8 border-t border-white/10 pt-4">
-        <nav class="text-mist flex justify-center gap-6 text-sm">
-          <a href="/" class="hover:text-cream transition-colors">Home</a>
-          <a href="/about" class="hover:text-cream transition-colors">About</a>
-          <a href="/help" class="hover:text-cream transition-colors">Help</a>
-          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
-          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
-        </nav>
-      </footer>
-    </div>
+<style>
+  /* Style overrides for Clerk PricingTable to match app theme */
+  .pricing-table-wrapper {
+    --clerk-surface-background: rgba(255, 255, 255, 0.1);
+    --clerk-elements-card-background: rgba(255, 255, 255, 0.05);
+  }
 
-    <style>
-      /* Style overrides for Clerk PricingTable to match app theme */
-      .pricing-table-wrapper {
-        --clerk-surface-background: rgba(255, 255, 255, 0.1);
-        --clerk-elements-card-background: rgba(255, 255, 255, 0.05);
-      }
-
-      .pricing-table-wrapper :global(.cl-pricingTable-root) {
-        background: transparent;
-      }
-    </style>
-  </body>
-</html>
+  .pricing-table-wrapper :global(.cl-pricingTable-root) {
+    background: transparent;
+  }
+</style>

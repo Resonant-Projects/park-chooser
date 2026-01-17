@@ -1,172 +1,167 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
 ---
 
-<BaseLayout>
+<PageLayout
+  title="Help Center"
+  subtitle="Find answers and get support"
+  pageTitle="Help Center - Today's Park"
+>
   <SEO
     slot="head"
     title="Help Center - Today's Park"
     description="Get help with Today's Park. Find answers to common questions and contact support."
   />
+  <!-- Quick Links -->
+  <div class="grid grid-cols-2 gap-3">
+    <a href="/about" class="block transition-transform hover:scale-[1.02]">
+      <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-4 text-center">
+          <div class="mb-2 text-2xl" aria-hidden="true">🚀</div>
+          <h3 class="text-cream text-sm font-semibold">Getting Started</h3>
+          <p class="text-mist mt-1 text-xs">New here? Start with the basics.</p>
+        </CardContent>
+      </Card>
+    </a>
+    <a href="/manage" class="block transition-transform hover:scale-[1.02]">
+      <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-4 text-center">
+          <div class="mb-2 text-2xl" aria-hidden="true">🌲</div>
+          <h3 class="text-cream text-sm font-semibold">Managing Parks</h3>
+          <p class="text-mist mt-1 text-xs">Add, remove, discover parks.</p>
+        </CardContent>
+      </Card>
+    </a>
+    <a href="/stats" class="block transition-transform hover:scale-[1.02]">
+      <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-4 text-center">
+          <div class="mb-2 text-2xl" aria-hidden="true">📊</div>
+          <h3 class="text-cream text-sm font-semibold">Stats & History</h3>
+          <p class="text-mist mt-1 text-xs">Track your adventures.</p>
+        </CardContent>
+      </Card>
+    </a>
+    <a href="/account" class="block transition-transform hover:scale-[1.02]">
+      <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-4 text-center">
+          <div class="mb-2 text-2xl" aria-hidden="true">💳</div>
+          <h3 class="text-cream text-sm font-semibold">Account & Billing</h3>
+          <p class="text-mist mt-1 text-xs">Manage your subscription.</p>
+        </CardContent>
+      </Card>
+    </a>
+  </div>
 
-  <header>
-    <h1 class="title">Help Center</h1>
-    <p class="subtitle">Find answers and get support</p>
-  </header>
+  <!-- FAQ -->
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">
+        Frequently Asked Questions
+      </h2>
 
-  <main class="flex flex-1 flex-col gap-4">
-    <!-- Quick Links -->
-    <div class="grid grid-cols-2 gap-3">
-      <a href="/about" class="block transition-transform hover:scale-[1.02]">
-        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-4 text-center">
-            <div class="mb-2 text-2xl" aria-hidden="true">🚀</div>
-            <h3 class="text-cream text-sm font-semibold">Getting Started</h3>
-            <p class="text-mist mt-1 text-xs">New here? Start with the basics.</p>
-          </CardContent>
-        </Card>
-      </a>
-      <a href="/manage" class="block transition-transform hover:scale-[1.02]">
-        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-4 text-center">
-            <div class="mb-2 text-2xl" aria-hidden="true">🌲</div>
-            <h3 class="text-cream text-sm font-semibold">Managing Parks</h3>
-            <p class="text-mist mt-1 text-xs">Add, remove, discover parks.</p>
-          </CardContent>
-        </Card>
-      </a>
-      <a href="/stats" class="block transition-transform hover:scale-[1.02]">
-        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-4 text-center">
-            <div class="mb-2 text-2xl" aria-hidden="true">📊</div>
-            <h3 class="text-cream text-sm font-semibold">Stats & History</h3>
-            <p class="text-mist mt-1 text-xs">Track your adventures.</p>
-          </CardContent>
-        </Card>
-      </a>
-      <a href="/account" class="block transition-transform hover:scale-[1.02]">
-        <Card class="h-full border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-4 text-center">
-            <div class="mb-2 text-2xl" aria-hidden="true">💳</div>
-            <h3 class="text-cream text-sm font-semibold">Account & Billing</h3>
-            <p class="text-mist mt-1 text-xs">Manage your subscription.</p>
-          </CardContent>
-        </Card>
-      </a>
-    </div>
+      <div class="space-y-4">
+        <details class="group" open>
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            How do I add parks to my list?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            Go to the <a href="/manage" class="text-gold hover:underline">Manage</a> page where you can
+            browse recommended parks or visit <a href="/discover" class="text-gold hover:underline"
+              >Discover</a
+            > to find parks near your current location.
+          </p>
+        </details>
 
-    <!-- FAQ -->
-    <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-      <CardContent class="p-6">
-        <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">
-          Frequently Asked Questions
-        </h2>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            Why doesn't the same park repeat?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            To encourage variety, we won't pick the same park twice within your last 5 selections.
+            If you have fewer than 5 parks, this limit is adjusted automatically.
+          </p>
+        </details>
 
-        <div class="space-y-4">
-          <details class="group" open>
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              How do I add parks to my list?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              Go to the <a href="/manage" class="text-gold hover:underline">Manage</a> page where you
-              can browse recommended parks or visit <a
-                href="/discover"
-                class="text-gold hover:underline">Discover</a
-              > to find parks near your current location.
-            </p>
-          </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            How is travel time calculated?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            When you pick a park, we request your location (with your permission) and use Google
+            Maps to estimate driving time based on current traffic conditions.
+          </p>
+        </details>
 
-          <details class="group">
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              Why doesn't the same park repeat?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              To encourage variety, we won't pick the same park twice within your last 5 selections.
-              If you have fewer than 5 parks, this limit is adjusted automatically.
-            </p>
-          </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            How do I track my park visits?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            Each time you tap "Open in Google Maps" after picking a park, we count it as a visit.
+            View your stats on the <a href="/stats" class="text-gold hover:underline">Stats</a> page.
+          </p>
+        </details>
 
-          <details class="group">
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              How is travel time calculated?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              When you pick a park, we request your location (with your permission) and use Google
-              Maps to estimate driving time based on current traffic conditions.
-            </p>
-          </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            Can I change or cancel my subscription?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            Yes! Click your profile icon in the top right corner of any page, then select "Manage
+            Account" to update your subscription or payment method.
+          </p>
+        </details>
 
-          <details class="group">
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              How do I track my park visits?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              Each time you tap "Open in Google Maps" after picking a park, we count it as a visit.
-              View your stats on the <a href="/stats" class="text-gold hover:underline">Stats</a> page.
-            </p>
-          </details>
+        <details class="group">
+          <summary
+            class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
+          >
+            What happens to my parks if I cancel?
+            <span class="text-mist transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <p class="text-mist mt-2 pl-0 text-sm">
+            Your park list and visit history are preserved. If you resubscribe later, everything
+            will be right where you left it.
+          </p>
+        </details>
+      </div>
+    </CardContent>
+  </Card>
 
-          <details class="group">
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              Can I change or cancel my subscription?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              Yes! Click your profile icon in the top right corner of any page, then select "Manage
-              Account" to update your subscription or payment method.
-            </p>
-          </details>
+  <!-- Support CTAs -->
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6 text-center">
+      <h2 class="text-cream mb-2 font-[Fraunces] text-lg font-semibold">Still need help?</h2>
+      <p class="text-mist mb-4 text-sm">
+        We're here to help. Reach out and we'll get back to you within 24-48 hours.
+      </p>
+      <div class="flex flex-col justify-center gap-3 sm:flex-row">
+        <Button as="a" href="/help/contact" variant="primary"> Contact Support </Button>
+        <Button as="a" href="/help/feedback" variant="secondary"> Send Feedback </Button>
+      </div>
+    </CardContent>
+  </Card>
 
-          <details class="group">
-            <summary
-              class="text-cream hover:text-gold flex cursor-pointer list-none items-center justify-between font-semibold transition-colors"
-            >
-              What happens to my parks if I cancel?
-              <span class="text-mist transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <p class="text-mist mt-2 pl-0 text-sm">
-              Your park list and visit history are preserved. If you resubscribe later, everything
-              will be right where you left it.
-            </p>
-          </details>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- Support CTAs -->
-    <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-      <CardContent class="p-6 text-center">
-        <h2 class="text-cream mb-2 font-[Fraunces] text-lg font-semibold">Still need help?</h2>
-        <p class="text-mist mb-4 text-sm">
-          We're here to help. Reach out and we'll get back to you within 24-48 hours.
-        </p>
-        <div class="flex flex-col justify-center gap-3 sm:flex-row">
-          <Button as="a" href="/help/contact" variant="primary"> Contact Support </Button>
-          <Button as="a" href="/help/feedback" variant="secondary"> Send Feedback </Button>
-        </div>
-      </CardContent>
-    </Card>
-  </main>
-
-  <footer class="mt-8 border-t border-white/10 pt-4">
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
     <nav class="text-mist flex justify-center gap-6 text-sm">
       <a href="/" class="hover:text-cream transition-colors">Home</a>
       <a href="/about" class="hover:text-cream transition-colors">About</a>
@@ -174,4 +169,4 @@ import Button from "../../components/starwind/button/Button.astro";
       <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
     </nav>
   </footer>
-</BaseLayout>
+</PageLayout>

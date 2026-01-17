@@ -6,8 +6,7 @@ import {
   getUserEntitlements,
 } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
-import "../styles/starwind.css";
-import "../styles/global.css";
+import PageLayout from "../layouts/PageLayout.astro";
 
 // Auth check
 const { userId, getToken } = Astro.locals.auth();
@@ -39,509 +38,444 @@ const canAddPark = entitlements?.canAddPark ?? true;
 const isAtLimit = !canAddPark && isFreeUser;
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Manage Parks</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <div class="mb-2 flex items-start justify-between">
-          <div>
-            <a
-              href="/"
-              class="text-gold hover:text-cream mb-1 inline-block text-sm font-medium transition-colors"
-              >&larr; Back</a
-            >
-            <h1 class="title">Manage Parks</h1>
-            <p class="subtitle">Add or remove parks from your list</p>
-          </div>
-          <div class="mt-1">
-            <UserButton afterSignOutUrl="/sign-in">
-              <UserButton.MenuItems>
-                <UserButton.Link label="Manage Parks" href="/manage">
-                  <svg
-                    slot="label-icon"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    width="16"
-                    height="16"
-                  >
-                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z"></path>
-                  </svg>
-                </UserButton.Link>
-              </UserButton.MenuItems>
-            </UserButton>
-          </div>
-        </div>
+<PageLayout
+  title="Manage Parks"
+  subtitle="Add or remove parks from your list"
+  pageTitle="Manage Parks"
+  backLink={{ href: "/" }}
+  showUserButton
+>
+  <UserButton.Link slot="user-menu" label="Account" href="/account">
+    <svg
+      slot="label-icon"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width="16"
+      height="16"
+    >
+      <path
+        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+      ></path>
+    </svg>
+  </UserButton.Link>
 
-        {/* Park limit badge for free users */}
-        {
-          isFreeUser && maxParks > 0 && (
-            <div class="mt-2 flex justify-center">
-              <span
-                class={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
-                  canAddPark
-                    ? "bg-forest/20 text-cream border-forest/30 border"
-                    : "bg-sunset/20 text-sunset border-sunset/30 border"
-                }`}
-              >
-                {canAddPark ? (
-                  <>
-                    <span>🌲</span>
-                    <span>
-                      {currentParkCount}/{maxParks} parks
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span>⚠️</span>
-                    <span>
-                      Park limit reached ({maxParks}/{maxParks})
-                    </span>
-                  </>
-                )}
-              </span>
-            </div>
-          )
-        }
-      </header>
+  {/* Upgrade prompt when limit reached */}
+  {
+    isAtLimit && (
+      <div
+        id="limit-banner"
+        class="from-sunset/20 to-gold/20 border-sunset/30 mb-4 rounded-2xl border bg-gradient-to-r p-4 text-center"
+      >
+        <p class="text-cream mb-2 font-medium">You've reached your park limit!</p>
+        <p class="text-mist mb-3 text-sm">
+          Free accounts can save up to {maxParks} parks. Upgrade to Premium for unlimited parks.
+        </p>
+        <a
+          href="/pricing"
+          class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold transition-colors"
+        >
+          <span>⭐</span>
+          <span>Upgrade to Premium</span>
+        </a>
+      </div>
+    )
+  }
 
-      {/* Upgrade prompt when limit reached */}
+  <div class="space-y-8">
+    <!-- My Parks Section -->
+    <section>
+      <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
+        My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
+      </h2>
+
       {
-        isAtLimit && (
+        userParks.length === 0 ? (
           <div
-            id="limit-banner"
-            class="from-sunset/20 to-gold/20 border-sunset/30 mb-4 rounded-2xl border bg-gradient-to-r p-4 text-center"
+            data-empty-message
+            class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl"
           >
-            <p class="text-cream mb-2 font-medium">You've reached your park limit!</p>
-            <p class="text-mist mb-3 text-sm">
-              Free accounts can save up to {maxParks} parks. Upgrade to Premium for unlimited parks.
-            </p>
-            <a
-              href="/pricing"
-              class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold transition-colors"
-            >
-              <span>⭐</span>
-              <span>Upgrade to Premium</span>
-            </a>
+            <p class="text-mist">No parks yet. Add some below to get started.</p>
+          </div>
+        ) : (
+          <div class="grid gap-3">
+            {userParks.map((park: any) => (
+              <article
+                class="park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200"
+                data-park-id={park.parkId}
+              >
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-forest truncate font-[Fraunces] font-semibold">{park.name}</h3>
+                  {park.customName && <p class="text-sunset truncate text-sm">{park.customName}</p>}
+                  {park.address && <p class="text-moss truncate text-sm">{park.address}</p>}
+                  {park.visitCount > 0 && (
+                    <span class="bg-gold/20 text-forest mt-1 inline-block rounded-full px-2 py-0.5 text-xs">
+                      {park.visitCount} visit{park.visitCount !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                <button
+                  class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+                  data-remove={park.parkId}
+                  aria-label={`Remove ${park.name}`}
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </article>
+            ))}
           </div>
         )
       }
+    </section>
 
-      <main class="!block space-y-8">
-        <!-- My Parks Section -->
-        <section>
-          <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
-            My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
-          </h2>
+    <!-- Available Parks Section -->
+    <section>
+      <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
+        Add Parks ({availableParks.length})
+      </h2>
 
-          {
-            userParks.length === 0 ? (
-              <div
-                data-empty-message
-                class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl"
+      {
+        availableParks.length === 0 ? (
+          <div class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl">
+            <p class="text-mist">You've added all available parks!</p>
+          </div>
+        ) : (
+          <div class="grid gap-3">
+            {availableParks.map((park: any) => (
+              <article
+                class="park-card flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
+                data-available-id={park._id}
               >
-                <p class="text-mist">No parks yet. Add some below to get started.</p>
-              </div>
-            ) : (
-              <div class="grid gap-3">
-                {userParks.map((park: any) => (
-                  <article
-                    class="park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200"
-                    data-park-id={park.parkId}
-                  >
-                    <div class="min-w-0 flex-1">
-                      <h3 class="text-forest truncate font-[Fraunces] font-semibold">
-                        {park.name}
-                      </h3>
-                      {park.customName && (
-                        <p class="text-sunset truncate text-sm">{park.customName}</p>
-                      )}
-                      {park.address && <p class="text-moss truncate text-sm">{park.address}</p>}
-                      {park.visitCount > 0 && (
-                        <span class="bg-gold/20 text-forest mt-1 inline-block rounded-full px-2 py-0.5 text-xs">
-                          {park.visitCount} visit{park.visitCount !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
-                      data-remove={park.parkId}
-                      aria-label={`Remove ${park.name}`}
-                    >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </article>
-                ))}
-              </div>
-            )
-          }
-        </section>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
+                  {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
+                  {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+                </div>
+                <button
+                  class={`add-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    isAtLimit
+                      ? "bg-mist/10 text-mist/50 cursor-not-allowed"
+                      : "bg-gold/20 hover:bg-gold/30 text-gold"
+                  }`}
+                  data-add={park._id}
+                  aria-label={`Add ${park.name}`}
+                  disabled={isAtLimit}
+                >
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+              </article>
+            ))}
+          </div>
+        )
+      }
+    </section>
+  </div>
 
-        <!-- Available Parks Section -->
-        <section>
-          <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
-            Add Parks ({availableParks.length})
-          </h2>
+  <footer slot="footer" class="mt-8 space-y-2 text-center">
+    <p class="text-mist text-sm opacity-80">
+      <a href="/discover" class="text-gold hover:text-cream font-semibold transition-colors"
+        >Discover nearby parks &rarr;</a
+      >
+    </p>
+    <p class="text-mist text-sm opacity-80">
+      <a href="/" class="text-gold hover:text-cream font-semibold transition-colors"
+        >Pick a park &rarr;</a
+      >
+    </p>
+    <nav class="text-mist mt-4 flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/help" class="hover:text-cream transition-colors">Help</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
 
-          {
-            availableParks.length === 0 ? (
-              <div class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl">
-                <p class="text-mist">You've added all available parks!</p>
-              </div>
-            ) : (
-              <div class="grid gap-3">
-                {availableParks.map((park: any) => (
-                  <article
-                    class="park-card flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
-                    data-available-id={park._id}
-                  >
-                    <div class="min-w-0 flex-1">
-                      <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
-                      {park.customName && (
-                        <p class="text-gold truncate text-sm">{park.customName}</p>
-                      )}
-                      {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
-                    </div>
-                    <button
-                      class={`add-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                        isAtLimit
-                          ? "bg-mist/10 text-mist/50 cursor-not-allowed"
-                          : "bg-gold/20 hover:bg-gold/30 text-gold"
-                      }`}
-                      data-add={park._id}
-                      aria-label={`Add ${park.name}`}
-                      disabled={isAtLimit}
-                    >
-                      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                    </button>
-                  </article>
-                ))}
-              </div>
-            )
-          }
-        </section>
-      </main>
+  <script slot="scripts" define:vars={{ convexUrl, convexToken: token, isFreeUser, maxParks }}>
+    // Track current park count for dynamic limit checking
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    let currentCount = 0;
 
-      <footer class="mt-8 space-y-2 text-center">
-        <p class="text-mist text-sm opacity-80">
-          <a href="/discover" class="text-gold hover:text-cream font-semibold transition-colors"
-            >Discover nearby parks &rarr;</a
-          >
-        </p>
-        <p class="text-mist text-sm opacity-80">
-          <a href="/" class="text-gold hover:text-cream font-semibold transition-colors"
-            >Pick a park &rarr;</a
-          >
-        </p>
-        <nav class="text-mist mt-4 flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
-          <a href="/about" class="hover:text-cream transition-colors">About</a>
-          <a href="/help" class="hover:text-cream transition-colors">Help</a>
-          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
-          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
-        </nav>
-      </footer>
-    </div>
+    // Helper to check if error is a limit error
+    function isLimitError(errorMessage) {
+      return (
+        errorMessage.includes("PARK_LIMIT_EXCEEDED") ||
+        errorMessage.includes("park limit") ||
+        errorMessage.includes("Maximum parks")
+      );
+    }
 
-    <script define:vars={{ convexUrl, convexToken: token, isFreeUser, maxParks }}>
-      // Track current park count for dynamic limit checking
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let currentCount = 0;
+    // Helper to escape HTML for safe insertion
+    function escapeHtml(text) {
+      if (!text) return "";
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
-      // Helper to check if error is a limit error
-      function isLimitError(errorMessage) {
-        return (
-          errorMessage.includes("PARK_LIMIT_EXCEEDED") ||
-          errorMessage.includes("park limit") ||
-          errorMessage.includes("Maximum parks")
-        );
+    // Create a card element for "My Parks" section
+    function createMyParkCard(park) {
+      const article = document.createElement("article");
+      article.className =
+        "park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200";
+      article.dataset.parkId = park.parkId;
+
+      // Build inner HTML
+      let html = `
+        <div class="min-w-0 flex-1">
+          <h3 class="text-forest truncate font-[Fraunces] font-semibold">${escapeHtml(park.name)}</h3>`;
+
+      if (park.customName) {
+        html += `<p class="text-sunset truncate text-sm">${escapeHtml(park.customName)}</p>`;
+      }
+      if (park.address) {
+        html += `<p class="text-moss truncate text-sm">${escapeHtml(park.address)}</p>`;
+      }
+      // New parks have visitCount = 0, so no badge needed
+
+      html += `</div>
+        <button
+          class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+          data-remove="${park.parkId}"
+          aria-label="Remove ${escapeHtml(park.name)}"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>`;
+
+      article.innerHTML = html;
+      return article;
+    }
+
+    // Add a park card to the "My Parks" section with animation
+    function addParkToMyParksSection(park) {
+      const myParksSection = document.querySelector("section:first-of-type");
+      if (!myParksSection) return;
+
+      // Check if there's an "empty" message div and remove it
+      const emptyMessage = myParksSection.querySelector("[data-empty-message]");
+      if (emptyMessage) {
+        // Replace with a grid container
+        const grid = document.createElement("div");
+        grid.className = "grid gap-3";
+        emptyMessage.replaceWith(grid);
       }
 
-      // Helper to escape HTML for safe insertion
-      function escapeHtml(text) {
-        if (!text) return "";
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
+      // Find the grid container
+      let grid = myParksSection.querySelector(".grid");
+      if (!grid) {
+        grid = document.createElement("div");
+        grid.className = "grid gap-3";
+        const h2 = myParksSection.querySelector("h2");
+        if (h2) {
+          h2.after(grid);
+        } else {
+          myParksSection.appendChild(grid);
+        }
       }
 
-      // Create a card element for "My Parks" section
-      function createMyParkCard(park) {
-        const article = document.createElement("article");
-        article.className =
-          "park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200";
-        article.dataset.parkId = park.parkId;
+      // Create and animate the new card
+      const card = createMyParkCard(park);
+      card.style.opacity = "0";
+      card.style.transform = "translateX(-20px)";
+      grid.prepend(card);
 
-        // Build inner HTML
-        let html = `
-          <div class="min-w-0 flex-1">
-            <h3 class="text-forest truncate font-[Fraunces] font-semibold">${escapeHtml(park.name)}</h3>`;
-
-        if (park.customName) {
-          html += `<p class="text-sunset truncate text-sm">${escapeHtml(park.customName)}</p>`;
-        }
-        if (park.address) {
-          html += `<p class="text-moss truncate text-sm">${escapeHtml(park.address)}</p>`;
-        }
-        // New parks have visitCount = 0, so no badge needed
-
-        html += `</div>
-          <button
-            class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
-            data-remove="${park.parkId}"
-            aria-label="Remove ${escapeHtml(park.name)}"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>`;
-
-        article.innerHTML = html;
-        return article;
+      // Attach remove handler to the new button
+      const removeBtn = card.querySelector(".remove-btn");
+      if (removeBtn) {
+        attachRemoveHandler(removeBtn);
       }
 
-      // Add a park card to the "My Parks" section with animation
-      function addParkToMyParksSection(park) {
-        const myParksSection = document.querySelector("section:first-of-type");
-        if (!myParksSection) return;
+      // Trigger animation
+      requestAnimationFrame(() => {
+        card.style.transition = "opacity 200ms, transform 200ms";
+        card.style.opacity = "1";
+        card.style.transform = "translateX(0)";
+      });
+    }
 
-        // Check if there's an "empty" message div and remove it
-        const emptyMessage = myParksSection.querySelector("[data-empty-message]");
-        if (emptyMessage) {
-          // Replace with a grid container
-          const grid = document.createElement("div");
-          grid.className = "grid gap-3";
-          emptyMessage.replaceWith(grid);
-        }
+    // Attach remove handler to a button (extracted for reuse)
+    function attachRemoveHandler(btn) {
+      btn.addEventListener("click", async (e) => {
+        const button = e.currentTarget;
+        const parkId = button.dataset.remove;
+        const card = button.closest(".park-card");
 
-        // Find the grid container
-        let grid = myParksSection.querySelector(".grid");
-        if (!grid) {
-          grid = document.createElement("div");
-          grid.className = "grid gap-3";
-          const h2 = myParksSection.querySelector("h2");
-          if (h2) {
-            h2.after(grid);
-          } else {
-            myParksSection.appendChild(grid);
+        button.disabled = true;
+        button.innerHTML =
+          '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
+
+        try {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${convexToken}`,
+            },
+            body: JSON.stringify({
+              path: "userParks:removeParkFromUserList",
+              args: { parkId },
+              format: "json",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to remove park");
           }
+
+          // Optimistic UI: fade out and remove card
+          card.style.opacity = "0";
+          card.style.transform = "translateX(-20px)";
+          setTimeout(() => {
+            card.remove();
+            updateCounts();
+          }, 200);
+        } catch (err) {
+          console.error("Failed to remove park:", err);
+          button.disabled = false;
+          button.innerHTML =
+            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
         }
+      });
+    }
 
-        // Create and animate the new card
-        const card = createMyParkCard(park);
-        card.style.opacity = "0";
-        card.style.transform = "translateX(-20px)";
-        grid.prepend(card);
+    // Helper to update section counts
+    function updateCounts() {
+      const myParksSection = document.querySelector("section:first-of-type");
+      const addParksSection = document.querySelector("section:last-of-type");
 
-        // Attach remove handler to the new button
-        const removeBtn = card.querySelector(".remove-btn");
-        if (removeBtn) {
-          attachRemoveHandler(removeBtn);
-        }
+      const myParksCount = myParksSection?.querySelectorAll(".park-card").length || 0;
+      const addParksCount = addParksSection?.querySelectorAll(".park-card").length || 0;
 
-        // Trigger animation
-        requestAnimationFrame(() => {
-          card.style.transition = "opacity 200ms, transform 200ms";
-          card.style.opacity = "1";
-          card.style.transform = "translateX(0)";
+      currentCount = myParksCount;
+
+      const myParksHeader = myParksSection?.querySelector("h2");
+      const addParksHeader = addParksSection?.querySelector("h2");
+
+      if (myParksHeader) {
+        myParksHeader.textContent =
+          isFreeUser && maxParks > 0
+            ? `My Parks (${myParksCount}/${maxParks})`
+            : `My Parks (${myParksCount})`;
+      }
+      if (addParksHeader) addParksHeader.textContent = `Add Parks (${addParksCount})`;
+
+      // Check if at limit and disable add buttons
+      if (isFreeUser && maxParks > 0 && myParksCount >= maxParks) {
+        document.querySelectorAll(".add-btn").forEach((btn) => {
+          btn.disabled = true;
+          btn.classList.remove("bg-gold/20", "hover:bg-gold/30", "text-gold");
+          btn.classList.add("bg-mist/10", "text-mist/50", "cursor-not-allowed");
         });
       }
+    }
 
-      // Attach remove handler to a button (extracted for reuse)
-      function attachRemoveHandler(btn) {
-        btn.addEventListener("click", async (e) => {
-          const button = e.currentTarget;
-          const parkId = button.dataset.remove;
-          const card = button.closest(".park-card");
+    // Show limit error UI
+    function showLimitError() {
+      // Show a toast or banner
+      const existingBanner = document.getElementById("limit-banner");
+      if (!existingBanner) {
+        const banner = document.createElement("div");
+        banner.id = "limit-banner";
+        banner.className =
+          "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
+        banner.innerHTML = `
+          <p class="text-cream font-medium mb-2">You've reached your park limit!</p>
+          <p class="text-mist text-sm mb-3">Free accounts can save up to ${maxParks} parks. Upgrade to Premium for unlimited parks.</p>
+          <a
+            href="/pricing"
+            class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
+          >
+            <span>⭐</span>
+            <span>Upgrade to Premium</span>
+          </a>
+        `;
+        const main = document.querySelector("main");
+        main.parentNode.insertBefore(banner, main);
+      }
+    }
 
-          button.disabled = true;
-          button.innerHTML =
-            '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
+    // Handle add park with optimistic UI
+    document.querySelectorAll(".add-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const button = e.currentTarget;
+        const parkId = button.dataset.add;
+        const card = button.closest(".park-card");
 
-          try {
-            const response = await fetch(`${convexUrl}/api/mutation`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${convexToken}`,
-              },
-              body: JSON.stringify({
-                path: "userParks:removeParkFromUserList",
-                args: { parkId },
-                format: "json",
-              }),
-            });
+        // Prevent action if already at limit
+        if (button.disabled) return;
 
-            const result = await response.json();
+        button.disabled = true;
+        button.innerHTML =
+          '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
-            if (result.status === "error") {
-              throw new Error(result.errorMessage || "Failed to remove park");
-            }
+        try {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${convexToken}`,
+            },
+            body: JSON.stringify({
+              path: "userParks:addParkToUserList",
+              args: { parkId },
+              format: "json",
+            }),
+          });
 
-            // Optimistic UI: fade out and remove card
-            card.style.opacity = "0";
-            card.style.transform = "translateX(-20px)";
-            setTimeout(() => {
-              card.remove();
-              updateCounts();
-            }, 200);
-          } catch (err) {
-            console.error("Failed to remove park:", err);
+          const result = await response.json();
+
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to add park");
+          }
+
+          // Add park to "My Parks" section
+          if (result.value && result.value.park) {
+            addParkToMyParksSection(result.value.park);
+          }
+
+          // Optimistic UI: fade out and remove card from "Add Parks" section
+          card.style.opacity = "0";
+          card.style.transform = "translateX(20px)";
+          setTimeout(() => {
+            card.remove();
+            updateCounts();
+          }, 200);
+        } catch (err) {
+          console.error("Failed to add park:", err);
+
+          // Check if this is a limit error
+          if (isLimitError(err.message)) {
+            showLimitError();
+            updateCounts(); // Will disable all add buttons
+          } else {
             button.disabled = false;
             button.innerHTML =
-              '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
+              '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
           }
-        });
-      }
-
-      // Helper to update section counts
-      function updateCounts() {
-        const myParksSection = document.querySelector("section:first-of-type");
-        const addParksSection = document.querySelector("section:last-of-type");
-
-        const myParksCount = myParksSection?.querySelectorAll(".park-card").length || 0;
-        const addParksCount = addParksSection?.querySelectorAll(".park-card").length || 0;
-
-        currentCount = myParksCount;
-
-        const myParksHeader = myParksSection?.querySelector("h2");
-        const addParksHeader = addParksSection?.querySelector("h2");
-
-        if (myParksHeader) {
-          myParksHeader.textContent =
-            isFreeUser && maxParks > 0
-              ? `My Parks (${myParksCount}/${maxParks})`
-              : `My Parks (${myParksCount})`;
         }
-        if (addParksHeader) addParksHeader.textContent = `Add Parks (${addParksCount})`;
-
-        // Check if at limit and disable add buttons
-        if (isFreeUser && maxParks > 0 && myParksCount >= maxParks) {
-          document.querySelectorAll(".add-btn").forEach((btn) => {
-            btn.disabled = true;
-            btn.classList.remove("bg-gold/20", "hover:bg-gold/30", "text-gold");
-            btn.classList.add("bg-mist/10", "text-mist/50", "cursor-not-allowed");
-          });
-        }
-      }
-
-      // Show limit error UI
-      function showLimitError() {
-        // Show a toast or banner
-        const existingBanner = document.getElementById("limit-banner");
-        if (!existingBanner) {
-          const banner = document.createElement("div");
-          banner.id = "limit-banner";
-          banner.className =
-            "bg-gradient-to-r from-sunset/20 to-gold/20 border border-sunset/30 rounded-2xl p-4 mb-4 text-center";
-          banner.innerHTML = `
-            <p class="text-cream font-medium mb-2">You've reached your park limit!</p>
-            <p class="text-mist text-sm mb-3">Free accounts can save up to ${maxParks} parks. Upgrade to Premium for unlimited parks.</p>
-            <a
-              href="/pricing"
-              class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-4 py-2 rounded-full hover:bg-cream transition-colors"
-            >
-              <span>⭐</span>
-              <span>Upgrade to Premium</span>
-            </a>
-          `;
-          const main = document.querySelector("main");
-          main.parentNode.insertBefore(banner, main);
-        }
-      }
-
-      // Handle add park with optimistic UI
-      document.querySelectorAll(".add-btn").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          const button = e.currentTarget;
-          const parkId = button.dataset.add;
-          const card = button.closest(".park-card");
-
-          // Prevent action if already at limit
-          if (button.disabled) return;
-
-          button.disabled = true;
-          button.innerHTML =
-            '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
-
-          try {
-            const response = await fetch(`${convexUrl}/api/mutation`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${convexToken}`,
-              },
-              body: JSON.stringify({
-                path: "userParks:addParkToUserList",
-                args: { parkId },
-                format: "json",
-              }),
-            });
-
-            const result = await response.json();
-
-            if (result.status === "error") {
-              throw new Error(result.errorMessage || "Failed to add park");
-            }
-
-            // Add park to "My Parks" section
-            if (result.value && result.value.park) {
-              addParkToMyParksSection(result.value.park);
-            }
-
-            // Optimistic UI: fade out and remove card from "Add Parks" section
-            card.style.opacity = "0";
-            card.style.transform = "translateX(20px)";
-            setTimeout(() => {
-              card.remove();
-              updateCounts();
-            }, 200);
-          } catch (err) {
-            console.error("Failed to add park:", err);
-
-            // Check if this is a limit error
-            if (isLimitError(err.message)) {
-              showLimitError();
-              updateCounts(); // Will disable all add buttons
-            } else {
-              button.disabled = false;
-              button.innerHTML =
-                '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
-            }
-          }
-        });
       });
+    });
 
-      // Handle remove park with optimistic UI
-      document.querySelectorAll(".remove-btn").forEach((btn) => {
-        attachRemoveHandler(btn);
-      });
-    </script>
-  </body>
-</html>
+    // Handle remove park with optimistic UI
+    document.querySelectorAll(".remove-btn").forEach((btn) => {
+      attachRemoveHandler(btn);
+    });
+  </script>
+</PageLayout>

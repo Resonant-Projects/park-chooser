@@ -1,8 +1,7 @@
 ---
-import "../../styles/starwind.css";
-import "../../styles/global.css";
+import PageLayout from "../../layouts/PageLayout.astro";
+import SEO from "../../components/SEO.astro";
 import { getConvexUrl } from "../../lib/convexClient";
-import { UserButton } from "@clerk/astro/components";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
@@ -20,260 +19,237 @@ const convexUrl = getConvexUrl();
 const convexToken = await getToken({ template: "convex" });
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Send Feedback - Today's Park</title>
-    <meta name="description" content="Share your feedback about Today's Park. Help us improve!" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="container max-w-xl">
-      <header>
-        <div class="mb-2 flex items-start justify-between">
-          <div>
-            <h1 class="title">Send Feedback</h1>
-            <p class="subtitle">Help us improve Today's Park</p>
+<PageLayout
+  title="Send Feedback"
+  subtitle="Help us improve Today's Park"
+  pageTitle="Send Feedback - Today's Park"
+  class="max-w-xl"
+  showUserButton
+>
+  <SEO
+    slot="head"
+    title="Send Feedback - Today's Park"
+    description="Share your feedback about Today's Park. Help us improve!"
+  />
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <form id="feedback-form" class="space-y-6">
+        <!-- Star Rating -->
+        <div>
+          <label class="text-cream mb-3 block text-sm font-medium">
+            Overall Rating <span class="text-sunset">*</span>
+          </label>
+          <div id="star-rating" class="flex gap-2" role="radiogroup" aria-label="Rating">
+            {
+              [1, 2, 3, 4, 5].map((star) => (
+                <button
+                  type="button"
+                  class="star-btn text-3xl transition-transform hover:scale-110 focus:outline-none"
+                  data-value={star}
+                  role="radio"
+                  aria-checked="false"
+                  aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                >
+                  <span class="star-empty">☆</span>
+                  <span class="star-filled hidden">★</span>
+                </button>
+              ))
+            }
           </div>
-          <div class="mt-1">
-            <UserButton afterSignOutUrl="/sign-in" />
-          </div>
+          <input type="hidden" id="rating" name="rating" required />
         </div>
-      </header>
 
-      <main class="flex-1">
-        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-6">
-            <form id="feedback-form" class="space-y-6">
-              <!-- Star Rating -->
-              <div>
-                <label class="text-cream mb-3 block text-sm font-medium">
-                  Overall Rating <span class="text-sunset">*</span>
-                </label>
-                <div id="star-rating" class="flex gap-2" role="radiogroup" aria-label="Rating">
-                  {
-                    [1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        type="button"
-                        class="star-btn text-3xl transition-transform hover:scale-110 focus:outline-none"
-                        data-value={star}
-                        role="radio"
-                        aria-checked="false"
-                        aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-                      >
-                        <span class="star-empty">☆</span>
-                        <span class="star-filled hidden">★</span>
-                      </button>
-                    ))
-                  }
-                </div>
-                <input type="hidden" id="rating" name="rating" required />
-              </div>
+        <!-- What do you like? -->
+        <div>
+          <label for="likes" class="text-cream mb-1 block text-sm font-medium">
+            What do you like about Today's Park?
+          </label>
+          <textarea
+            id="likes"
+            name="likes"
+            rows="3"
+            maxlength="1000"
+            class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+            placeholder="What's working well for you..."></textarea>
+        </div>
 
-              <!-- What do you like? -->
-              <div>
-                <label for="likes" class="text-cream mb-1 block text-sm font-medium">
-                  What do you like about Today's Park?
-                </label>
-                <textarea
-                  id="likes"
-                  name="likes"
-                  rows="3"
-                  maxlength="1000"
-                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                  placeholder="What's working well for you..."></textarea>
-              </div>
+        <!-- What could be improved? -->
+        <div>
+          <label for="improvements" class="text-cream mb-1 block text-sm font-medium">
+            What could be improved?
+          </label>
+          <textarea
+            id="improvements"
+            name="improvements"
+            rows="3"
+            maxlength="1000"
+            class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+            placeholder="What would make the app better..."></textarea>
+        </div>
 
-              <!-- What could be improved? -->
-              <div>
-                <label for="improvements" class="text-cream mb-1 block text-sm font-medium">
-                  What could be improved?
-                </label>
-                <textarea
-                  id="improvements"
-                  name="improvements"
-                  rows="3"
-                  maxlength="1000"
-                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                  placeholder="What would make the app better..."></textarea>
-              </div>
+        <!-- Feature requests -->
+        <div>
+          <label for="features" class="text-cream mb-1 block text-sm font-medium">
+            Any feature requests?
+          </label>
+          <textarea
+            id="features"
+            name="features"
+            rows="3"
+            maxlength="1000"
+            class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+            placeholder="Features you'd love to see..."></textarea>
+        </div>
 
-              <!-- Feature requests -->
-              <div>
-                <label for="features" class="text-cream mb-1 block text-sm font-medium">
-                  Any feature requests?
-                </label>
-                <textarea
-                  id="features"
-                  name="features"
-                  rows="3"
-                  maxlength="1000"
-                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                  placeholder="Features you'd love to see..."></textarea>
-              </div>
+        <div id="form-error" class="text-sunset hidden text-sm"></div>
 
-              <div id="form-error" class="text-sunset hidden text-sm"></div>
+        <Button type="submit" id="submit-btn" variant="primary" class="w-full">
+          <span class="button-text">Submit Feedback</span>
+          <Spinner class="button-spinner hidden size-5" />
+        </Button>
+      </form>
 
-              <Button type="submit" id="submit-btn" variant="primary" class="w-full">
-                <span class="button-text">Submit Feedback</span>
-                <Spinner class="button-spinner hidden size-5" />
-              </Button>
-            </form>
+      <!-- Success state (hidden initially) -->
+      <div id="success-state" class="hidden py-6 text-center">
+        <div class="mb-4 text-4xl">💚</div>
+        <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Thank You!</h2>
+        <p class="text-mist mb-6">Your feedback helps us make Today's Park better for everyone.</p>
+        <div class="flex flex-col justify-center gap-3 sm:flex-row">
+          <Button as="a" href="/" variant="primary"> Back to Home </Button>
+          <Button as="a" href="/help" variant="secondary"> Help Center </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 
-            <!-- Success state (hidden initially) -->
-            <div id="success-state" class="hidden py-6 text-center">
-              <div class="mb-4 text-4xl">💚</div>
-              <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Thank You!</h2>
-              <p class="text-mist mb-6">
-                Your feedback helps us make Today's Park better for everyone.
-              </p>
-              <div class="flex flex-col justify-center gap-3 sm:flex-row">
-                <Button as="a" href="/" variant="primary"> Back to Home </Button>
-                <Button as="a" href="/help" variant="secondary"> Help Center </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
+    <nav class="text-mist flex justify-center gap-6 text-sm">
+      <a href="/" class="hover:text-cream transition-colors">Home</a>
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/help" class="hover:text-cream transition-colors">Help</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
+</PageLayout>
 
-      <footer class="mt-8 border-t border-white/10 pt-4">
-        <nav class="text-mist flex justify-center gap-6 text-sm">
-          <a href="/" class="hover:text-cream transition-colors">Home</a>
-          <a href="/about" class="hover:text-cream transition-colors">About</a>
-          <a href="/help" class="hover:text-cream transition-colors">Help</a>
-          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
-          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
-        </nav>
-      </footer>
-    </div>
+<script define:vars={{ convexUrl, convexToken }}>
+  const form = document.getElementById("feedback-form");
+  const submitBtn = document.getElementById("submit-btn");
+  const errorDiv = document.getElementById("form-error");
+  const successState = document.getElementById("success-state");
+  const ratingInput = document.getElementById("rating");
+  const starButtons = document.querySelectorAll(".star-btn");
 
-    <script define:vars={{ convexUrl, convexToken }}>
-      const form = document.getElementById("feedback-form");
-      const submitBtn = document.getElementById("submit-btn");
-      const errorDiv = document.getElementById("form-error");
-      const successState = document.getElementById("success-state");
-      const ratingInput = document.getElementById("rating");
-      const starButtons = document.querySelectorAll(".star-btn");
+  let selectedRating = 0;
 
-      let selectedRating = 0;
+  // Star rating interaction
+  starButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedRating = parseInt(btn.dataset.value);
+      ratingInput.value = selectedRating;
+      updateStars();
+    });
 
-      // Star rating interaction
-      starButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          selectedRating = parseInt(btn.dataset.value);
-          ratingInput.value = selectedRating;
-          updateStars();
-        });
+    btn.addEventListener("mouseenter", () => {
+      const hoverValue = parseInt(btn.dataset.value);
+      highlightStars(hoverValue);
+    });
+  });
 
-        btn.addEventListener("mouseenter", () => {
-          const hoverValue = parseInt(btn.dataset.value);
-          highlightStars(hoverValue);
-        });
+  document.getElementById("star-rating").addEventListener("mouseleave", () => {
+    updateStars();
+  });
+
+  function highlightStars(count) {
+    starButtons.forEach((btn) => {
+      const value = parseInt(btn.dataset.value);
+      const empty = btn.querySelector(".star-empty");
+      const filled = btn.querySelector(".star-filled");
+
+      if (value <= count) {
+        empty.classList.add("hidden");
+        filled.classList.remove("hidden");
+        filled.classList.add("text-gold");
+      } else {
+        empty.classList.remove("hidden");
+        filled.classList.add("hidden");
+      }
+    });
+  }
+
+  function updateStars() {
+    highlightStars(selectedRating);
+    // Update aria-checked for accessibility
+    starButtons.forEach((btn) => {
+      const value = parseInt(btn.dataset.value);
+      btn.setAttribute("aria-checked", value === selectedRating ? "true" : "false");
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Reset error state
+    errorDiv.classList.add("hidden");
+    errorDiv.textContent = "";
+
+    // Get form data
+    const formData = new FormData(form);
+    const rating = parseInt(formData.get("rating"));
+    const likesText = formData.get("likes") || undefined;
+    const improvementsText = formData.get("improvements") || undefined;
+    const featureRequestsText = formData.get("features") || undefined;
+
+    // Client-side validation
+    if (!rating || rating < 1 || rating > 5) {
+      errorDiv.textContent = "Please select a rating.";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.querySelector(".button-text").textContent = "Submitting...";
+    submitBtn.querySelector(".button-spinner").classList.remove("hidden");
+
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${convexToken}`,
+      };
+
+      const response = await fetch(`${convexUrl}/api/action`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          path: "actions/submitFeedback:submitFeedback",
+          args: {
+            rating,
+            likesText: likesText || undefined,
+            improvementsText: improvementsText || undefined,
+            featureRequestsText: featureRequestsText || undefined,
+          },
+          format: "json",
+        }),
       });
 
-      document.getElementById("star-rating").addEventListener("mouseleave", () => {
-        updateStars();
-      });
+      const result = await response.json();
 
-      function highlightStars(count) {
-        starButtons.forEach((btn) => {
-          const value = parseInt(btn.dataset.value);
-          const empty = btn.querySelector(".star-empty");
-          const filled = btn.querySelector(".star-filled");
-
-          if (value <= count) {
-            empty.classList.add("hidden");
-            filled.classList.remove("hidden");
-            filled.classList.add("text-gold");
-          } else {
-            empty.classList.remove("hidden");
-            filled.classList.add("hidden");
-          }
-        });
+      if (result.status === "error") {
+        throw new Error(result.errorMessage || "Failed to submit feedback");
       }
 
-      function updateStars() {
-        highlightStars(selectedRating);
-        // Update aria-checked for accessibility
-        starButtons.forEach((btn) => {
-          const value = parseInt(btn.dataset.value);
-          btn.setAttribute("aria-checked", value === selectedRating ? "true" : "false");
-        });
-      }
-
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        // Reset error state
-        errorDiv.classList.add("hidden");
-        errorDiv.textContent = "";
-
-        // Get form data
-        const formData = new FormData(form);
-        const rating = parseInt(formData.get("rating"));
-        const likesText = formData.get("likes") || undefined;
-        const improvementsText = formData.get("improvements") || undefined;
-        const featureRequestsText = formData.get("features") || undefined;
-
-        // Client-side validation
-        if (!rating || rating < 1 || rating > 5) {
-          errorDiv.textContent = "Please select a rating.";
-          errorDiv.classList.remove("hidden");
-          return;
-        }
-
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.querySelector(".button-text").textContent = "Submitting...";
-        submitBtn.querySelector(".button-spinner").classList.remove("hidden");
-
-        try {
-          const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${convexToken}`,
-          };
-
-          const response = await fetch(`${convexUrl}/api/action`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              path: "actions/submitFeedback:submitFeedback",
-              args: {
-                rating,
-                likesText: likesText || undefined,
-                improvementsText: improvementsText || undefined,
-                featureRequestsText: featureRequestsText || undefined,
-              },
-              format: "json",
-            }),
-          });
-
-          const result = await response.json();
-
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to submit feedback");
-          }
-
-          // Show success state
-          form.classList.add("hidden");
-          successState.classList.remove("hidden");
-        } catch (err) {
-          errorDiv.textContent = err.message || "Something went wrong. Please try again.";
-          errorDiv.classList.remove("hidden");
-          // Only reset button on error (success hides the form anyway)
-          submitBtn.disabled = false;
-          submitBtn.querySelector(".button-text").textContent = "Submit Feedback";
-          submitBtn.querySelector(".button-spinner").classList.add("hidden");
-        }
-      });
-    </script>
-  </body>
-</html>
+      // Show success state
+      form.classList.add("hidden");
+      successState.classList.remove("hidden");
+    } catch (err) {
+      errorDiv.textContent = err.message || "Something went wrong. Please try again.";
+      errorDiv.classList.remove("hidden");
+      // Only reset button on error (success hides the form anyway)
+      submitBtn.disabled = false;
+      submitBtn.querySelector(".button-text").textContent = "Submit Feedback";
+      submitBtn.querySelector(".button-spinner").classList.add("hidden");
+    }
+  });
+</script>

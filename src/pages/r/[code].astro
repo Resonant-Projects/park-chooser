@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
@@ -41,9 +41,17 @@ if (isValid && code) {
     secure: import.meta.env.PROD,
   });
 }
+
+const pageTitle = isValid
+  ? `${referrerName} invited you to Today's Park`
+  : "Invalid Referral - Today's Park";
 ---
 
-<BaseLayout>
+<PageLayout
+  title="Today's Park"
+  subtitle={isValid ? "You've been invited!" : "Oops!"}
+  pageTitle={pageTitle}
+>
   <SEO
     slot="head"
     title={isValid
@@ -54,111 +62,101 @@ if (isValid && code) {
       : "This referral link is invalid or has expired."}
     noindex={true}
   />
+  {
+    isValid ? (
+      <Card class="bg-gold/10 border-gold/20 backdrop-blur-xl">
+        <CardContent class="p-6 text-center">
+          <div class="mb-4">
+            <span class="text-4xl" aria-hidden="true">
+              🌳
+            </span>
+          </div>
+          <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
+            {referrerName} wants you to explore more parks!
+          </h2>
+          <p class="text-mist mx-auto mb-6 max-w-md">
+            Today's Park helps you discover and visit local parks. Build your list, let us pick a
+            random one, and go on an adventure!
+          </p>
+          <Button as="a" href="/sign-up" variant="primary" size="lg">
+            Sign Up Free
+          </Button>
+          <p class="text-mist/70 mt-4 text-sm">
+            Already have an account?{" "}
+            <a href="/sign-in" class="text-gold hover:underline">
+              Sign in
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    ) : (
+      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-6 text-center">
+          <div class="mb-4">
+            <span class="text-4xl" aria-hidden="true">
+              😕
+            </span>
+          </div>
+          <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
+            Invalid Referral Link
+          </h2>
+          <p class="text-mist mb-6">
+            {errorMessage || "This referral link is invalid or has expired."}
+          </p>
+          <Button as="a" href="/" variant="secondary" size="lg">
+            Go to Homepage
+          </Button>
+          <p class="text-mist/70 mt-4 text-sm">
+            Want to sign up anyway?{" "}
+            <a href="/sign-up" class="text-gold hover:underline">
+              Create an account
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
-  <header>
-    <h1 class="title">Today's Park</h1>
-    <p class="subtitle">
-      {isValid ? "You've been invited!" : "Oops!"}
-    </p>
-  </header>
-
-  <main class="flex flex-1 flex-col gap-4">
-    {
-      isValid ? (
-        <Card class="bg-gold/10 border-gold/20 backdrop-blur-xl">
-          <CardContent class="p-6 text-center">
-            <div class="mb-4">
-              <span class="text-4xl" aria-hidden="true">
-                🌳
+  {
+    isValid && (
+      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-6">
+          <h3 class="text-cream mb-4 font-[Fraunces] text-lg font-semibold">How It Works</h3>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                1
               </span>
+              <div>
+                <p class="text-cream font-medium">Add your favorite parks</p>
+                <p class="text-mist text-sm">Build a list of parks you want to explore</p>
+              </div>
             </div>
-            <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
-              {referrerName} wants you to explore more parks!
-            </h2>
-            <p class="text-mist mx-auto mb-6 max-w-md">
-              Today's Park helps you discover and visit local parks. Build your list, let us pick a
-              random one, and go on an adventure!
-            </p>
-            <Button as="a" href="/sign-up" variant="primary" size="lg">
-              Sign Up Free
-            </Button>
-            <p class="text-mist/70 mt-4 text-sm">
-              Already have an account?{" "}
-              <a href="/sign-in" class="text-gold hover:underline">
-                Sign in
-              </a>
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-6 text-center">
-            <div class="mb-4">
-              <span class="text-4xl" aria-hidden="true">
-                😕
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                2
               </span>
-            </div>
-            <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
-              Invalid Referral Link
-            </h2>
-            <p class="text-mist mb-6">
-              {errorMessage || "This referral link is invalid or has expired."}
-            </p>
-            <Button as="a" href="/" variant="secondary" size="lg">
-              Go to Homepage
-            </Button>
-            <p class="text-mist/70 mt-4 text-sm">
-              Want to sign up anyway?{" "}
-              <a href="/sign-up" class="text-gold hover:underline">
-                Create an account
-              </a>
-            </p>
-          </CardContent>
-        </Card>
-      )
-    }
-
-    {
-      isValid && (
-        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-6">
-            <h3 class="text-cream mb-4 font-[Fraunces] text-lg font-semibold">How It Works</h3>
-            <div class="space-y-3">
-              <div class="flex items-start gap-3">
-                <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
-                  1
-                </span>
-                <div>
-                  <p class="text-cream font-medium">Add your favorite parks</p>
-                  <p class="text-mist text-sm">Build a list of parks you want to explore</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3">
-                <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
-                  2
-                </span>
-                <div>
-                  <p class="text-cream font-medium">Pick a park</p>
-                  <p class="text-mist text-sm">We'll randomly choose one for you</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3">
-                <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
-                  3
-                </span>
-                <div>
-                  <p class="text-cream font-medium">Go explore!</p>
-                  <p class="text-mist text-sm">Get directions and track your visits</p>
-                </div>
+              <div>
+                <p class="text-cream font-medium">Pick a park</p>
+                <p class="text-mist text-sm">We'll randomly choose one for you</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )
-    }
-  </main>
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                3
+              </span>
+              <div>
+                <p class="text-cream font-medium">Go explore!</p>
+                <p class="text-mist text-sm">Get directions and track your visits</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-  <footer class="mt-8 border-t border-white/10 pt-4">
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
     <nav class="text-mist flex justify-center gap-6 text-sm">
       <a href="/" class="hover:text-cream transition-colors">Home</a>
       <a href="/about" class="hover:text-cream transition-colors">About</a>
@@ -166,4 +164,4 @@ if (isValid && code) {
       <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
     </nav>
   </footer>
-</BaseLayout>
+</PageLayout>

@@ -1,6 +1,6 @@
 ---
-import "../../styles/starwind.css";
-import "../../styles/global.css";
+import PageLayout from "../../layouts/PageLayout.astro";
+import SEO from "../../components/SEO.astro";
 import { getConvexUrl } from "../../lib/convexClient";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
@@ -14,237 +14,222 @@ const { getToken } = Astro.locals.auth();
 const convexToken = await getToken({ template: "convex" });
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Contact Support - Today's Park</title>
-    <meta name="description" content="Get help with Today's Park. Contact our support team." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="container max-w-xl">
-      <header>
-        <h1 class="title">Contact Support</h1>
-        <p class="subtitle">We typically respond within 24-48 hours</p>
-      </header>
+<PageLayout
+  title="Contact Support"
+  subtitle="We typically respond within 24-48 hours"
+  pageTitle="Contact Support - Today's Park"
+  class="max-w-xl"
+>
+  <SEO
+    slot="head"
+    title="Contact Support - Today's Park"
+    description="Get help with Today's Park. Contact our support team."
+  />
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <form id="contact-form" class="space-y-4">
+        <!-- Honeypot field (hidden from users, catches bots) -->
+        <div class="hidden" aria-hidden="true">
+          <label for="website">Website</label>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+        </div>
 
-      <main class="flex-1">
-        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-          <CardContent class="p-6">
-            <form id="contact-form" class="space-y-4">
-              <!-- Honeypot field (hidden from users, catches bots) -->
-              <div class="hidden" aria-hidden="true">
-                <label for="website">Website</label>
-                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
-              </div>
+        <div>
+          <label for="email" class="text-cream mb-1 block text-sm font-medium">
+            Email Address <span class="text-sunset">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+            placeholder="your@email.com"
+          />
+        </div>
 
-              <div>
-                <label for="email" class="text-cream mb-1 block text-sm font-medium">
-                  Email Address <span class="text-sunset">*</span>
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  required
-                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                  placeholder="your@email.com"
-                />
-              </div>
+        <div>
+          <label for="subject" class="text-cream mb-1 block text-sm font-medium">
+            Subject <span class="text-sunset">*</span>
+          </label>
+          <select
+            id="subject"
+            name="subject"
+            required
+            class="text-cream focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+          >
+            <option value="" disabled selected>Select a topic...</option>
+            <option value="bug">Bug Report</option>
+            <option value="billing">Billing Question</option>
+            <option value="feature">Feature Request</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
 
-              <div>
-                <label for="subject" class="text-cream mb-1 block text-sm font-medium">
-                  Subject <span class="text-sunset">*</span>
-                </label>
-                <select
-                  id="subject"
-                  name="subject"
-                  required
-                  class="text-cream focus:border-gold focus:ring-gold w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                >
-                  <option value="" disabled selected>Select a topic...</option>
-                  <option value="bug">Bug Report</option>
-                  <option value="billing">Billing Question</option>
-                  <option value="feature">Feature Request</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+        <div>
+          <label for="message" class="text-cream mb-1 block text-sm font-medium">
+            Message <span class="text-sunset">*</span>
+          </label>
+          <textarea
+            id="message"
+            name="message"
+            required
+            minlength="20"
+            maxlength="2000"
+            rows="5"
+            class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
+            placeholder="Please describe your issue or question in detail..."></textarea>
+          <p class="text-mist mt-1 text-xs">
+            <span id="char-count">0</span>/2000 characters (minimum 20)
+          </p>
+        </div>
 
-              <div>
-                <label for="message" class="text-cream mb-1 block text-sm font-medium">
-                  Message <span class="text-sunset">*</span>
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  required
-                  minlength="20"
-                  maxlength="2000"
-                  rows="5"
-                  class="text-cream placeholder-mist/60 focus:border-gold focus:ring-gold w-full resize-none rounded-lg border border-white/20 bg-white/10 px-4 py-2 focus:ring-1 focus:outline-none"
-                  placeholder="Please describe your issue or question in detail..."></textarea>
-                <p class="text-mist mt-1 text-xs">
-                  <span id="char-count">0</span>/2000 characters (minimum 20)
-                </p>
-              </div>
+        <div id="form-error" class="text-sunset hidden text-sm"></div>
 
-              <div id="form-error" class="text-sunset hidden text-sm"></div>
+        <Button type="submit" id="submit-btn" variant="primary" class="w-full">
+          <span class="button-text">Send Message</span>
+          <Spinner class="button-spinner hidden size-5" />
+        </Button>
+      </form>
 
-              <Button type="submit" id="submit-btn" variant="primary" class="w-full">
-                <span class="button-text">Send Message</span>
-                <Spinner class="button-spinner hidden size-5" />
-              </Button>
-            </form>
+      <!-- Success state (hidden initially) -->
+      <div id="success-state" class="hidden py-6 text-center">
+        <div class="mb-4 text-4xl">✅</div>
+        <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Message Sent!</h2>
+        <p class="text-mist mb-4">We've received your message and will respond soon.</p>
+        <p class="text-mist text-sm">
+          Your reference ID: <span id="reference-id" class="text-gold font-mono"></span>
+        </p>
+        <p class="text-mist mt-4 text-xs">Save this ID to track your request.</p>
+        <div class="mt-6">
+          <Button as="a" href="/help" variant="secondary"> Back to Help Center </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 
-            <!-- Success state (hidden initially) -->
-            <div id="success-state" class="hidden py-6 text-center">
-              <div class="mb-4 text-4xl">✅</div>
-              <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Message Sent!</h2>
-              <p class="text-mist mb-4">We've received your message and will respond soon.</p>
-              <p class="text-mist text-sm">
-                Your reference ID: <span id="reference-id" class="text-gold font-mono"></span>
-              </p>
-              <p class="text-mist mt-4 text-xs">Save this ID to track your request.</p>
-              <div class="mt-6">
-                <Button as="a" href="/help" variant="secondary"> Back to Help Center </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
+    <nav class="text-mist flex justify-center gap-6 text-sm">
+      <a href="/" class="hover:text-cream transition-colors">Home</a>
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/help" class="hover:text-cream transition-colors">Help</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
+</PageLayout>
 
-      <footer class="mt-8 border-t border-white/10 pt-4">
-        <nav class="text-mist flex justify-center gap-6 text-sm">
-          <a href="/" class="hover:text-cream transition-colors">Home</a>
-          <a href="/about" class="hover:text-cream transition-colors">About</a>
-          <a href="/help" class="hover:text-cream transition-colors">Help</a>
-          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
-          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
-        </nav>
-      </footer>
-    </div>
+<script define:vars={{ convexUrl, convexToken }}>
+  const form = document.getElementById("contact-form");
+  const submitBtn = document.getElementById("submit-btn");
+  const errorDiv = document.getElementById("form-error");
+  const successState = document.getElementById("success-state");
+  const referenceIdSpan = document.getElementById("reference-id");
+  const messageInput = document.getElementById("message");
+  const charCount = document.getElementById("char-count");
 
-    <script define:vars={{ convexUrl, convexToken }}>
-      const form = document.getElementById("contact-form");
-      const submitBtn = document.getElementById("submit-btn");
-      const errorDiv = document.getElementById("form-error");
-      const successState = document.getElementById("success-state");
-      const referenceIdSpan = document.getElementById("reference-id");
-      const messageInput = document.getElementById("message");
-      const charCount = document.getElementById("char-count");
+  // Character counter
+  messageInput.addEventListener("input", () => {
+    charCount.textContent = messageInput.value.length;
+  });
 
-      // Character counter
-      messageInput.addEventListener("input", () => {
-        charCount.textContent = messageInput.value.length;
-      });
+  // Simple hash function for IP anonymization (client-side approximation)
+  async function getBrowserFingerprintHash() {
+    try {
+      // Use a combination of browser fingerprinting for rate limiting
+      const data = [
+        navigator.userAgent,
+        navigator.language,
+        new Date().toDateString(),
+        screen.width,
+        screen.height,
+      ].join("|");
 
-      // Simple hash function for IP anonymization (client-side approximation)
-      async function getBrowserFingerprintHash() {
-        try {
-          // Use a combination of browser fingerprinting for rate limiting
-          const data = [
-            navigator.userAgent,
-            navigator.language,
-            new Date().toDateString(),
-            screen.width,
-            screen.height,
-          ].join("|");
+      const encoder = new TextEncoder();
+      const buffer = await crypto.subtle.digest("SHA-256", encoder.encode(data));
+      const hashArray = Array.from(new Uint8Array(buffer));
+      return hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+        .slice(0, 16);
+    } catch {
+      return "anonymous";
+    }
+  }
 
-          const encoder = new TextEncoder();
-          const buffer = await crypto.subtle.digest("SHA-256", encoder.encode(data));
-          const hashArray = Array.from(new Uint8Array(buffer));
-          return hashArray
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join("")
-            .slice(0, 16);
-        } catch {
-          return "anonymous";
-        }
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Reset error state
+    errorDiv.classList.add("hidden");
+    errorDiv.textContent = "";
+
+    // Get form data
+    const formData = new FormData(form);
+    const email = formData.get("email");
+    const subject = formData.get("subject");
+    const message = formData.get("message");
+    const honeypot = formData.get("website"); // Honeypot field
+
+    // Client-side validation
+    if (!email || !subject || !message) {
+      errorDiv.textContent = "Please fill in all required fields.";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+
+    if (message.length < 20) {
+      errorDiv.textContent = "Message must be at least 20 characters.";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.querySelector(".button-text").textContent = "Sending...";
+    submitBtn.querySelector(".button-spinner").classList.remove("hidden");
+
+    try {
+      const fingerprintHash = await getBrowserFingerprintHash();
+
+      const headers = { "Content-Type": "application/json" };
+      if (convexToken) {
+        headers["Authorization"] = `Bearer ${convexToken}`;
       }
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        // Reset error state
-        errorDiv.classList.add("hidden");
-        errorDiv.textContent = "";
-
-        // Get form data
-        const formData = new FormData(form);
-        const email = formData.get("email");
-        const subject = formData.get("subject");
-        const message = formData.get("message");
-        const honeypot = formData.get("website"); // Honeypot field
-
-        // Client-side validation
-        if (!email || !subject || !message) {
-          errorDiv.textContent = "Please fill in all required fields.";
-          errorDiv.classList.remove("hidden");
-          return;
-        }
-
-        if (message.length < 20) {
-          errorDiv.textContent = "Message must be at least 20 characters.";
-          errorDiv.classList.remove("hidden");
-          return;
-        }
-
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.querySelector(".button-text").textContent = "Sending...";
-        submitBtn.querySelector(".button-spinner").classList.remove("hidden");
-
-        try {
-          const fingerprintHash = await getBrowserFingerprintHash();
-
-          const headers = { "Content-Type": "application/json" };
-          if (convexToken) {
-            headers["Authorization"] = `Bearer ${convexToken}`;
-          }
-
-          const response = await fetch(`${convexUrl}/api/action`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              path: "actions/submitSupportTicket:submitSupportTicket",
-              args: {
-                email,
-                subject,
-                message,
-                honeypot: honeypot || "",
-                ipHash: fingerprintHash,
-              },
-              format: "json",
-            }),
-          });
-
-          const result = await response.json();
-
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to send message");
-          }
-
-          // Show success state
-          form.classList.add("hidden");
-          referenceIdSpan.textContent = result.value.referenceId;
-          successState.classList.remove("hidden");
-        } catch (err) {
-          errorDiv.textContent = err.message || "Something went wrong. Please try again.";
-          errorDiv.classList.remove("hidden");
-          // Only reset button on error (success hides the form anyway)
-          submitBtn.disabled = false;
-          submitBtn.querySelector(".button-text").textContent = "Send Message";
-          submitBtn.querySelector(".button-spinner").classList.add("hidden");
-        }
+      const response = await fetch(`${convexUrl}/api/action`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          path: "actions/submitSupportTicket:submitSupportTicket",
+          args: {
+            email,
+            subject,
+            message,
+            honeypot: honeypot || "",
+            ipHash: fingerprintHash,
+          },
+          format: "json",
+        }),
       });
-    </script>
-  </body>
-</html>
+
+      const result = await response.json();
+
+      if (result.status === "error") {
+        throw new Error(result.errorMessage || "Failed to send message");
+      }
+
+      // Show success state
+      form.classList.add("hidden");
+      referenceIdSpan.textContent = result.value.referenceId;
+      successState.classList.remove("hidden");
+    } catch (err) {
+      errorDiv.textContent = err.message || "Something went wrong. Please try again.";
+      errorDiv.classList.remove("hidden");
+      // Only reset button on error (success hides the form anyway)
+      submitBtn.disabled = false;
+      submitBtn.querySelector(".button-text").textContent = "Send Message";
+      submitBtn.querySelector(".button-spinner").classList.add("hidden");
+    }
+  });
+</script>

@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
 import JsonLd from "../components/JsonLd.astro";
 import { softwareApplicationSchema } from "../lib/schemas";
@@ -8,7 +8,11 @@ import CardContent from "../components/starwind/card/CardContent.astro";
 import Button from "../components/starwind/button/Button.astro";
 ---
 
-<BaseLayout>
+<PageLayout
+  title="About Today's Park"
+  subtitle="Making every day an adventure"
+  pageTitle="About - Today's Park"
+>
   <SEO
     slot="head"
     title="About - Today's Park"
@@ -16,89 +20,80 @@ import Button from "../components/starwind/button/Button.astro";
   >
     <JsonLd schema={softwareApplicationSchema} />
   </SEO>
+  <!-- What is Today's Park -->
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <h2 class="text-cream mb-3 font-[Fraunces] text-xl font-semibold">What is Today's Park?</h2>
+      <p class="text-mist mb-4 leading-relaxed">
+        Today's Park is a simple tool that helps families get outside more often. Instead of
+        debating which park to visit or defaulting to the same spot every time, let us pick for you.
+      </p>
+      <p class="text-mist leading-relaxed">
+        Add your favorite local parks to your list, hit the button, and discover where your next
+        adventure awaits. Track your visits and make sure you're exploring all your neighborhood has
+        to offer.
+      </p>
+    </CardContent>
+  </Card>
 
-  <header>
-    <h1 class="title">About Today's Park</h1>
-    <p class="subtitle">Making every day an adventure</p>
-  </header>
-
-  <main class="flex flex-1 flex-col gap-4">
-    <!-- What is Today's Park -->
-    <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-      <CardContent class="p-6">
-        <h2 class="text-cream mb-3 font-[Fraunces] text-xl font-semibold">What is Today's Park?</h2>
-        <p class="text-mist mb-4 leading-relaxed">
-          Today's Park is a simple tool that helps families get outside more often. Instead of
-          debating which park to visit or defaulting to the same spot every time, let us pick for
-          you.
-        </p>
-        <p class="text-mist leading-relaxed">
-          Add your favorite local parks to your list, hit the button, and discover where your next
-          adventure awaits. Track your visits and make sure you're exploring all your neighborhood
-          has to offer.
-        </p>
-      </CardContent>
-    </Card>
-
-    <!-- How it Works -->
-    <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
-      <CardContent class="p-6">
-        <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">How It Works</h2>
-        <div class="space-y-4">
-          <div class="flex items-start gap-4">
-            <span
-              class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
-              >1</span
-            >
-            <div>
-              <h3 class="text-cream font-semibold">Build Your List</h3>
-              <p class="text-mist text-sm">
-                Add parks from our recommendations or discover new ones nearby.
-              </p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4">
-            <span
-              class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
-              >2</span
-            >
-            <div>
-              <h3 class="text-cream font-semibold">Pick a Park</h3>
-              <p class="text-mist text-sm">
-                Hit the button and we'll randomly select from your list (no repeats in the last 5
-                picks).
-              </p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4">
-            <span
-              class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
-              >3</span
-            >
-            <div>
-              <h3 class="text-cream font-semibold">Go Explore</h3>
-              <p class="text-mist text-sm">
-                Get directions, see travel time, and head out on your adventure.
-              </p>
-            </div>
+  <!-- How it Works -->
+  <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+    <CardContent class="p-6">
+      <h2 class="text-cream mb-4 font-[Fraunces] text-xl font-semibold">How It Works</h2>
+      <div class="space-y-4">
+        <div class="flex items-start gap-4">
+          <span
+            class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >1</span
+          >
+          <div>
+            <h3 class="text-cream font-semibold">Build Your List</h3>
+            <p class="text-mist text-sm">
+              Add parks from our recommendations or discover new ones nearby.
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <div class="flex items-start gap-4">
+          <span
+            class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >2</span
+          >
+          <div>
+            <h3 class="text-cream font-semibold">Pick a Park</h3>
+            <p class="text-mist text-sm">
+              Hit the button and we'll randomly select from your list (no repeats in the last 5
+              picks).
+            </p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4">
+          <span
+            class="bg-gold/20 text-gold flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >3</span
+          >
+          <div>
+            <h3 class="text-cream font-semibold">Go Explore</h3>
+            <p class="text-mist text-sm">
+              Get directions, see travel time, and head out on your adventure.
+            </p>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 
-    <!-- CTA -->
-    <Card class="bg-gold/10 border-gold/20 backdrop-blur-xl">
-      <CardContent class="p-6 text-center">
-        <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
-          Ready to start exploring?
-        </h2>
-        <p class="text-mist mb-4">Create your free account and add your first parks.</p>
-        <Button as="a" href="/sign-up" variant="primary" size="lg"> Get Started </Button>
-      </CardContent>
-    </Card>
-  </main>
+  <!-- CTA -->
+  <Card class="bg-gold/10 border-gold/20 backdrop-blur-xl">
+    <CardContent class="p-6 text-center">
+      <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
+        Ready to start exploring?
+      </h2>
+      <p class="text-mist mb-4">Create your free account and add your first parks.</p>
+      <Button as="a" href="/sign-up" variant="primary" size="lg"> Get Started </Button>
+    </CardContent>
+  </Card>
 
-  <footer class="mt-8 border-t border-white/10 pt-4">
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
     <nav class="text-mist flex justify-center gap-6 text-sm">
       <a href="/" class="hover:text-cream transition-colors">Home</a>
       <a href="/help" class="hover:text-cream transition-colors">Help</a>
@@ -106,4 +101,4 @@ import Button from "../components/starwind/button/Button.astro";
       <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
     </nav>
   </footer>
-</BaseLayout>
+</PageLayout>
