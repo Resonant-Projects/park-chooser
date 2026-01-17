@@ -214,9 +214,19 @@ export const upsertFromClerkWebhook = internalMutation({
       return { success: false, reason: "user_not_found" };
     }
 
-    // Determine tier from plan slug
-    // Clerk sends "free_user" or "monthly" - only monthly is premium
-    const tier: Tier = args.clerkPlanSlug === "monthly" ? "premium" : "free";
+    // Log webhook data for debugging
+    console.log("Webhook data:", {
+      status: args.status,
+      planSlug: args.clerkPlanSlug,
+      subscriptionId: args.clerkSubscriptionId,
+    });
+
+    // Determine tier from subscription status and plan slug
+    // If status is "active" and we have subscription IDs, user has a paid subscription
+    // Fall back to plan slug check for backwards compatibility
+    const hasPaidSubscription = args.status === "active" && args.clerkSubscriptionId;
+    const isPremiumBySlug = args.clerkPlanSlug === "monthly";
+    const tier: Tier = hasPaidSubscription || isPremiumBySlug ? "premium" : "free";
 
     // Map Clerk status to our status
     type Status = "active" | "past_due" | "canceled" | "incomplete";
