@@ -79,32 +79,43 @@ export const processReferralConversion = internalAction({
 
     const referrerTier: "free" | "premium" = referrerEntitlement?.tier ?? "free";
 
-    if (referrerTier === "premium") {
-      // Premium subscriber gets bonus days
-      const rewardResult = await ctx.runMutation(internal.referralRewards.grantBonusDays, {
-        userId: referrerId,
+    // Wrap reward grant in try/catch to handle failures gracefully
+    // The referral is already marked as "converted" - only mark "rewarded" on success
+    try {
+      if (referrerTier === "premium") {
+        // Premium subscriber gets bonus days
+        const rewardResult = await ctx.runMutation(internal.referralRewards.grantBonusDays, {
+          userId: referrerId,
+          referralId: pendingReferral._id,
+        });
+        console.log("Granted bonus days to referrer:", rewardResult);
+      } else {
+        // Free tier user gets discount code for future upgrade
+        const rewardResult = await ctx.runMutation(internal.referralRewards.grantDiscountCode, {
+          userId: referrerId,
+          referralId: pendingReferral._id,
+        });
+        console.log("Granted discount code to referrer:", rewardResult);
+      }
+
+      // Mark referral as rewarded only after successful grant
+      await ctx.runMutation(internal.referrals.markReferralRewarded, {
         referralId: pendingReferral._id,
       });
-      console.log("Granted bonus days to referrer:", rewardResult);
-    } else {
-      // Free tier user gets discount code for future upgrade
-      const rewardResult = await ctx.runMutation(internal.referralRewards.grantDiscountCode, {
-        userId: referrerId,
-        referralId: pendingReferral._id,
-      });
-      console.log("Granted discount code to referrer:", rewardResult);
+
+      return {
+        processed: true,
+        rewarded: true,
+        referrerId,
+        rewardType: referrerTier === "premium" ? "bonus_days" : "discount_code",
+      };
+    } catch (error) {
+      console.error("Failed to grant referral reward:", error);
+      return {
+        processed: true,
+        rewarded: false,
+        reason: "reward_grant_failed",
+      };
     }
-
-    // Mark referral as rewarded
-    await ctx.runMutation(internal.referrals.markReferralRewarded, {
-      referralId: pendingReferral._id,
-    });
-
-    return {
-      processed: true,
-      rewarded: true,
-      referrerId,
-      rewardType: referrerTier === "premium" ? "bonus_days" : "discount_code",
-    };
   },
 });

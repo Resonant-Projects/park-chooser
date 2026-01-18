@@ -410,7 +410,7 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          await fetch(`${convexUrl}/api/mutation`, {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -422,6 +422,15 @@ const availableParks = await getAvailableParks(token);
               format: "json",
             }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to add park: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to add park");
+          }
 
           // Update UI to show added state
           button.outerHTML = `
@@ -464,7 +473,7 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          await fetch(`${convexUrl}/api/mutation`, {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -476,6 +485,15 @@ const availableParks = await getAvailableParks(token);
               format: "json",
             }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to add park: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to add park");
+          }
 
           // Fade out and remove the card
           const card = button.closest(".park-card");

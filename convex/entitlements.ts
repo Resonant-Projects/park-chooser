@@ -192,7 +192,7 @@ export const upsertFromClerkWebhook = internalMutation({
     userId: v.id("users"),
     clerkSubscriptionId: v.string(),
     clerkSubscriptionItemId: v.string(),
-    clerkPlanId: v.string(),
+    clerkPlanId: v.optional(v.string()),
     clerkPlanSlug: v.optional(v.string()),
     status: v.string(),
     periodStart: v.optional(v.number()),
