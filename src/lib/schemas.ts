@@ -17,13 +17,6 @@ export const softwareApplicationSchema = {
     priceCurrency: "USD",
     description: "Free tier available with daily limit. Premium plans available.",
   },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.8",
-    ratingCount: "150",
-    bestRating: "5",
-    worstRating: "1",
-  },
 };
 
 export const websiteSchema = {
@@ -49,7 +42,6 @@ export const organizationSchema = {
   name: "Today's Park",
   url: siteUrl,
   logo: `${siteUrl}/favicon.svg`,
-  sameAs: [],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
@@ -62,48 +54,26 @@ export const homepageSchema = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "WebSite",
+      ...websiteSchema,
+      "@context": undefined,
       "@id": `${siteUrl}/#website`,
-      name: "Today's Park",
-      url: siteUrl,
-      description: "Random park picker for families exploring local parks",
       publisher: {
         "@id": `${siteUrl}/#organization`,
       },
-      potentialAction: {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${siteUrl}/discover?q={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
     },
     {
-      "@type": "Organization",
+      ...organizationSchema,
+      "@context": undefined,
       "@id": `${siteUrl}/#organization`,
-      name: "Today's Park",
-      url: siteUrl,
       logo: {
         "@type": "ImageObject",
         url: `${siteUrl}/favicon.svg`,
       },
     },
     {
-      "@type": "SoftwareApplication",
+      ...softwareApplicationSchema,
+      "@context": undefined,
       "@id": `${siteUrl}/#app`,
-      name: "Today's Park",
-      applicationCategory: "LifestyleApplication",
-      operatingSystem: "Web",
-      description:
-        "Random park picker for families. End the 'which park?' debate and discover local adventures.",
-      url: siteUrl,
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-        description: "Free tier available",
-      },
     },
     {
       "@type": "WebPage",

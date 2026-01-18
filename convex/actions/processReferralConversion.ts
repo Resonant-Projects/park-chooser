@@ -111,6 +111,19 @@ export const processReferralConversion = internalAction({
       };
     } catch (error) {
       console.error("Failed to grant referral reward:", error);
+
+      // Record failure for retry/recovery
+      const rewardType =
+        referrerTier === "premium" ? ("bonus_days" as const) : ("discount_code" as const);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      await ctx.runMutation(internal.failedReferralRewards.recordFailedReward, {
+        referralId: pendingReferral._id,
+        userId: referrerId,
+        rewardType,
+        error: errorMessage,
+      });
+
       return {
         processed: true,
         rewarded: false,

@@ -214,4 +214,18 @@ export default defineSchema({
     firstSeenAt: v.number(),
     lastSeenAt: v.number(),
   }).index("by_identifier_type", ["identifier", "signalType"]),
+
+  // Failed referral rewards for retry/recovery
+  failedReferralRewards: defineTable({
+    referralId: v.id("referrals"),
+    userId: v.id("users"),
+    rewardType: v.union(v.literal("bonus_days"), v.literal("discount_code")),
+    error: v.string(),
+    retryCount: v.number(),
+    lastAttemptAt: v.number(),
+    status: v.union(v.literal("pending"), v.literal("resolved"), v.literal("escalated")),
+    createdAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_referral", ["referralId"]),
 });
