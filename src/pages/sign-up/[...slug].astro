@@ -2,6 +2,7 @@
 import { SignUp } from "@clerk/astro/components";
 import "../../styles/starwind.css";
 import "../../styles/global.css";
+import { SITE_NAME } from "../../lib/config";
 ---
 
 <!doctype html>
@@ -10,10 +11,10 @@ import "../../styles/global.css";
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sign Up - Today's Park</title>
+    <title>Sign Up - {SITE_NAME}</title>
     <meta
       name="description"
-      content="Create your free Today's Park account. Start discovering and tracking visits to local parks."
+      content={`Create your free ${SITE_NAME} account. Start discovering and tracking visits to local parks.`}
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,7 +26,7 @@ import "../../styles/global.css";
   <body>
     <div class="container">
       <header>
-        <h1 class="title">Today's Park</h1>
+        <h1 class="title">{SITE_NAME}</h1>
         <p class="subtitle">Create your account</p>
       </header>
 

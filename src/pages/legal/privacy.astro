@@ -5,25 +5,24 @@ import JsonLd from "../../components/JsonLd.astro";
 import { createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+import { SITE_URL, SITE_NAME } from "../../lib/config";
 
 const breadcrumbs = [
-  { name: "Home", url: siteUrl },
-  { name: "Privacy Policy", url: `${siteUrl}/legal/privacy` },
+  { name: "Home", url: SITE_URL },
+  { name: "Privacy Policy", url: `${SITE_URL}/legal/privacy` },
 ];
 ---
 
 <PageLayout
   title="Privacy Policy"
   subtitle="Last updated: January 2026"
-  pageTitle="Privacy Policy - Today's Park"
+  pageTitle={`Privacy Policy - ${SITE_NAME}`}
   class="max-w-2xl"
 >
   <SEO
     slot="head"
-    title="Privacy Policy - Today's Park"
-    description="Privacy Policy for Today's Park. Learn how we collect, use, and protect your data. We respect your privacy and are transparent about our practices."
+    title={`Privacy Policy - ${SITE_NAME}`}
+    description={`Privacy Policy for ${SITE_NAME}. Learn how we collect, use, and protect your data. We respect your privacy and are transparent about our practices.`}
   >
     <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>

@@ -54,8 +54,8 @@ if (referralStatsResult.status === "fulfilled") {
 }
 
 // Build referral link
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
-const referralLink = referralCode ? `${siteUrl}/r/${referralCode.code}` : null;
+import { SITE_URL, SITE_NAME } from "../lib/config";
+const referralLink = referralCode ? `${SITE_URL}/r/${referralCode.code}` : null;
 
 // Format period end date
 const formatDate = (timestamp: number | undefined) => {
@@ -263,15 +263,15 @@ const isPremium = entitlements?.tier === "premium";
                   id="native-share-btn"
                   class="bg-gold text-forest hover:bg-cream hidden rounded-full px-4 py-2 text-sm font-medium transition-colors"
                   data-link={referralLink}
-                  data-title="Join me on Today's Park!"
-                  data-text="Discover your next park adventure with Today's Park!"
+                  data-title={`Join me on ${SITE_NAME}!`}
+                  data-text={`Discover your next park adventure with ${SITE_NAME}!`}
                 >
                   Share
                 </button>
 
                 {/* SMS */}
                 <a
-                  href={`sms:?body=${encodeURIComponent(`Check out Today's Park! ${referralLink}`)}`}
+                  href={`sms:?body=${encodeURIComponent(`Check out ${SITE_NAME}! ${referralLink}`)}`}
                   class="share-btn text-cream inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
                 >
                   <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
@@ -282,7 +282,7 @@ const isPremium = entitlements?.tier === "premium";
 
                 {/* Email */}
                 <a
-                  href={`mailto:?subject=${encodeURIComponent("Join me on Today's Park!")}&body=${encodeURIComponent(`I've been using Today's Park to discover local parks. Check it out: ${referralLink}`)}`}
+                  href={`mailto:?subject=${encodeURIComponent(`Join me on ${SITE_NAME}!`)}&body=${encodeURIComponent(`I've been using ${SITE_NAME} to discover local parks. Check it out: ${referralLink}`)}`}
                   class="share-btn text-cream inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
                 >
                   <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@ const isPremium = entitlements?.tier === "premium";
 
                 {/* WhatsApp */}
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Check out Today's Park! ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Check out ${SITE_NAME}! ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="share-btn text-cream inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
@@ -306,7 +306,7 @@ const isPremium = entitlements?.tier === "premium";
 
                 {/* Twitter/X */}
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Discover your next park adventure with Today's Park!`)}&url=${encodeURIComponent(referralLink)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Discover your next park adventure with ${SITE_NAME}!`)}&url=${encodeURIComponent(referralLink)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="share-btn text-cream inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
@@ -359,7 +359,7 @@ const isPremium = entitlements?.tier === "premium";
           </div>
         ) : (
           <div class="space-y-4">
-            <p class="text-mist">Share Today's Park with friends and earn rewards!</p>
+            <p class="text-mist">Share {SITE_NAME} with friends and earn rewards!</p>
             <Button id="generate-code-btn" variant="secondary" class="w-full">
               Generate My Referral Link
             </Button>
@@ -406,8 +406,8 @@ const isPremium = entitlements?.tier === "premium";
 
         try {
           await navigator.share({
-            title: title || "Today's Park",
-            text: text || "Check out Today's Park!",
+            title: title || "Pick a Park",
+            text: text || "Check out Pick a Park!",
             url: link,
           });
         } catch (err) {

@@ -6,6 +6,7 @@ import "../styles/global.css";
 import SEO from "../components/SEO.astro";
 import JsonLd from "../components/JsonLd.astro";
 import { createItemListSchema, createBreadcrumbSchema } from "../lib/schemas";
+import { SITE_URL, SITE_NAME } from "../lib/config";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 import Badge from "../components/starwind/badge/Badge.astro";
@@ -15,8 +16,6 @@ import TableCell from "../components/starwind/table/TableCell.astro";
 import TableHead from "../components/starwind/table/TableHead.astro";
 import TableHeader from "../components/starwind/table/TableHeader.astro";
 import TableRow from "../components/starwind/table/TableRow.astro";
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
 
 // Get Clerk auth
 const { userId, getToken } = Astro.locals.auth();
@@ -52,8 +51,8 @@ const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0)
 
 // Schema data for SEO
 const breadcrumbs = [
-  { name: "Home", url: siteUrl },
-  { name: "Stats", url: `${siteUrl}/stats` },
+  { name: "Home", url: SITE_URL },
+  { name: "Stats", url: `${SITE_URL}/stats` },
 ];
 
 const itemListData = parks.map((park, index) => ({
@@ -69,8 +68,8 @@ const itemListData = parks.map((park, index) => ({
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <SEO
-      title="Your Park Stats - Today's Park"
-      description="Track your park visit history and see which parks you've explored most. View statistics for all the parks in your Today's Park list."
+      title={`Your Park Stats - ${SITE_NAME}`}
+      description={`Track your park visit history and see which parks you've explored most. View statistics for all the parks in your ${SITE_NAME} list.`}
       noindex={true}
     >
       <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
@@ -108,7 +107,7 @@ const itemListData = parks.map((park, index) => ({
             <a
               href="/"
               class="text-gold hover:text-cream text-[0.9375rem] font-semibold transition-colors"
-              >← Back to Today's Park</a
+              >← Back to {SITE_NAME}</a
             >
             <Badge variant="outline" class="text-mist border-none bg-white/10"
               >{totalVisits} visits</Badge

@@ -3,6 +3,7 @@ import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
 import { getConvexUrl, getAvailableParks } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
+import { SITE_NAME } from "../lib/config";
 
 // Auth check
 const { userId, getToken } = Astro.locals.auth();
@@ -23,14 +24,14 @@ const availableParks = await getAvailableParks(token);
 <PageLayout
   title="Discover Parks"
   subtitle="Find parks near your location"
-  pageTitle="Discover Parks - Today's Park"
+  pageTitle={`Discover Parks - ${SITE_NAME}`}
   backLink={{ href: "/manage", text: "Back to Manage" }}
   showUserButton
 >
   <SEO
     slot="head"
-    title="Discover Parks - Today's Park"
-    description="Discover parks near your location with Today's Park."
+    title={`Discover Parks - ${SITE_NAME}`}
+    description={`Discover parks near your location with ${SITE_NAME}.`}
   />
 
   <UserButton.Link slot="user-menu" label="Manage Parks" href="/manage">

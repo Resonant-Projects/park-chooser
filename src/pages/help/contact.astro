@@ -8,8 +8,7 @@ import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
 import Spinner from "../../components/starwind/spinner/Spinner.astro";
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+import { SITE_URL, SITE_NAME } from "../../lib/config";
 const convexUrl = getConvexUrl();
 
 // Get the Clerk token if authenticated
@@ -17,22 +16,22 @@ const { getToken } = Astro.locals.auth();
 const convexToken = await getToken({ template: "convex" });
 
 const breadcrumbs = [
-  { name: "Home", url: siteUrl },
-  { name: "Help", url: `${siteUrl}/help` },
-  { name: "Contact Support", url: `${siteUrl}/help/contact` },
+  { name: "Home", url: SITE_URL },
+  { name: "Help", url: `${SITE_URL}/help` },
+  { name: "Contact Support", url: `${SITE_URL}/help/contact` },
 ];
 ---
 
 <PageLayout
   title="Contact Support"
   subtitle="We typically respond within 24-48 hours"
-  pageTitle="Contact Support - Today's Park"
+  pageTitle={`Contact Support - ${SITE_NAME}`}
   class="max-w-xl"
 >
   <SEO
     slot="head"
-    title="Contact Support - Today's Park"
-    description="Need help with Today's Park? Contact our support team for assistance with bugs, billing, features, or any other questions. We respond within 24-48 hours."
+    title={`Contact Support - ${SITE_NAME}`}
+    description={`Need help with ${SITE_NAME}? Contact our support team for assistance with bugs, billing, features, or any other questions. We respond within 24-48 hours.`}
   >
     <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>

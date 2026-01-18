@@ -6,8 +6,7 @@ import { createFaqSchema, createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+import { SITE_URL, SITE_NAME } from "../../lib/config";
 
 const helpFaqs = [
   {
@@ -43,20 +42,20 @@ const helpFaqs = [
 ];
 
 const breadcrumbs = [
-  { name: "Home", url: siteUrl },
-  { name: "Help", url: `${siteUrl}/help` },
+  { name: "Home", url: SITE_URL },
+  { name: "Help", url: `${SITE_URL}/help` },
 ];
 ---
 
 <PageLayout
   title="Help Center"
   subtitle="Find answers and get support"
-  pageTitle="Help Center - Today's Park"
+  pageTitle={`Help Center - ${SITE_NAME}`}
 >
   <SEO
     slot="head"
-    title="Help Center - Today's Park | FAQs & Support"
-    description="Get help with Today's Park. Find answers to frequently asked questions about adding parks, tracking visits, subscriptions, and more."
+    title={`Help Center - ${SITE_NAME} | FAQs & Support`}
+    description={`Get help with ${SITE_NAME}. Find answers to frequently asked questions about adding parks, tracking visits, subscriptions, and more.`}
   >
     <JsonLd schema={createFaqSchema(helpFaqs)} />
     <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />

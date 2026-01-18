@@ -1,16 +1,15 @@
 // JSON-LD Schema definitions for structured data
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+import { SITE_NAME, SITE_URL, APP_SUBTITLE } from "./config";
 
 export const softwareApplicationSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "Today's Park",
+  name: SITE_NAME,
   applicationCategory: "LifestyleApplication",
   operatingSystem: "Web",
   description:
     "Random park picker for families exploring local parks. Discover your next adventure.",
-  url: siteUrl,
+  url: SITE_URL,
   offers: {
     "@type": "Offer",
     price: "0",
@@ -22,15 +21,15 @@ export const softwareApplicationSchema = {
 export const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Today's Park",
-  url: siteUrl,
+  name: SITE_NAME,
+  url: SITE_URL,
   description:
     "Random park picker for families exploring local parks. End the 'which park?' debate forever.",
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: `${siteUrl}/discover?q={search_term_string}`,
+      urlTemplate: `${SITE_URL}/discover?q={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   },
@@ -39,13 +38,13 @@ export const websiteSchema = {
 export const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "Today's Park",
-  url: siteUrl,
-  logo: `${siteUrl}/favicon.svg`,
+  name: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/favicon.svg`,
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
-    url: `${siteUrl}/help/contact`,
+    url: `${SITE_URL}/help/contact`,
   },
 };
 
@@ -56,35 +55,35 @@ export const homepageSchema = {
     {
       ...websiteSchema,
       "@context": undefined,
-      "@id": `${siteUrl}/#website`,
+      "@id": `${SITE_URL}/#website`,
       publisher: {
-        "@id": `${siteUrl}/#organization`,
+        "@id": `${SITE_URL}/#organization`,
       },
     },
     {
       ...organizationSchema,
       "@context": undefined,
-      "@id": `${siteUrl}/#organization`,
+      "@id": `${SITE_URL}/#organization`,
       logo: {
         "@type": "ImageObject",
-        url: `${siteUrl}/favicon.svg`,
+        url: `${SITE_URL}/favicon.svg`,
       },
     },
     {
       ...softwareApplicationSchema,
       "@context": undefined,
-      "@id": `${siteUrl}/#app`,
+      "@id": `${SITE_URL}/#app`,
     },
     {
       "@type": "WebPage",
-      "@id": `${siteUrl}/#webpage`,
-      url: siteUrl,
-      name: "Today's Park - Random Park Picker for Families",
+      "@id": `${SITE_URL}/#webpage`,
+      url: SITE_URL,
+      name: `${SITE_NAME} - ${APP_SUBTITLE}`,
       isPartOf: {
-        "@id": `${siteUrl}/#website`,
+        "@id": `${SITE_URL}/#website`,
       },
       about: {
-        "@id": `${siteUrl}/#app`,
+        "@id": `${SITE_URL}/#app`,
       },
       description:
         "Discover your next park adventure. Random park picker that helps families explore local parks without the debate.",
@@ -144,9 +143,8 @@ export function createItemListSchema(
 export const howToSchema = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "How to Use Today's Park",
-  description:
-    "Learn how to use Today's Park to discover and explore local parks with your family.",
+  name: `How to Use ${SITE_NAME}`,
+  description: `Learn how to use ${SITE_NAME} to discover and explore local parks with your family.`,
   step: [
     {
       "@type": "HowToStep",

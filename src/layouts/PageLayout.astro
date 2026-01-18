@@ -2,6 +2,7 @@
 import "../styles/starwind.css";
 import "../styles/global.css";
 import { UserButton } from "@clerk/astro/components";
+import { SITE_NAME } from "../lib/config";
 
 interface Props {
   title: string;
@@ -25,7 +26,7 @@ const {
   class: className,
 } = Astro.props;
 
-const browserTitle = pageTitle ?? `${title} - Today's Park`;
+const browserTitle = pageTitle ?? `${title} - ${SITE_NAME}`;
 ---
 
 <!doctype html>

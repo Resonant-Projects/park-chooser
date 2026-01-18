@@ -5,6 +5,7 @@ import Analytics from "@vercel/analytics/astro";
 import SEO from "../components/SEO.astro";
 import JsonLd from "../components/JsonLd.astro";
 import { homepageSchema } from "../lib/schemas";
+import { SITE_NAME, APP_SUBTITLE } from "../lib/config";
 import "../styles/starwind.css";
 import "../styles/global.css";
 import Button from "../components/starwind/button/Button.astro";
@@ -50,8 +51,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <SEO
-      title="Today's Park - Random Park Picker for Families"
-      description="End the 'which park?' debate! Today's Park randomly picks your next family adventure from your curated list of local parks. Free to try."
+      title={`${SITE_NAME} - ${APP_SUBTITLE}`}
+      description={`End the 'which park?' debate! ${SITE_NAME} randomly picks your next family adventure from your curated list of local parks. Free to try.`}
     >
       <JsonLd schema={homepageSchema} />
     </SEO>
@@ -81,7 +82,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       <header>
         <div class="mb-2 flex items-start justify-between">
           <div>
-            <h1 class="title">Today's Park</h1>
+            <h1 class="title">{SITE_NAME}</h1>
             <p class="subtitle">Random Park Picker for Family Adventures</p>
           </div>
           <div class="mt-1">

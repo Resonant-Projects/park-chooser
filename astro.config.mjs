@@ -7,7 +7,7 @@ import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
-  site: process.env.SITE_URL || "https://todayspark.app",
+  site: process.env.SITE_URL || "https://pickapark.app",
   output: "server",
   vite: {
     plugins: [tailwindcss()],

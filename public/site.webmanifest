@@ -1,6 +1,6 @@
 {
-  "name": "Today's Park",
-  "short_name": "Today's Park",
+  "name": "Pick a Park",
+  "short_name": "Pick a Park",
   "description": "Discover your next park adventure. Random park picker for families.",
   "start_url": "/",
   "display": "standalone",

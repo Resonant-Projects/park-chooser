@@ -6,36 +6,35 @@ import { softwareApplicationSchema, howToSchema, createBreadcrumbSchema } from "
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 import Button from "../components/starwind/button/Button.astro";
-
-const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+import { SITE_URL, SITE_NAME } from "../lib/config";
 
 const breadcrumbs = [
-  { name: "Home", url: siteUrl },
-  { name: "About", url: `${siteUrl}/about` },
+  { name: "Home", url: SITE_URL },
+  { name: "About", url: `${SITE_URL}/about` },
 ];
 ---
 
 <PageLayout
-  title="About Today's Park"
+  title={`About ${SITE_NAME}`}
   subtitle="Making every day an adventure"
-  pageTitle="About - Today's Park"
+  pageTitle={`About - ${SITE_NAME}`}
 >
   <SEO
     slot="head"
-    title="About Today's Park | Random Park Picker for Families"
-    description="Learn how Today's Park helps families explore local parks. Build your list, pick randomly, track visits. End the 'which park?' debate forever!"
+    title={`About ${SITE_NAME} | Random Park Picker for Families`}
+    description={`Learn how ${SITE_NAME} helps families explore local parks. Build your list, pick randomly, track visits. End the 'which park?' debate forever!`}
   >
     <JsonLd schema={softwareApplicationSchema} />
     <JsonLd schema={howToSchema} />
     <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
-  <!-- What is Today's Park -->
+  <!-- What is Pick a Park -->
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="p-6">
-      <h2 class="text-cream mb-3 font-[Fraunces] text-xl font-semibold">What is Today's Park?</h2>
+      <h2 class="text-cream mb-3 font-[Fraunces] text-xl font-semibold">What is {SITE_NAME}?</h2>
       <p class="text-mist mb-4 leading-relaxed">
-        Today's Park is a simple tool that helps families get outside more often. Instead of
-        debating which park to visit or defaulting to the same spot every time, let us pick for you.
+        {SITE_NAME} is a simple tool that helps families get outside more often. Instead of debating which
+        park to visit or defaulting to the same spot every time, let us pick for you.
       </p>
       <p class="text-mist leading-relaxed">
         Add your favorite local parks to your list, hit the button, and discover where your next

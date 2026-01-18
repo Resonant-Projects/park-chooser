@@ -15,4 +15,4 @@ Disallow: /help/feedback
 Disallow: /api/
 Disallow: /r/
 
-Sitemap: https://todayspark.app/sitemap-index.xml
+Sitemap: https://pickapark.app/sitemap-index.xml
