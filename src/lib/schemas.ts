@@ -151,6 +151,25 @@ export function createBreadcrumbSchema(items: Array<{ name: string; url: string 
   };
 }
 
+// ItemList schema generator for lists of items (e.g., park stats)
+export function createItemListSchema(
+  items: Array<{ name: string; url?: string; position?: number }>,
+  listName: string
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: listName,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: item.position ?? index + 1,
+      name: item.name,
+      ...(item.url && { url: item.url }),
+    })),
+  };
+}
+
 // HowTo schema for the about page
 export const howToSchema = {
   "@context": "https://schema.org",

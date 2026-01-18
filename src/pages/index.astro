@@ -10,8 +10,6 @@ import "../styles/global.css";
 import Button from "../components/starwind/button/Button.astro";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
-import CardTitle from "../components/starwind/card/CardTitle.astro";
-import CardDescription from "../components/starwind/card/CardDescription.astro";
 import Spinner from "../components/starwind/spinner/Spinner.astro";
 
 const convexUrl = getConvexUrl();
@@ -84,7 +82,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         <div class="mb-2 flex items-start justify-between">
           <div>
             <h1 class="title">Today's Park</h1>
-            <p class="subtitle">A random adventure awaits</p>
+            <p class="subtitle">Random Park Picker for Family Adventures</p>
           </div>
           <div class="mt-1">
             <UserButton afterSignOutUrl="/sign-in">
@@ -116,13 +114,13 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             >
               <CardContent class="px-8 py-12">
                 <div class="mb-4 text-5xl">🎉</div>
-                <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
-                  Welcome to Today's Park!
-                </CardTitle>
-                <CardDescription class="text-mist mb-6">
-                  Get started by adding parks to your list. You can add our curated recommendations
-                  or browse the full catalog.
-                </CardDescription>
+                <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                  Welcome to Your Random Park Picker!
+                </h2>
+                <p class="text-mist mb-6">
+                  End the "which park?" debate. Add parks to your list and let us pick your next
+                  family adventure.
+                </p>
                 <div class="flex flex-col items-center gap-4">
                   <Button
                     id="seed-recommended"
@@ -146,9 +144,12 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           ) : !canPick && isFreeUser ? (
             <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
               <div class="mb-4 text-5xl">⏰</div>
-              <h2 class="text-cream mb-3 font-[Fraunces] text-2xl">Daily Limit Reached</h2>
+              <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                Daily Pick Limit Reached
+              </h2>
               <p class="text-mist mb-6">
-                Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!
+                Free accounts get 1 random park pick per day. Come back tomorrow for a new
+                adventure!
               </p>
               <a
                 href="/pricing"
@@ -162,12 +163,12 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
               <CardContent class="px-8 py-12">
                 <div class="mb-4 text-5xl">🌲</div>
-                <CardTitle class="text-cream mb-3 font-[Fraunces] text-2xl">
-                  Ready for an adventure?
-                </CardTitle>
-                <CardDescription class="text-mist mb-6">
-                  Click below to discover your park for today!
-                </CardDescription>
+                <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                  Ready for a Park Adventure?
+                </h2>
+                <p class="text-mist mb-6">
+                  Click below to randomly pick your next park destination!
+                </p>
                 <div class="text-gold animate-bounce text-3xl">↓</div>
               </CardContent>
             </Card>

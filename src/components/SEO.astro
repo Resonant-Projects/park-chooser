@@ -6,6 +6,7 @@ interface Props {
   image?: string;
   type?: "website" | "article";
   noindex?: boolean;
+  keywords?: string;
 }
 
 const {
@@ -15,19 +16,31 @@ const {
   image = "/og-default.png",
   type = "website",
   noindex = false,
+  keywords,
 } = Astro.props;
 
 // Use site URL from env or default - allows domain flexibility
 const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
 const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
 const imageUrl = image.startsWith("http") ? image : new URL(image, siteUrl).href;
+
+// Generate default keywords if not provided
+const defaultKeywords =
+  "random park picker, family parks, park finder, local parks, outdoor activities";
+const metaKeywords = keywords || defaultKeywords;
 ---
 
 <title>{title}</title>
 <meta name="description" content={description} />
+<meta name="keywords" content={metaKeywords} />
 <link rel="canonical" href={canonicalUrl} />
 
 {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<!-- Additional meta tags for mobile and apps -->
+<meta name="apple-mobile-web-app-title" content="Today's Park" />
+<meta name="application-name" content="Today's Park" />
+<meta name="msapplication-TileColor" content="#1a472a" />
 
 <!-- Open Graph -->
 <meta property="og:title" content={title} />
@@ -35,13 +48,18 @@ const imageUrl = image.startsWith("http") ? image : new URL(image, siteUrl).href
 <meta property="og:type" content={type} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:image" content={imageUrl} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Today's Park - Random Park Picker for Families" />
 <meta property="og:site_name" content="Today's Park" />
+<meta property="og:locale" content="en_US" />
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
+<meta name="twitter:image:alt" content="Today's Park - Random Park Picker for Families" />
 
 <!-- JSON-LD structured data slot -->
 <slot />
