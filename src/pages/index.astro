@@ -2,6 +2,9 @@
 import { getConvexUrl, getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import Analytics from "@vercel/analytics/astro";
+import SEO from "../components/SEO.astro";
+import JsonLd from "../components/JsonLd.astro";
+import { homepageSchema } from "../lib/schemas";
 import "../styles/starwind.css";
 import "../styles/global.css";
 import Button from "../components/starwind/button/Button.astro";
@@ -43,12 +46,17 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Today's Park - Random Park Picker for Families</title>
-    <meta
-      name="description"
-      content="Discover your next park adventure. Random park picker for families exploring local parks."
-    />
+    <meta name="theme-color" content="#c9a227" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <SEO
+      title="Today's Park - Random Park Picker for Families"
+      description="End the 'which park?' debate! Today's Park randomly picks your next family adventure from your curated list of local parks. Free to try."
+    >
+      <JsonLd schema={homepageSchema} />
+    </SEO>
     <!-- Font preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

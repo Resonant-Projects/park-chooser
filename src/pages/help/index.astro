@@ -1,9 +1,51 @@
 ---
 import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { createFaqSchema, createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
+
+const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+
+const helpFaqs = [
+  {
+    question: "How do I add parks to my list?",
+    answer:
+      "Go to the Manage page where you can browse recommended parks or visit Discover to find parks near your current location.",
+  },
+  {
+    question: "Why doesn't the same park repeat?",
+    answer:
+      "To encourage variety, we won't pick the same park twice within your last 5 selections. If you have fewer than 5 parks, this limit is adjusted automatically.",
+  },
+  {
+    question: "How is travel time calculated?",
+    answer:
+      "When you pick a park, we request your location (with your permission) and use Google Maps to estimate driving time based on current traffic conditions.",
+  },
+  {
+    question: "How do I track my park visits?",
+    answer:
+      "Each time you tap 'Open in Google Maps' after picking a park, we count it as a visit. View your stats on the Stats page.",
+  },
+  {
+    question: "Can I change or cancel my subscription?",
+    answer:
+      "Yes! Click your profile icon in the top right corner of any page, then select 'Manage Account' to update your subscription or payment method.",
+  },
+  {
+    question: "What happens to my parks if I cancel?",
+    answer:
+      "Your park list and visit history are preserved. If you resubscribe later, everything will be right where you left it.",
+  },
+];
+
+const breadcrumbs = [
+  { name: "Home", url: siteUrl },
+  { name: "Help", url: `${siteUrl}/help` },
+];
 ---
 
 <PageLayout
@@ -13,9 +55,12 @@ import Button from "../../components/starwind/button/Button.astro";
 >
   <SEO
     slot="head"
-    title="Help Center - Today's Park"
-    description="Get help with Today's Park. Find answers to common questions and contact support."
-  />
+    title="Help Center - Today's Park | FAQs & Support"
+    description="Get help with Today's Park. Find answers to frequently asked questions about adding parks, tracking visits, subscriptions, and more."
+  >
+    <JsonLd schema={createFaqSchema(helpFaqs)} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
+  </SEO>
   <!-- Quick Links -->
   <div class="grid grid-cols-2 gap-3">
     <a href="/about" class="block transition-transform hover:scale-[1.02]">

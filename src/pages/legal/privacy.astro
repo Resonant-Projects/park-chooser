@@ -2,9 +2,17 @@
 import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
 import JsonLd from "../../components/JsonLd.astro";
-import { softwareApplicationSchema } from "../../lib/schemas";
+import { createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
+
+const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+
+const breadcrumbs = [
+  { name: "Home", url: siteUrl },
+  { name: "Legal", url: `${siteUrl}/legal/privacy` },
+  { name: "Privacy Policy", url: `${siteUrl}/legal/privacy` },
+];
 ---
 
 <PageLayout
@@ -16,9 +24,9 @@ import CardContent from "../../components/starwind/card/CardContent.astro";
   <SEO
     slot="head"
     title="Privacy Policy - Today's Park"
-    description="Privacy Policy for Today's Park. Learn how we collect, use, and protect your data."
+    description="Privacy Policy for Today's Park. Learn how we collect, use, and protect your data. We respect your privacy and are transparent about our practices."
   >
-    <JsonLd schema={softwareApplicationSchema} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="prose prose-invert prose-sm max-w-none p-6">

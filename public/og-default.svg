@@ -1,0 +1,44 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a2f"/>
+      <stop offset="100%" style="stop-color:#0f2520"/>
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#e8c547"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Decorative trees silhouette at bottom -->
+  <g opacity="0.15" fill="#2d5a47">
+    <path d="M0 630 L60 450 L120 630 Z"/>
+    <path d="M80 630 L160 420 L240 630 Z"/>
+    <path d="M200 630 L280 480 L360 630 Z"/>
+    <path d="M320 630 L420 400 L520 630 Z"/>
+    <path d="M480 630 L560 460 L640 630 Z"/>
+    <path d="M600 630 L700 380 L800 630 Z"/>
+    <path d="M760 630 L840 450 L920 630 Z"/>
+    <path d="M880 630 L980 420 L1080 630 Z"/>
+    <path d="M1040 630 L1120 470 L1200 630 Z"/>
+  </g>
+
+  <!-- Park emoji/icon -->
+  <text x="600" y="200" font-size="120" text-anchor="middle" dominant-baseline="middle">🌲</text>
+
+  <!-- Main title -->
+  <text x="600" y="320" font-family="Georgia, serif" font-size="72" font-weight="700" fill="#f5f0e6" text-anchor="middle">Today's Park</text>
+
+  <!-- Tagline -->
+  <text x="600" y="400" font-family="system-ui, sans-serif" font-size="32" fill="#a8c5b8" text-anchor="middle">Random Park Picker for Families</text>
+
+  <!-- CTA line -->
+  <text x="600" y="480" font-family="system-ui, sans-serif" font-size="24" fill="url(#goldGradient)" text-anchor="middle">End the "which park?" debate forever</text>
+
+  <!-- URL -->
+  <text x="600" y="560" font-family="system-ui, sans-serif" font-size="20" fill="#6b8f7a" text-anchor="middle">todayspark.app</text>
+</svg>

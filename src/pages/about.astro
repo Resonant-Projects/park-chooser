@@ -2,10 +2,17 @@
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
 import JsonLd from "../components/JsonLd.astro";
-import { softwareApplicationSchema } from "../lib/schemas";
+import { softwareApplicationSchema, howToSchema, createBreadcrumbSchema } from "../lib/schemas";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 import Button from "../components/starwind/button/Button.astro";
+
+const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
+
+const breadcrumbs = [
+  { name: "Home", url: siteUrl },
+  { name: "About", url: `${siteUrl}/about` },
+];
 ---
 
 <PageLayout
@@ -15,10 +22,12 @@ import Button from "../components/starwind/button/Button.astro";
 >
   <SEO
     slot="head"
-    title="About - Today's Park"
-    description="Today's Park helps families discover and explore local parks by randomly picking your next adventure."
+    title="About Today's Park | Random Park Picker for Families"
+    description="Learn how Today's Park helps families explore local parks. Build your list, pick randomly, track visits. End the 'which park?' debate forever!"
   >
     <JsonLd schema={softwareApplicationSchema} />
+    <JsonLd schema={howToSchema} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
   <!-- What is Today's Park -->
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">

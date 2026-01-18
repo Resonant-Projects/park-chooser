@@ -1,17 +1,26 @@
 ---
 import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { createBreadcrumbSchema } from "../../lib/schemas";
 import { getConvexUrl } from "../../lib/convexClient";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
 import Spinner from "../../components/starwind/spinner/Spinner.astro";
 
+const siteUrl = import.meta.env.SITE_URL || "https://todayspark.app";
 const convexUrl = getConvexUrl();
 
 // Get the Clerk token if authenticated
 const { getToken } = Astro.locals.auth();
 const convexToken = await getToken({ template: "convex" });
+
+const breadcrumbs = [
+  { name: "Home", url: siteUrl },
+  { name: "Help", url: `${siteUrl}/help` },
+  { name: "Contact Support", url: `${siteUrl}/help/contact` },
+];
 ---
 
 <PageLayout
@@ -23,8 +32,10 @@ const convexToken = await getToken({ template: "convex" });
   <SEO
     slot="head"
     title="Contact Support - Today's Park"
-    description="Get help with Today's Park. Contact our support team."
-  />
+    description="Need help with Today's Park? Contact our support team for assistance with bugs, billing, features, or any other questions. We respond within 24-48 hours."
+  >
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
+  </SEO>
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="p-6">
       <form id="contact-form" class="space-y-4">
