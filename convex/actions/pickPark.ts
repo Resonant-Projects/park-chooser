@@ -1,9 +1,10 @@
 "use node";
 
 import { action } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import { getPhotoUrl } from "../lib/googleMaps";
-import type { Id } from "../_generated/dataModel";
+import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
 
 export interface PickedPark {
   _id: string;
@@ -14,65 +15,112 @@ export interface PickedPark {
   placeId: string;
 }
 
+interface UserParkWithDetails {
+  _id: Id<"userParks">;
+  parkId: Id<"parks">;
+  placeId: string;
+  name: string;
+  customName: string | undefined;
+  address: string | undefined;
+  photoRefs: string[];
+}
+
 /**
- * Pick a random park that hasn't been chosen in the last 5 picks.
- * Returns the park with a photo URL.
+ * Pick a random park from the user's list that hasn't been chosen
+ * in the last 5 picks (per-user constraint).
  */
 export const pickPark = action({
   args: {},
   handler: async (ctx): Promise<PickedPark> => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    // Ensure we have parks
-    const parkCount = await ctx.runQuery(api.parks.count);
-    if (parkCount === 0) {
-      // Try to sync from Google if API key is available
-      if (apiKey) {
-        await ctx.runAction(api.actions.syncParks.syncParks, { force: true });
-      } else {
-        throw new Error(
-          "No parks found. Run `npx convex run seed:seedParks` to add sample parks, " +
-            "or set GOOGLE_MAPS_API_KEY to sync from Google Places."
-        );
-      }
+    // Get current user (required for per-user lists)
+    const user = await ctx.runQuery(internal.users.getCurrentUserInternal);
+    if (!user) {
+      throw new Error("Authentication required to pick a park");
     }
 
-    // Get all parks
-    const allParks = await ctx.runQuery(api.parks.list);
-    if (allParks.length === 0) {
-      throw new Error("No parks available. Please sync parks first.");
+    // Check daily pick limit
+    const pickCheck = await ctx.runQuery(internal.entitlements.checkCanPickToday, {
+      userId: user._id,
+    });
+
+    if (!pickCheck.canPick) {
+      throw createLimitError(
+        ENTITLEMENT_ERRORS.DAILY_PICK_LIMIT_EXCEEDED,
+        `Daily pick limit reached (${pickCheck.currentCount}/${pickCheck.limit}). Upgrade to Premium for unlimited picks.`,
+        {
+          tier: pickCheck.tier,
+          limit: pickCheck.limit,
+          current: pickCheck.currentCount,
+          resetsAt: getNextMidnightUTC(),
+        }
+      );
     }
 
-    // Get the last 5 picked park IDs
-    const lastFiveIds = await ctx.runQuery(internal.picks.getLastFivePickIds);
-    const lastFiveSet = new Set(lastFiveIds.map((id) => id.toString()));
-
-    // Filter out recently picked parks
-    const eligibleParks = allParks.filter(
-      (park) => !lastFiveSet.has(park._id.toString())
+    // Get all parks in user's list (cast and filter nulls)
+    const rawUserParks = await ctx.runQuery(internal.userParks.getUserParksWithDetails, {
+      userId: user._id,
+    });
+    const userParks: UserParkWithDetails[] = rawUserParks.filter(
+      (p: UserParkWithDetails | null): p is UserParkWithDetails => p !== null
     );
 
-    // If all parks have been picked recently (fewer parks than constraint),
-    // allow picking from all parks
-    const poolToPickFrom = eligibleParks.length > 0 ? eligibleParks : allParks;
+    if (userParks.length === 0) {
+      throw new Error(
+        "NO_PARKS: Add parks to your list first. Visit the Manage page to get started."
+      );
+    }
+
+    // Get the last 5 picked park IDs for this user
+    const lastFiveIds = await ctx.runQuery(internal.userParks.getLastFivePickIdsForUser, {
+      userId: user._id,
+    });
+    const lastFiveSet = new Set(lastFiveIds.map((id: Id<"parks">) => id.toString()));
+
+    // Filter out recently picked parks
+    const eligibleParks: UserParkWithDetails[] = userParks.filter(
+      (up: UserParkWithDetails) => !lastFiveSet.has(up.parkId.toString())
+    );
+
+    // If all parks have been picked recently, allow picking from all
+    const poolToPickFrom: UserParkWithDetails[] =
+      eligibleParks.length > 0 ? eligibleParks : userParks;
 
     // Randomly select a park
     const randomIndex = Math.floor(Math.random() * poolToPickFrom.length);
-    const selectedPark = poolToPickFrom[randomIndex];
+    const selectedPark: UserParkWithDetails = poolToPickFrom[randomIndex];
+
+    // Validate that the park still exists before recording
+    const parkExists = await ctx.runQuery(internal.parks.getById, {
+      id: selectedPark.parkId,
+    });
+    if (!parkExists) {
+      throw new Error(
+        "PARK_NOT_FOUND: The selected park no longer exists. Please refresh and try again."
+      );
+    }
 
     // Record this pick
     await ctx.runMutation(internal.picks.recordPick, {
-      parkId: selectedPark._id,
+      parkId: selectedPark.parkId,
+      userId: user._id,
+      userParkId: selectedPark._id,
+    });
+
+    // Increment daily pick count for rate limiting
+    await ctx.runMutation(internal.entitlements.incrementDailyPickCount, {
+      userId: user._id,
     });
 
     // Generate photo URL if we have a photo reference
     let photoUrl: string | undefined;
-    if (selectedPark.photoRefs.length > 0 && apiKey) {
+    if (selectedPark.photoRefs && selectedPark.photoRefs.length > 0 && apiKey) {
       photoUrl = getPhotoUrl(selectedPark.photoRefs[0], apiKey, 1200);
     }
 
     return {
-      _id: selectedPark._id,
+      _id: selectedPark.parkId.toString(),
       name: selectedPark.name,
       customName: selectedPark.customName,
       address: selectedPark.address,

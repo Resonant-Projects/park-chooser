@@ -44,6 +44,7 @@ npx convex dev
 ```
 
 This will:
+
 - Start the Convex development server
 - Sync your schema and functions
 - Create a `.env.local` file with your deployment URL
@@ -62,6 +63,7 @@ GOOGLE_MAPS_API_KEY=your_api_key_here
 Edit the `PARK_PLACE_IDS` array in `convex/lib/googleMaps.ts` with the Google Place IDs for your parks.
 
 To find Place IDs:
+
 1. Go to [Place ID Finder](https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder)
 2. Search for each park
 3. Copy the Place ID
@@ -121,13 +123,13 @@ Visit [http://localhost:4321](http://localhost:4321) to see the app.
 
 ## Commands
 
-| Command           | Action                                      |
-| :---------------- | :------------------------------------------ |
-| `bun install`     | Install dependencies                        |
-| `bun dev`         | Start Astro dev server at `localhost:4321`  |
-| `npx convex dev`  | Start Convex dev server                     |
-| `bun build`       | Build production site to `./dist/`          |
-| `bun preview`     | Preview production build locally            |
+| Command          | Action                                     |
+| :--------------- | :----------------------------------------- |
+| `bun install`    | Install dependencies                       |
+| `bun dev`        | Start Astro dev server at `localhost:4321` |
+| `npx convex dev` | Start Convex dev server                    |
+| `bun build`      | Build production site to `./dist/`         |
+| `bun preview`    | Preview production build locally           |
 
 ## Verifying the 5-Pick Constraint
 

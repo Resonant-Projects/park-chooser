@@ -56,10 +56,7 @@ export const SRQ_PARKS: ParkEntry[] = [
 /**
  * Search for a place using Text Search API (New) and return the place ID.
  */
-export async function searchPlace(
-  query: string,
-  apiKey: string
-): Promise<string | null> {
+export async function searchPlace(query: string, apiKey: string): Promise<string | null> {
   const url = "https://places.googleapis.com/v1/places:searchText";
 
   try {
@@ -128,9 +125,7 @@ export async function fetchPlaceDetails(
       placeId: data.id || placeId,
       name: data.displayName?.text || "Unknown Park",
       address: data.formattedAddress,
-      photoRefs: (data.photos || [])
-        .slice(0, 5)
-        .map((p: { name: string }) => p.name),
+      photoRefs: (data.photos || []).slice(0, 5).map((p: { name: string }) => p.name),
     };
   } catch (error) {
     console.error(`Error fetching place details for ${placeId}:`, error);
@@ -142,11 +137,7 @@ export async function fetchPlaceDetails(
  * Generate a photo URL from a Places API photo reference.
  * The photo name format from Places API (New) is: places/{placeId}/photos/{photoRef}
  */
-export function getPhotoUrl(
-  photoName: string,
-  apiKey: string,
-  maxWidth = 800
-): string {
+export function getPhotoUrl(photoName: string, apiKey: string, maxWidth = 800): string {
   // Places API (New) photo media endpoint
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${apiKey}`;
 }
@@ -166,9 +157,7 @@ export async function getTravelTime(
   destinationPlaceId: string,
   apiKey: string
 ): Promise<TravelTimeResult | null> {
-  const url = new URL(
-    "https://maps.googleapis.com/maps/api/distancematrix/json"
-  );
+  const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
   url.searchParams.set("origins", `${originLat},${originLng}`);
   url.searchParams.set("destinations", `place_id:${destinationPlaceId}`);
   url.searchParams.set("mode", "driving");
@@ -204,4 +193,125 @@ export async function getTravelTime(
     console.error("Error fetching travel time:", error);
     return null;
   }
+}
+
+// ============================================================
+// Nearby Search (Location Discovery)
+// ============================================================
+
+export interface NearbySearchResult {
+  placeId: string;
+  name: string;
+  address?: string;
+  lat: number;
+  lng: number;
+  photoRefs: string[];
+  primaryType?: string;
+}
+
+/**
+ * Search for nearby parks using Places API Nearby Search (New).
+ * Returns parks, playgrounds, and dog parks within the specified radius.
+ */
+export async function searchNearbyParks(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  apiKey: string
+): Promise<NearbySearchResult[]> {
+  const url = "https://places.googleapis.com/v1/places:searchNearby";
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask":
+          "places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.primaryType",
+      },
+      body: JSON.stringify({
+        includedPrimaryTypes: ["park", "playground", "dog_park"],
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius: radiusMeters,
+          },
+        },
+        maxResultCount: 20,
+        rankPreference: "DISTANCE",
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Nearby Search API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error details:", errorText);
+      return [];
+    }
+
+    const data = await response.json();
+
+    if (!data.places || data.places.length === 0) {
+      console.log("No nearby parks found");
+      return [];
+    }
+
+    return data.places
+      .filter(
+        (place: { id: string; location?: { latitude: number; longitude: number } }) =>
+          place.location?.latitude !== undefined && place.location?.longitude !== undefined
+      )
+      .map(
+        (place: {
+          id: string;
+          displayName?: { text: string };
+          formattedAddress?: string;
+          location: { latitude: number; longitude: number };
+          photos?: Array<{ name: string }>;
+          primaryType?: string;
+        }) => ({
+          placeId: place.id,
+          name: place.displayName?.text || "Unknown Park",
+          address: place.formattedAddress,
+          lat: place.location.latitude,
+          lng: place.location.longitude,
+          photoRefs: (place.photos || []).slice(0, 5).map((p: { name: string }) => p.name),
+          primaryType: place.primaryType,
+        })
+      );
+  } catch (error) {
+    console.error("Error searching nearby parks:", error);
+    return [];
+  }
+}
+
+/**
+ * Calculate straight-line distance between two points using Haversine formula.
+ * Returns distance in miles.
+ */
+export function calculateDistanceMiles(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Generate a simple geohash for caching nearby search results.
+ * Rounds coordinates to create geographic cache cells (~1 mile precision at default).
+ */
+export function simpleGeohash(lat: number, lng: number, precision: number = 2): string {
+  const latRounded = lat.toFixed(precision);
+  const lngRounded = lng.toFixed(precision);
+  return `${latRounded},${lngRounded}`;
 }

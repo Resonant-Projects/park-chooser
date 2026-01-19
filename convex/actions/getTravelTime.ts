@@ -27,12 +27,7 @@ export const calculateTravelTime = action({
       return null;
     }
 
-    const result = await getTravelTime(
-      args.originLat,
-      args.originLng,
-      args.placeId,
-      apiKey
-    );
+    const result = await getTravelTime(args.originLat, args.originLng, args.placeId, apiKey);
 
     if (!result) {
       return null;

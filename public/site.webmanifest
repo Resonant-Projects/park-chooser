@@ -1,0 +1,16 @@
+{
+  "name": "Pick a Park",
+  "short_name": "Pick a Park",
+  "description": "Discover your next park adventure. Random park picker for families.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a3a2f",
+  "theme_color": "#c9a227",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

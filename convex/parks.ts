@@ -1,10 +1,6 @@
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
+import { query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get all parks from the database.
@@ -20,6 +16,16 @@ export const list = query({
  * Get a single park by ID.
  */
 export const get = query({
+  args: { id: v.id("parks") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * Get a single park by ID (internal).
+ */
+export const getById = internalQuery({
   args: { id: v.id("parks") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
@@ -108,28 +114,111 @@ export const count = query({
   },
 });
 
+// Note: incrementVisitCount and listByVisitCount have been removed.
+// Visit tracking is now per-user via userParks.ts:
+// - incrementUserParkVisit (internal mutation)
+// - listUserParksByVisits (public query)
+
 /**
- * Increment the visit count for a park (internal, called by trackVisit action).
+ * Upsert discovered parks from nearby search (internal).
+ * Includes lat/lng coordinates and primaryType for location-based features.
  */
-export const incrementVisitCount = internalMutation({
-  args: { parkId: v.id("parks") },
+export const upsertDiscoveredParks = internalMutation({
+  args: {
+    parks: v.array(
+      v.object({
+        placeId: v.string(),
+        name: v.string(),
+        address: v.optional(v.string()),
+        photoRefs: v.array(v.string()),
+        lat: v.number(),
+        lng: v.number(),
+        primaryType: v.optional(v.string()),
+      })
+    ),
+  },
   handler: async (ctx, args) => {
-    const park = await ctx.db.get(args.parkId);
-    if (park) {
-      await ctx.db.patch(args.parkId, {
-        visitCount: (park.visitCount ?? 0) + 1,
-      });
+    const now = Date.now();
+    const upsertedIds: Array<{ placeId: string; _id: Id<"parks"> }> = [];
+
+    for (const park of args.parks) {
+      const existing = await ctx.db
+        .query("parks")
+        .withIndex("by_placeId", (q) => q.eq("placeId", park.placeId))
+        .first();
+
+      if (existing) {
+        // Update existing park with latest data
+        await ctx.db.patch(existing._id, {
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lat: park.lat,
+          lng: park.lng,
+          primaryType: park.primaryType,
+          lastSynced: now,
+        });
+        upsertedIds.push({ placeId: park.placeId, _id: existing._id });
+      } else {
+        // Insert new discovered park
+        const newId = await ctx.db.insert("parks", {
+          placeId: park.placeId,
+          name: park.name,
+          address: park.address,
+          photoRefs: park.photoRefs,
+          lat: park.lat,
+          lng: park.lng,
+          primaryType: park.primaryType,
+          lastSynced: now,
+          discoveredAt: now,
+        });
+        upsertedIds.push({ placeId: park.placeId, _id: newId });
+      }
     }
+
+    return upsertedIds;
   },
 });
 
 /**
- * Get all parks sorted by visit count (most visited first).
+ * Get parks available for user to add (not already in their list).
  */
-export const listByVisitCount = query({
+export const getAvailableParks = query({
   args: {},
   handler: async (ctx) => {
-    const parks = await ctx.db.query("parks").collect();
-    return parks.sort((a, b) => (b.visitCount ?? 0) - (a.visitCount ?? 0));
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      // Unauthenticated: return all parks
+      return await ctx.db.query("parks").collect();
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) {
+      return await ctx.db.query("parks").collect();
+    }
+
+    // Get user's current park IDs
+    const userParks = await ctx.db
+      .query("userParks")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    // Early exit: if user has no parks, return all parks (most common case for new users)
+    if (userParks.length === 0) {
+      return await ctx.db.query("parks").collect();
+    }
+
+    const userParkIds = new Set(userParks.map((up) => up.parkId.toString()));
+
+    // Get all parks, filter out user's parks
+    // Note: Convex doesn't support "NOT IN" queries, so in-memory filtering is acceptable
+    // for the expected park count (<500)
+    const allParks = await ctx.db.query("parks").collect();
+
+    return allParks.filter((park) => !userParkIds.has(park._id.toString()));
   },
 });

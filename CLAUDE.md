@@ -27,14 +27,16 @@ bun run sync:prod                                    # Prod sync (shorthand)
 
 This is a full-stack park selection application combining:
 
-- **Frontend**: Astro static site generator with inline scripts
+- **Frontend**: Astro static site generator with Starwind UI components
 - **Backend**: Convex (real-time database with serverless functions)
-- **External API**: Google Places API (New) for park details and photos
+- **Authentication**: Clerk
+- **External APIs**: Google Places API (New) for park details/photos, Distance Matrix API for travel time
+- **Analytics**: Vercel Analytics for page tracking
 
 ### Data Flow
 
-1. **Initial Page Load** → Astro calls `pickPark` action → Returns random park + photo → Renders HTML
-2. **"Pick Another Park" Button** → Client-side fetch to Convex HTTP API → Updates display without reload
+1. **Initial Page Load** → Astro renders placeholder UI with "Pick a Park" button
+2. **"Pick a Park" Button** → Client-side fetch to Convex `pickPark` action → Returns random park + photo → Updates display → Requests geolocation → Fetches travel time
 3. **"Open in Google Maps" Link** → Tracks visit via `trackVisit` action (fire-and-forget with keepalive)
 
 ### Database Schema
@@ -60,6 +62,7 @@ syncState (metadata):
 ### Key Constraint
 
 **No park repeats within the last 5 selections.** The `pickPark` action:
+
 1. Queries all parks
 2. Gets the last 5 picked park IDs
 3. Filters out recently picked parks
@@ -71,17 +74,31 @@ syncState (metadata):
 ### Frontend
 
 - **`src/pages/index.astro`** - Main landing page
-  - Calls `pickPark` on initial load (server-side)
-  - Contains inline `<script>` for client-side park picking and visit tracking
+  - Renders placeholder UI initially (no server-side data fetch)
+  - Contains inline `<script>` for client-side park picking, visit tracking, and travel time
+  - Uses browser geolocation API for travel time calculation
   - Uses Fetch API with `keepalive` for reliable tracking before navigation
 
+- **`src/pages/stats.astro`** - Stats page showing park visit counts
+  - Server-side fetches all parks sorted by visit count
+  - Uses Starwind Table components for display
+
+- **`src/components/starwind/`** - Starwind UI component library
+  - `badge/` - Badge component for labels
+  - `button/` - Primary/secondary button variants
+  - `card/` - Card with Header, Title, Description, Content, Footer
+  - `separator/` - Horizontal/vertical dividers
+  - `spinner/` - Loading spinner
+  - `table/` - Table, TableHeader, TableBody, TableRow, TableCell, etc.
+
 - **`src/lib/convexClient.ts`** - HTTP client for Convex actions/queries
-  - `pickPark()` - Server-side action call
+  - `pickPark()` - Server-side action call (currently unused, kept for reference)
   - `getParkStats()` - Query for stats page
-  - `getConvexUrl()` - Helper to get deployment URL
+  - `getConvexUrl()` - Helper to get deployment URL for client-side calls
   - Uses `import.meta.env.CONVEX_URL` from `.env.local`
 
-- **`src/styles/global.css`** - Single stylesheet with Tailwind CSS
+- **`src/styles/global.css`** - Main stylesheet with custom properties and animations
+- **`src/styles/starwind.css`** - Starwind component base styles
 
 ### Backend (Convex)
 
@@ -118,30 +135,40 @@ syncState (metadata):
   - Increments park's `visitCount`
   - Called via fire-and-forget fetch
 
-- **`convex/lib/googleMaps.ts`** - Google Places API helpers
+- **`convex/actions/getTravelTime.ts`** - Calculate driving time to park
+  - Takes origin coordinates (from browser geolocation) and destination place ID
+  - Returns duration and distance text (e.g., "15 mins", "5.2 mi")
+  - Called client-side after park is picked
+
+- **`convex/lib/googleMaps.ts`** - Google API helpers
   - `searchPlace()` - Text Search API (finds place ID by query)
   - `fetchPlaceDetails()` - Place Details API (gets address, photos)
   - `getPhotoUrl()` - Generates media endpoint URL for photo display
+  - `getTravelTime()` - Distance Matrix API (calculates driving time/distance)
   - `SRQ_PARKS` array - Hardcoded list of parks to sync
 
 ### Configuration
 
-- **`astro.config.mjs`** - Astro config (enables Tailwind CSS via Vite plugin)
+- **`astro.config.mjs`** - Astro config (Tailwind v4 via `@tailwindcss/vite` plugin)
 - **`tsconfig.json`** - TypeScript config for Astro
 - **`convex/tsconfig.json`** - TypeScript config for Convex
 - **`.env.local`** - Created by `npx convex dev`, contains `CONVEX_URL`
 - **`.env.prod`** - Production Convex URL (set during build)
+
+**Note:** This project uses **Tailwind CSS v4** with the Vite plugin (`@tailwindcss/vite`), not the PostCSS plugin. Configuration is done via CSS `@theme` directives in stylesheets rather than `tailwind.config.js`.
 
 ## Development Workflow
 
 ### Normal Development
 
 Terminal 1:
+
 ```bash
 npx convex dev
 ```
 
 Terminal 2:
+
 ```bash
 bun dev
 ```
@@ -167,16 +194,24 @@ Use the Convex dashboard to edit a park's `customName` field. This displays abov
 
 ## Important Implementation Notes
 
-### Google Places API (New)
+### Google APIs Required
 
-The codebase uses the **Places API (New)**, not the legacy Places API. Key differences:
+**Places API (New)** - for park details and photos:
+
 - Photo references are full resource names: `places/{placeId}/photos/{photoRef}`
 - Use `X-Goog-FieldMask` header to specify requested fields
 - Media endpoint: `https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={width}&key={apiKey}`
 
+**Distance Matrix API** - for travel time calculation:
+
+- Calculates driving duration/distance from user location to park
+- Uses imperial units (miles, minutes)
+- Requires user to grant browser geolocation permission
+
 ### Convex HTTP Calls
 
 Both server-side (Astro) and client-side (browser) call Convex actions/queries via HTTP:
+
 - **Server**: `/api/action` and `/api/query` endpoints (used in `convexClient.ts`)
 - **Client**: Same endpoints from `index.astro` inline script
 - No authentication needed for dev/preview (Convex dev mode is open)
@@ -198,4 +233,9 @@ The photo URL is generated on-demand in `pickPark` action (not stored). This ens
 
 ## Stats Page
 
-A `/stats` page exists (referenced in footer) that should display parks sorted by visit count. Check `src/pages/stats.astro` for implementation.
+The `/stats` page displays all parks in a table sorted by visit count (highest first). Features:
+
+- Uses Starwind Table components for consistent styling
+- Shows total visit count in header badge
+- Parks with visits are highlighted with gold background
+- Links back to main page

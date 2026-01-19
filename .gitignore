@@ -3,6 +3,7 @@ dist/
 # generated types
 .astro/
 .playwright-mcp/
+.vercel/
 
 # dependencies
 node_modules/

@@ -1,9 +1,4 @@
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
+import { query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -13,11 +8,7 @@ export const getRecentPicks = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 5;
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .take(limit);
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").take(limit);
 
     // Fetch the associated parks
     const picksWithParks = await Promise.all(
@@ -37,11 +28,7 @@ export const getRecentPicks = query({
 export const getLastFivePickIds = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .take(5);
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").take(5);
 
     return picks.map((p) => p.parkId);
   },
@@ -51,10 +38,16 @@ export const getLastFivePickIds = internalQuery({
  * Record a new pick (internal).
  */
 export const recordPick = internalMutation({
-  args: { parkId: v.id("parks") },
+  args: {
+    parkId: v.id("parks"),
+    userId: v.id("users"),
+    userParkId: v.optional(v.id("userParks")),
+  },
   handler: async (ctx, args) => {
     await ctx.db.insert("picks", {
       parkId: args.parkId,
+      userId: args.userId,
+      userParkId: args.userParkId,
       chosenAt: Date.now(),
     });
   },
@@ -66,11 +59,7 @@ export const recordPick = internalMutation({
 export const listAll = query({
   args: {},
   handler: async (ctx) => {
-    const picks = await ctx.db
-      .query("picks")
-      .withIndex("by_chosenAt")
-      .order("desc")
-      .collect();
+    const picks = await ctx.db.query("picks").withIndex("by_chosenAt").order("desc").collect();
 
     const picksWithParks = await Promise.all(
       picks.map(async (pick) => {
@@ -82,4 +71,3 @@ export const listAll = query({
     return picksWithParks;
   },
 });
-
