@@ -2,9 +2,9 @@ import { query, mutation, internalQuery, internalMutation } from "./_generated/s
 import { v } from "convex/values";
 
 /**
- * Generate a user-friendly referral code.
- * Format: {USERNAME_PREFIX}-{RANDOM4}
- * Example: KEITH-A7X2
+ * Generate a user-friendly referral code using cryptographically secure randomness.
+ * Format: {USERNAME_PREFIX}-{RANDOM6}
+ * Example: KEITH-A7X2B9
  */
 function generateCode(name: string | undefined): string {
   // Extract prefix from name (4-6 alphanumeric chars, uppercase)
@@ -14,11 +14,17 @@ function generateCode(name: string | undefined): string {
     .slice(0, 6)
     .padEnd(4, "X");
 
-  // Generate 4 random alphanumeric characters
+  // Generate 6 random alphanumeric characters for ~30 bits of entropy
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude ambiguous chars (I, O, 0, 1)
+  const RANDOM_LENGTH = 6;
+
+  // Use crypto.getRandomValues for secure randomness
+  const randomBytes = new Uint8Array(RANDOM_LENGTH);
+  crypto.getRandomValues(randomBytes);
+
   let random = "";
-  for (let i = 0; i < 4; i++) {
-    random += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < RANDOM_LENGTH; i++) {
+    random += chars.charAt(randomBytes[i] % chars.length);
   }
 
   return `${prefix}-${random}`;

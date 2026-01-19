@@ -331,14 +331,26 @@ export async function getUserEntitlements(token: string): Promise<UserEntitlemen
 /**
  * Parse a limit error from an error message.
  * Returns null if the error is not a limit error.
+ * Uses multiple regex patterns for robust parsing with sensible defaults.
  */
 export function parseLimitError(error: unknown): LimitError | null {
   if (!(error instanceof Error)) return null;
+
+  // Optional debug logging (enable via window.__LIMIT_ERROR_DEBUG__ = true in browser console)
+  const debugEnabled =
+    typeof window !== "undefined" &&
+    (window as unknown as { __LIMIT_ERROR_DEBUG__?: boolean }).__LIMIT_ERROR_DEBUG__;
+  const debug = (msg: string, data?: unknown) => {
+    if (debugEnabled) console.log(`[parseLimitError] ${msg}`, data ?? "");
+  };
+
+  debug("Parsing error:", error.message);
 
   try {
     // Try to parse the error message as JSON
     const parsed = JSON.parse(error.message);
     if (parsed.code && Object.values(ENTITLEMENT_ERROR_CODES).includes(parsed.code)) {
+      debug("Parsed as JSON:", parsed);
       return parsed as LimitError;
     }
   } catch {
@@ -346,11 +358,55 @@ export function parseLimitError(error: unknown): LimitError | null {
     const message = error.message;
     for (const code of Object.values(ENTITLEMENT_ERROR_CODES)) {
       if (message.includes(code)) {
-        // Try to extract tier and limit from message
-        const tierMatch = message.match(/tier[:\s]+"?(free|premium)"?/i);
-        const limitMatch = message.match(/limit[:\s]+(\d+)/i);
-        const tier = tierMatch ? (tierMatch[1].toLowerCase() as "free" | "premium") : "free";
-        const limit = limitMatch ? parseInt(limitMatch[1], 10) : 0;
+        debug("Found error code:", code);
+
+        // Multiple patterns for tier extraction (case-insensitive)
+        const tierPatterns = [
+          /tier[:\s]+"?(free|premium)"?/i,
+          /"tier"\s*:\s*"(free|premium)"/i,
+          /\((free|premium)\s+tier\)/i,
+          /\b(free|premium)\s+(?:users?|accounts?|tier)/i,
+        ];
+
+        let tier: "free" | "premium" = "free";
+        for (const pattern of tierPatterns) {
+          const match = message.match(pattern);
+          if (match) {
+            tier = match[1].toLowerCase() as "free" | "premium";
+            debug("Extracted tier:", tier);
+            break;
+          }
+        }
+
+        // Multiple patterns for limit extraction
+        const limitPatterns = [
+          /limit[:\s]+(\d+)/i,
+          /(\d+)\/(\d+)/, // X/Y format (uses Y as limit)
+          /max(?:imum)?[:\s]+(\d+)/i,
+          /\((\d+)\s*parks?\)/i,
+          /"limit"\s*:\s*(\d+)/i,
+        ];
+
+        let limit = 0;
+        for (const pattern of limitPatterns) {
+          const match = message.match(pattern);
+          if (match) {
+            // For X/Y format, use Y (the limit)
+            limit = parseInt(match[pattern.source.includes("/") ? 2 : 1], 10);
+            debug("Extracted limit:", limit);
+            break;
+          }
+        }
+
+        // Sensible defaults based on error code + tier if parsing failed
+        if (limit === 0) {
+          if (code === ENTITLEMENT_ERROR_CODES.PARK_LIMIT_EXCEEDED) {
+            limit = tier === "free" ? 5 : 1000; // Default free tier park limit
+          } else if (code === ENTITLEMENT_ERROR_CODES.DAILY_PICK_LIMIT_EXCEEDED) {
+            limit = tier === "free" ? 3 : 1000; // Default free tier daily pick limit
+          }
+          debug("Using default limit:", limit);
+        }
 
         return {
           code,
@@ -362,6 +418,7 @@ export function parseLimitError(error: unknown): LimitError | null {
     }
   }
 
+  debug("Not a limit error");
   return null;
 }
 

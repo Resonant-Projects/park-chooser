@@ -146,14 +146,20 @@ export const updateStatus = internalMutation({
 });
 
 /**
- * Generate a user-friendly reference ID
- * Format: TP-XXXXXX (6 alphanumeric characters)
+ * Generate a user-friendly reference ID using cryptographically secure randomness.
+ * Format: TP-XXXXXXXXXX (10 alphanumeric characters for ~50 bits of entropy)
  */
 function generateReferenceId(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluding similar chars (0/O, 1/I)
+  const ID_LENGTH = 10;
   let result = "TP-";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+
+  // Use crypto.getRandomValues for secure randomness
+  const randomBytes = new Uint8Array(ID_LENGTH);
+  crypto.getRandomValues(randomBytes);
+
+  for (let i = 0; i < ID_LENGTH; i++) {
+    result += chars.charAt(randomBytes[i] % chars.length);
   }
   return result;
 }

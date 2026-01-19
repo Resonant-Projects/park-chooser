@@ -467,14 +467,16 @@ const isAtLimit = !canAddPark && isFreeUser;
         } catch (err) {
           console.error("Failed to add park:", err);
 
-          // Check if this is a limit error
+          // Reset button state BEFORE checking error type
+          // This ensures button is never stuck in spinner state
+          button.disabled = false;
+          button.innerHTML =
+            '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+
+          // Check if this is a limit error and show appropriate UI
           if (isLimitError(err.message)) {
             showLimitError();
-            updateCounts(); // Will disable all add buttons
-          } else {
-            button.disabled = false;
-            button.innerHTML =
-              '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+            updateCounts(); // Will disable all add buttons if at limit
           }
         }
       });

@@ -207,9 +207,16 @@ export const getAvailableParks = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
+    // Early exit: if user has no parks, return all parks (most common case for new users)
+    if (userParks.length === 0) {
+      return await ctx.db.query("parks").collect();
+    }
+
     const userParkIds = new Set(userParks.map((up) => up.parkId.toString()));
 
     // Get all parks, filter out user's parks
+    // Note: Convex doesn't support "NOT IN" queries, so in-memory filtering is acceptable
+    // for the expected park count (<500)
     const allParks = await ctx.db.query("parks").collect();
 
     return allParks.filter((park) => !userParkIds.has(park._id.toString()));

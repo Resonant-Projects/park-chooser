@@ -145,22 +145,25 @@ export const markExpiredReferrals = internalMutation({
   handler: async (ctx) => {
     const expirationThreshold = Date.now() - 90 * 24 * 60 * 60 * 1000; // 90 days
 
-    // Process in batches to avoid loading too many records at once
-    const pendingReferrals = await ctx.db
+    // Use composite index to filter at the database level, not in-memory
+    // This is more efficient as it only returns records that are actually expired
+    const expiredReferrals = await ctx.db
       .query("referrals")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .withIndex("by_status_signupAt", (q) =>
+        q.eq("status", "pending").lt("signupAt", expirationThreshold)
+      )
       .take(BATCH_SIZE);
 
-    let expiredCount = 0;
-    for (const referral of pendingReferrals) {
-      if (referral.signupAt < expirationThreshold) {
-        await ctx.db.patch(referral._id, { status: "expired" });
-        expiredCount++;
-      }
+    // All returned records are expired, no need for additional filtering
+    for (const referral of expiredReferrals) {
+      await ctx.db.patch(referral._id, { status: "expired" });
     }
 
     // Return whether there might be more to process (for scheduler to re-run)
-    return { expiredCount, hasMore: pendingReferrals.length === BATCH_SIZE };
+    return {
+      expiredCount: expiredReferrals.length,
+      hasMore: expiredReferrals.length === BATCH_SIZE,
+    };
   },
 });
 

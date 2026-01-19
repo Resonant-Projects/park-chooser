@@ -28,6 +28,7 @@ import type * as http from "../http.js";
 import type * as lib_entitlements from "../lib/entitlements.js";
 import type * as lib_fraudDetection from "../lib/fraudDetection.js";
 import type * as lib_googleMaps from "../lib/googleMaps.js";
+import type * as lib_typeGuards from "../lib/typeGuards.js";
 import type * as lib_userHelpers from "../lib/userHelpers.js";
 import type * as migrations_markRecommendedParks from "../migrations/markRecommendedParks.js";
 import type * as migrations_migrateExistingUsers from "../migrations/migrateExistingUsers.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   "lib/entitlements": typeof lib_entitlements;
   "lib/fraudDetection": typeof lib_fraudDetection;
   "lib/googleMaps": typeof lib_googleMaps;
+  "lib/typeGuards": typeof lib_typeGuards;
   "lib/userHelpers": typeof lib_userHelpers;
   "migrations/markRecommendedParks": typeof migrations_markRecommendedParks;
   "migrations/migrateExistingUsers": typeof migrations_migrateExistingUsers;

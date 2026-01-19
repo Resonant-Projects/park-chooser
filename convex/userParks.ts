@@ -1,6 +1,7 @@
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { TIER_LIMITS, type Tier, ENTITLEMENT_ERRORS, createLimitError } from "./lib/entitlements";
+import { isDefined } from "./lib/typeGuards";
 
 /**
  * List all parks in the current user's list with merged park details.
@@ -48,7 +49,7 @@ export const listUserParks = query({
       })
     );
 
-    return parksWithDetails.filter(Boolean);
+    return parksWithDetails.filter(isDefined);
   },
 });
 
@@ -296,8 +297,8 @@ export const listUserParksByVisits = query({
 
     // Sort by visit count descending
     return parksWithDetails
-      .filter(Boolean)
-      .sort((a, b) => (b?.visitCount ?? 0) - (a?.visitCount ?? 0));
+      .filter(isDefined)
+      .sort((a, b) => (b.visitCount ?? 0) - (a.visitCount ?? 0));
   },
 });
 
@@ -361,7 +362,7 @@ export const getUserParksWithDetails = internalQuery({
       })
     );
 
-    return parksWithDetails.filter(Boolean);
+    return parksWithDetails.filter(isDefined);
   },
 });
 
