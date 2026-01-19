@@ -12,6 +12,7 @@ import type * as actions_backfillEntitlements from "../actions/backfillEntitleme
 import type * as actions_getTravelTime from "../actions/getTravelTime.js";
 import type * as actions_pickPark from "../actions/pickPark.js";
 import type * as actions_processReferralConversion from "../actions/processReferralConversion.js";
+import type * as actions_retryFailedRewards from "../actions/retryFailedRewards.js";
 import type * as actions_searchNearbyParks from "../actions/searchNearbyParks.js";
 import type * as actions_seedUser from "../actions/seedUser.js";
 import type * as actions_submitFeedback from "../actions/submitFeedback.js";
@@ -19,7 +20,9 @@ import type * as actions_submitSupportTicket from "../actions/submitSupportTicke
 import type * as actions_syncParks from "../actions/syncParks.js";
 import type * as actions_trackVisit from "../actions/trackVisit.js";
 import type * as backfillHelpers from "../backfillHelpers.js";
+import type * as crons from "../crons.js";
 import type * as entitlements from "../entitlements.js";
+import type * as failedReferralRewards from "../failedReferralRewards.js";
 import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as lib_entitlements from "../lib/entitlements.js";
@@ -50,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   "actions/getTravelTime": typeof actions_getTravelTime;
   "actions/pickPark": typeof actions_pickPark;
   "actions/processReferralConversion": typeof actions_processReferralConversion;
+  "actions/retryFailedRewards": typeof actions_retryFailedRewards;
   "actions/searchNearbyParks": typeof actions_searchNearbyParks;
   "actions/seedUser": typeof actions_seedUser;
   "actions/submitFeedback": typeof actions_submitFeedback;
@@ -57,7 +61,9 @@ declare const fullApi: ApiFromModules<{
   "actions/syncParks": typeof actions_syncParks;
   "actions/trackVisit": typeof actions_trackVisit;
   backfillHelpers: typeof backfillHelpers;
+  crons: typeof crons;
   entitlements: typeof entitlements;
+  failedReferralRewards: typeof failedReferralRewards;
   feedback: typeof feedback;
   http: typeof http;
   "lib/entitlements": typeof lib_entitlements;

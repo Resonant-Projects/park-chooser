@@ -1,4 +1,6 @@
 ---
+/* eslint-disable astro/no-set-html-directive */
+// Safe to use set:html here - JSON schema is sanitized below
 interface Props {
   schema: Record<string, unknown>;
 }

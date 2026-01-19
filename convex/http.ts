@@ -219,7 +219,7 @@ http.route({
                 userId: user._id,
                 clerkSubscriptionId: data.id,
                 clerkSubscriptionItemId: item?.id ?? data.id,
-                clerkPlanId: item?.plan_id ?? "",
+                clerkPlanId: item?.plan_id,
                 clerkPlanSlug: item?.plan?.slug,
                 status: "canceled",
               });

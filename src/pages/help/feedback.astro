@@ -6,6 +6,7 @@ import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
 import Spinner from "../../components/starwind/spinner/Spinner.astro";
+import { SITE_NAME } from "../../lib/config";
 
 // Get Clerk auth
 const { userId, getToken } = Astro.locals.auth();
@@ -21,15 +22,15 @@ const convexToken = await getToken({ template: "convex" });
 
 <PageLayout
   title="Send Feedback"
-  subtitle="Help us improve Today's Park"
-  pageTitle="Send Feedback - Today's Park"
+  subtitle={`Help us improve ${SITE_NAME}`}
+  pageTitle={`Send Feedback - ${SITE_NAME}`}
   class="max-w-xl"
   showUserButton
 >
   <SEO
     slot="head"
-    title="Send Feedback - Today's Park"
-    description="Share your feedback about Today's Park. Help us improve!"
+    title={`Send Feedback - ${SITE_NAME}`}
+    description={`Share your feedback about ${SITE_NAME}. Help us improve!`}
   />
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="p-6">
@@ -62,7 +63,7 @@ const convexToken = await getToken({ template: "convex" });
         <!-- What do you like? -->
         <div>
           <label for="likes" class="text-cream mb-1 block text-sm font-medium">
-            What do you like about Today's Park?
+            What do you like about {SITE_NAME}?
           </label>
           <textarea
             id="likes"
@@ -113,7 +114,7 @@ const convexToken = await getToken({ template: "convex" });
       <div id="success-state" class="hidden py-6 text-center">
         <div class="mb-4 text-4xl">💚</div>
         <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">Thank You!</h2>
-        <p class="text-mist mb-6">Your feedback helps us make Today's Park better for everyone.</p>
+        <p class="text-mist mb-6">Your feedback helps us make {SITE_NAME} better for everyone.</p>
         <div class="flex flex-col justify-center gap-3 sm:flex-row">
           <Button as="a" href="/" variant="primary"> Back to Home </Button>
           <Button as="a" href="/help" variant="secondary"> Help Center </Button>

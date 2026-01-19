@@ -1,21 +1,59 @@
 ---
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
+import JsonLd from "../components/JsonLd.astro";
+import { createFaqSchema, createBreadcrumbSchema } from "../lib/schemas";
 import { PricingTable } from "@clerk/astro/components";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
+import { SITE_URL, SITE_NAME } from "../lib/config";
+
+const pricingFaqs = [
+  {
+    question: "What payment methods do you accept?",
+    answer:
+      "We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.",
+  },
+  {
+    question: "Can I change my plan later?",
+    answer:
+      "Yes! You can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing period.",
+  },
+  {
+    question: "Is there a free trial?",
+    answer: `You can try ${SITE_NAME} with a limited set of features before subscribing. Sign up to see what's available in the free tier.`,
+  },
+  {
+    question: "How do I cancel my subscription?",
+    answer:
+      "You can cancel anytime from your account settings. Click your profile icon and select 'Manage Account' to access billing options. Your access continues until the end of your current billing period.",
+  },
+  {
+    question: "Do you offer refunds?",
+    answer:
+      "We don't offer refunds for partial billing periods. However, if you're unsatisfied within the first 7 days, contact us and we'll work something out.",
+  },
+];
+
+const breadcrumbs = [
+  { name: "Home", url: SITE_URL },
+  { name: "Pricing", url: `${SITE_URL}/pricing` },
+];
 ---
 
 <PageLayout
   title="Choose Your Plan"
   subtitle="Simple pricing for your park adventures"
-  pageTitle="Pricing - Today's Park"
+  pageTitle={`Pricing - ${SITE_NAME}`}
 >
   <SEO
     slot="head"
-    title="Pricing - Today's Park"
-    description="Choose your plan for Today's Park. Simple, affordable pricing for your park adventures."
-  />
+    title={`Pricing - ${SITE_NAME} | Free & Premium Plans`}
+    description={`Simple, transparent pricing for ${SITE_NAME}. Start free with 1 daily pick, or go unlimited with Premium. Cancel anytime.`}
+  >
+    <JsonLd schema={createFaqSchema(pricingFaqs)} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
+  </SEO>
   <!-- Pricing Table from Clerk -->
   <div class="pricing-table-wrapper">
     <PricingTable />
@@ -63,8 +101,8 @@ import CardContent from "../components/starwind/card/CardContent.astro";
             <span class="text-mist transition-transform group-open:rotate-180">▼</span>
           </summary>
           <p class="text-mist mt-2 text-sm">
-            You can try Today's Park with a limited set of features before subscribing. Sign up to
-            see what's available in the free tier.
+            You can try {SITE_NAME} with a limited set of features before subscribing. Sign up to see
+            what's available in the free tier.
           </p>
         </details>
 

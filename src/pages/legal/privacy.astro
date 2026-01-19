@@ -2,23 +2,29 @@
 import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
 import JsonLd from "../../components/JsonLd.astro";
-import { softwareApplicationSchema } from "../../lib/schemas";
+import { createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
+import { SITE_URL, SITE_NAME } from "../../lib/config";
+
+const breadcrumbs = [
+  { name: "Home", url: SITE_URL },
+  { name: "Privacy Policy", url: `${SITE_URL}/legal/privacy` },
+];
 ---
 
 <PageLayout
   title="Privacy Policy"
   subtitle="Last updated: January 2026"
-  pageTitle="Privacy Policy - Today's Park"
+  pageTitle={`Privacy Policy - ${SITE_NAME}`}
   class="max-w-2xl"
 >
   <SEO
     slot="head"
-    title="Privacy Policy - Today's Park"
-    description="Privacy Policy for Today's Park. Learn how we collect, use, and protect your data."
+    title={`Privacy Policy - ${SITE_NAME}`}
+    description={`Privacy Policy for ${SITE_NAME}. Learn how we collect, use, and protect your data. We respect your privacy and are transparent about our practices.`}
   >
-    <JsonLd schema={softwareApplicationSchema} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="prose prose-invert prose-sm max-w-none p-6">
@@ -113,7 +119,7 @@ import CardContent from "../../components/starwind/card/CardContent.astro";
           <p>
             Database and backend services. Your park list and activity data is stored on Convex
             servers. See <a
-              href="https://www.convex.dev/privacy"
+              href="https://www.convex.com/privacy"
               class="text-gold hover:underline"
               target="_blank"
               rel="noopener noreferrer">Convex's Privacy Policy</a

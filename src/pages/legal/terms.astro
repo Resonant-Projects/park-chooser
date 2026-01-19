@@ -2,23 +2,29 @@
 import PageLayout from "../../layouts/PageLayout.astro";
 import SEO from "../../components/SEO.astro";
 import JsonLd from "../../components/JsonLd.astro";
-import { softwareApplicationSchema } from "../../lib/schemas";
+import { createBreadcrumbSchema } from "../../lib/schemas";
 import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
+import { SITE_URL, SITE_NAME } from "../../lib/config";
+
+const breadcrumbs = [
+  { name: "Home", url: SITE_URL },
+  { name: "Terms of Service", url: `${SITE_URL}/legal/terms` },
+];
 ---
 
 <PageLayout
   title="Terms of Service"
   subtitle="Last updated: January 2026"
-  pageTitle="Terms of Service - Today's Park"
+  pageTitle={`Terms of Service - ${SITE_NAME}`}
   class="max-w-2xl"
 >
   <SEO
     slot="head"
-    title="Terms of Service - Today's Park"
-    description="Terms of Service for Today's Park. Rules and guidelines for using our park discovery service."
+    title={`Terms of Service - ${SITE_NAME}`}
+    description={`Terms of Service for ${SITE_NAME}. Read our terms covering accounts, subscriptions, billing, and acceptable use of our park discovery service.`}
   >
-    <JsonLd schema={softwareApplicationSchema} />
+    <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
   <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
     <CardContent class="prose prose-invert prose-sm max-w-none p-6">
@@ -28,8 +34,8 @@ import CardContent from "../../components/starwind/card/CardContent.astro";
             1. Acceptance of Terms
           </h2>
           <p>
-            By accessing or using Today's Park ("the Service"), you agree to be bound by these Terms
-            of Service. If you do not agree to these terms, please do not use the Service.
+            By accessing or using {SITE_NAME} ("the Service"), you agree to be bound by these Terms of
+            Service. If you do not agree to these terms, please do not use the Service.
           </p>
         </section>
 
@@ -38,9 +44,8 @@ import CardContent from "../../components/starwind/card/CardContent.astro";
             2. Description of Service
           </h2>
           <p>
-            Today's Park is a web application that helps users discover and track visits to local
-            parks. The Service includes features for managing park lists, random park selection, and
-            visit tracking.
+            {SITE_NAME} is a web application that helps users discover and track visits to local parks.
+            The Service includes features for managing park lists, random park selection, and visit tracking.
           </p>
         </section>
 

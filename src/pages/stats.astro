@@ -3,6 +3,10 @@ import { getUserParkStats } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import "../styles/starwind.css";
 import "../styles/global.css";
+import SEO from "../components/SEO.astro";
+import JsonLd from "../components/JsonLd.astro";
+import { createItemListSchema, createBreadcrumbSchema } from "../lib/schemas";
+import { SITE_URL, SITE_NAME } from "../lib/config";
 import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 import Badge from "../components/starwind/badge/Badge.astro";
@@ -44,6 +48,17 @@ try {
 }
 
 const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0);
+
+// Schema data for SEO
+const breadcrumbs = [
+  { name: "Home", url: SITE_URL },
+  { name: "Stats", url: `${SITE_URL}/stats` },
+];
+
+const itemListData = parks.map((park, index) => ({
+  name: park.name,
+  position: index + 1,
+}));
 ---
 
 <!doctype html>
@@ -52,7 +67,18 @@ const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0)
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Park Stats</title>
+    <SEO
+      title={`Your Park Stats - ${SITE_NAME}`}
+      description={`Track your park visit history and see which parks you've explored most. View statistics for all the parks in your ${SITE_NAME} list.`}
+      noindex={true}
+    >
+      <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
+      {
+        parks.length > 0 && (
+          <JsonLd schema={createItemListSchema(itemListData, "Your Park Visit Stats")} />
+        )
+      }
+    </SEO>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -66,7 +92,7 @@ const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0)
         <div class="mb-2 flex items-start justify-between">
           <div>
             <h1 class="title">Your Park Stats</h1>
-            <p class="subtitle">Track your park adventures</p>
+            <p class="subtitle">Track your park visits and adventures</p>
           </div>
           <div class="mt-1">
             <UserButton afterSignOutUrl="/sign-in" />
@@ -81,7 +107,7 @@ const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0)
             <a
               href="/"
               class="text-gold hover:text-cream text-[0.9375rem] font-semibold transition-colors"
-              >← Back to Today's Park</a
+              >← Back to {SITE_NAME}</a
             >
             <Badge variant="outline" class="text-mist border-none bg-white/10"
               >{totalVisits} visits</Badge
@@ -106,6 +132,7 @@ const totalVisits = parks.reduce((sum, park) => sum + (park.visitCount ?? 0), 0)
             </Card>
           ) : (
             <Card class="overflow-hidden">
+              <h2 class="sr-only">Your Park Visit History</h2>
               <Table class="table-fixed">
                 <TableHeader>
                   <TableRow class="bg-mist/30 border-sage/30 border-b">

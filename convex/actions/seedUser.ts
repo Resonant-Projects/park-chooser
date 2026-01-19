@@ -51,8 +51,11 @@ export const seedUserWithRecommendedParks = action({
         if (syncedParks.length === 0) {
           return { seeded: false, message: "No parks available to seed", count: 0 };
         }
-        // Seed with synced parks
-        const parkIds: Id<"parks">[] = syncedParks.map((p: Park) => p._id);
+        // Filter to recommended parks (same logic as main path)
+        const recommendedSyncedParks = syncedParks.filter((p: Park) => p.isRecommended === true);
+        const parksToSeed =
+          recommendedSyncedParks.length > 0 ? recommendedSyncedParks : syncedParks;
+        const parkIds: Id<"parks">[] = parksToSeed.map((p: Park) => p._id);
         await ctx.runMutation(internal.userParks.seedUserParksInternal, {
           userId: user._id,
           parkIds,

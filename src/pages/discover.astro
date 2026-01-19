@@ -3,6 +3,7 @@ import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
 import { getConvexUrl, getAvailableParks } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
+import { SITE_NAME } from "../lib/config";
 
 // Auth check
 const { userId, getToken } = Astro.locals.auth();
@@ -23,14 +24,14 @@ const availableParks = await getAvailableParks(token);
 <PageLayout
   title="Discover Parks"
   subtitle="Find parks near your location"
-  pageTitle="Discover Parks - Today's Park"
+  pageTitle={`Discover Parks - ${SITE_NAME}`}
   backLink={{ href: "/manage", text: "Back to Manage" }}
   showUserButton
 >
   <SEO
     slot="head"
-    title="Discover Parks - Today's Park"
-    description="Discover parks near your location with Today's Park."
+    title={`Discover Parks - ${SITE_NAME}`}
+    description={`Discover parks near your location with ${SITE_NAME}.`}
   />
 
   <UserButton.Link slot="user-menu" label="Manage Parks" href="/manage">
@@ -410,7 +411,7 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          await fetch(`${convexUrl}/api/mutation`, {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -422,6 +423,15 @@ const availableParks = await getAvailableParks(token);
               format: "json",
             }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to add park: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to add park");
+          }
 
           // Update UI to show added state
           button.outerHTML = `
@@ -464,7 +474,7 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          await fetch(`${convexUrl}/api/mutation`, {
+          const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -476,6 +486,15 @@ const availableParks = await getAvailableParks(token);
               format: "json",
             }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to add park: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to add park");
+          }
 
           // Fade out and remove the card
           const card = button.closest(".park-card");

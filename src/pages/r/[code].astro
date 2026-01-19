@@ -5,6 +5,7 @@ import Card from "../../components/starwind/card/Card.astro";
 import CardContent from "../../components/starwind/card/CardContent.astro";
 import Button from "../../components/starwind/button/Button.astro";
 import { validateReferralCode } from "../../lib/convexClient";
+import { SITE_NAME } from "../../lib/config";
 
 const { code } = Astro.params;
 
@@ -43,22 +44,22 @@ if (isValid && code) {
 }
 
 const pageTitle = isValid
-  ? `${referrerName} invited you to Today's Park`
-  : "Invalid Referral - Today's Park";
+  ? `${referrerName} invited you to ${SITE_NAME}`
+  : `Invalid Referral - ${SITE_NAME}`;
 ---
 
 <PageLayout
-  title="Today's Park"
+  title={SITE_NAME}
   subtitle={isValid ? "You've been invited!" : "Oops!"}
   pageTitle={pageTitle}
 >
   <SEO
     slot="head"
     title={isValid
-      ? `${referrerName} invited you to Today's Park`
-      : "Invalid Referral - Today's Park"}
+      ? `${referrerName} invited you to ${SITE_NAME}`
+      : `Invalid Referral - ${SITE_NAME}`}
     description={isValid
-      ? `Join Today's Park and discover your next adventure. ${referrerName} thinks you'll love it!`
+      ? `Join ${SITE_NAME} and discover your next adventure. ${referrerName} thinks you'll love it!`
       : "This referral link is invalid or has expired."}
     noindex={true}
   />
@@ -75,7 +76,7 @@ const pageTitle = isValid
             {referrerName} wants you to explore more parks!
           </h2>
           <p class="text-mist mx-auto mb-6 max-w-md">
-            Today's Park helps you discover and visit local parks. Build your list, let us pick a
+            {SITE_NAME} helps you discover and visit local parks. Build your list, let us pick a
             random one, and go on an adventure!
           </p>
           <Button as="a" href="/sign-up" variant="primary" size="lg">
