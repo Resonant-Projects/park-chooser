@@ -83,7 +83,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         <div class="mb-2 flex items-start justify-between">
           <div>
             <h1 class="title">{SITE_NAME}</h1>
-            <p class="subtitle">Random Park Picker for Family Adventures</p>
+            <p class="subtitle">{APP_SUBTITLE}</p>
           </div>
           <div class="mt-1">
             <UserButton afterSignOutUrl="/sign-in">

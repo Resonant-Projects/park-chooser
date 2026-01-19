@@ -1,5 +1,5 @@
 ---
-import { SITE_NAME, SITE_URL, DEFAULT_IMAGE_ALT } from "../lib/config";
+import { SITE_NAME, SITE_URL, DEFAULT_IMAGE_ALT, TILE_COLOR } from "../lib/config";
 
 interface Props {
   title: string;
@@ -42,7 +42,7 @@ const metaKeywords = keywords || defaultKeywords;
 <!-- Additional meta tags for mobile and apps -->
 <meta name="apple-mobile-web-app-title" content={SITE_NAME} />
 <meta name="application-name" content={SITE_NAME} />
-<meta name="msapplication-TileColor" content="#1a472a" />
+<meta name="msapplication-TileColor" content={TILE_COLOR} />
 
 <!-- Open Graph -->
 <meta property="og:title" content={title} />

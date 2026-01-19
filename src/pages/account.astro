@@ -7,6 +7,7 @@ import {
   type MyReferralCode,
   type MyReferralStats,
 } from "../lib/convexClient";
+import { SITE_URL, SITE_NAME } from "../lib/config";
 import { UserButton } from "@clerk/astro/components";
 import PageLayout from "../layouts/PageLayout.astro";
 import Card from "../components/starwind/card/Card.astro";
@@ -54,7 +55,6 @@ if (referralStatsResult.status === "fulfilled") {
 }
 
 // Build referral link
-import { SITE_URL, SITE_NAME } from "../lib/config";
 const referralLink = referralCode ? `${SITE_URL}/r/${referralCode.code}` : null;
 
 // Format period end date
@@ -369,7 +369,7 @@ const isPremium = entitlements?.tier === "premium";
     </CardContent>
   </Card>
 
-  <script slot="scripts">
+  <script slot="scripts" define:vars={{ SITE_NAME }}>
     // Copy to clipboard functionality
     const copyBtn = document.getElementById("copy-link-btn");
     if (copyBtn) {
@@ -406,8 +406,8 @@ const isPremium = entitlements?.tier === "premium";
 
         try {
           await navigator.share({
-            title: title || "Pick a Park",
-            text: text || "Check out Pick a Park!",
+            title: title || SITE_NAME,
+            text: text || `Check out ${SITE_NAME}!`,
             url: link,
           });
         } catch (err) {

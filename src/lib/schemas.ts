@@ -134,7 +134,7 @@ export function createItemListSchema(
       "@type": "ListItem",
       position: item.position ?? index + 1,
       name: item.name,
-      ...(item.url && { url: item.url }),
+      ...(item.url && { item: { "@id": item.url } }),
     })),
   };
 }
