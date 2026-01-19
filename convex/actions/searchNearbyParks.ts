@@ -87,9 +87,16 @@ export const searchNearbyParks = action({
     const userParkIdSet = new Set(userParkIds);
 
     // Build results with distances and user flags
-    const results: NearbyParkResult[] = nearbyParks.map((park) => {
+    // Filter out parks that failed to upsert (no dbId)
+    const results: NearbyParkResult[] = [];
+    for (const park of nearbyParks) {
       const dbId = placeIdToDbId.get(park.placeId);
-      const dbIdStr = dbId?.toString() ?? "";
+      if (!dbId) {
+        // Park wasn't successfully upserted, skip it
+        console.warn(`Park ${park.placeId} (${park.name}) not found in upserted results`);
+        continue;
+      }
+      const dbIdStr = dbId.toString();
       const distance = calculateDistanceMiles(args.lat, args.lng, park.lat, park.lng);
 
       // Generate photo URL if available
@@ -98,7 +105,7 @@ export const searchNearbyParks = action({
         photoUrl = getPhotoUrl(park.photoRefs[0], apiKey, 800);
       }
 
-      return {
+      results.push({
         _id: dbIdStr,
         placeId: park.placeId,
         name: park.name,
@@ -107,8 +114,8 @@ export const searchNearbyParks = action({
         distanceMiles: Math.round(distance * 10) / 10, // Round to 1 decimal
         isInUserList: userParkIdSet.has(dbIdStr),
         primaryType: park.primaryType,
-      };
-    });
+      });
+    }
 
     // Sort by distance
     results.sort((a, b) => a.distanceMiles - b.distanceMiles);

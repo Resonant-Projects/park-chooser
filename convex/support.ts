@@ -129,6 +129,12 @@ export const updateStatus = internalMutation({
     ),
   },
   handler: async (ctx, { ticketId, status }) => {
+    // Verify ticket exists before updating
+    const ticket = await ctx.db.get(ticketId);
+    if (!ticket) {
+      throw new Error(`Support ticket ${ticketId} not found`);
+    }
+
     const updates: Record<string, unknown> = { status };
 
     if (status === "resolved" || status === "closed") {

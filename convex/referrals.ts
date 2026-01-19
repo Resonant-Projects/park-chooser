@@ -136,16 +136,20 @@ export const markReferralFraudulent = internalMutation({
 /**
  * Internal: Mark expired referrals (90 days without conversion).
  * Called periodically by a scheduled job.
+ * Processes in batches to prevent OOM with large datasets.
  */
+const BATCH_SIZE = 100;
+
 export const markExpiredReferrals = internalMutation({
   args: {},
   handler: async (ctx) => {
     const expirationThreshold = Date.now() - 90 * 24 * 60 * 60 * 1000; // 90 days
 
+    // Process in batches to avoid loading too many records at once
     const pendingReferrals = await ctx.db
       .query("referrals")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
+      .take(BATCH_SIZE);
 
     let expiredCount = 0;
     for (const referral of pendingReferrals) {
@@ -155,7 +159,8 @@ export const markExpiredReferrals = internalMutation({
       }
     }
 
-    return { expiredCount };
+    // Return whether there might be more to process (for scheduler to re-run)
+    return { expiredCount, hasMore: pendingReferrals.length === BATCH_SIZE };
   },
 });
 

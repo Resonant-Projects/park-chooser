@@ -24,10 +24,11 @@ http.route({
   path: "/webhooks/clerk-billing",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const event = await validateRequest(request);
-    if (!event) {
-      return new Response("Invalid webhook signature", { status: 400 });
+    const result = await validateRequest(request);
+    if (!result.success) {
+      return new Response(result.error, { status: 400 });
     }
+    const event = result.event;
 
     console.log("Received Clerk Billing webhook:", event.type);
 
@@ -224,6 +225,8 @@ http.route({
                 status: "canceled",
               });
               console.log("Subscription canceled/ended for user:", clerkUserId);
+            } else {
+              console.warn("User not found for canceled subscription:", clerkUserId);
             }
           }
           break;
@@ -241,10 +244,14 @@ http.route({
   }),
 });
 
+type ValidationResult =
+  | { success: true; event: ClerkWebhookEvent }
+  | { success: false; error: string };
+
 /**
  * Validate Svix webhook signature.
  */
-async function validateRequest(req: Request): Promise<ClerkWebhookEvent | null> {
+async function validateRequest(req: Request): Promise<ValidationResult> {
   const payloadString = await req.text();
 
   const svixId = req.headers.get("svix-id");
@@ -253,13 +260,13 @@ async function validateRequest(req: Request): Promise<ClerkWebhookEvent | null> 
 
   if (!svixId || !svixTimestamp || !svixSignature) {
     console.error("Missing Svix headers");
-    return null;
+    return { success: false, error: "Missing Svix headers" };
   }
 
   const webhookSecret = process.env.CLERK_BILLING_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error("CLERK_BILLING_WEBHOOK_SECRET not configured");
-    return null;
+    return { success: false, error: "Webhook secret not configured" };
   }
 
   const wh = new Webhook(webhookSecret);
@@ -270,10 +277,10 @@ async function validateRequest(req: Request): Promise<ClerkWebhookEvent | null> 
       "svix-timestamp": svixTimestamp,
       "svix-signature": svixSignature,
     }) as unknown as ClerkWebhookEvent;
-    return event;
+    return { success: true, event };
   } catch (error) {
     console.error("Error verifying webhook signature:", error);
-    return null;
+    return { success: false, error: "Invalid webhook signature" };
   }
 }
 

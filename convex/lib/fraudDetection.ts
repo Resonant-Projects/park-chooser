@@ -122,12 +122,13 @@ export async function checkCodeVelocity(
   const oneHourAgo = now - 60 * 60 * 1000;
   const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-  // Get most recent referrals for this code (using index for performance)
+  // Get referrals for this code from the last day (using index for performance)
+  // Filter in the loop to avoid loading unnecessary records while still getting accurate counts
   const referrals = await db
     .query("referrals")
     .withIndex("by_referral_code", (q) => q.eq("referralCodeId", codeId))
-    .order("desc")
-    .take(100);
+    .filter((q) => q.gte(q.field("signupAt"), oneDayAgo))
+    .collect();
 
   // Check hourly limit
   const lastHourCount = referrals.filter((r) => r.signupAt > oneHourAgo).length;
@@ -135,9 +136,8 @@ export async function checkCodeVelocity(
     return { throttled: true, reason: "hourly_limit_exceeded" };
   }
 
-  // Check daily limit
-  const lastDayCount = referrals.filter((r) => r.signupAt > oneDayAgo).length;
-  if (lastDayCount >= LIMITS.maxSignupsPerCodeDay) {
+  // Check daily limit (all referrals in collection are within last day due to filter)
+  if (referrals.length >= LIMITS.maxSignupsPerCodeDay) {
     return { throttled: true, reason: "daily_limit_exceeded" };
   }
 

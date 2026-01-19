@@ -169,8 +169,8 @@ const isPremium = entitlements?.tier === "premium";
                       parks
                     </li>
                     <li class="text-cream flex items-center gap-2 text-sm">
-                      <span class="text-forest">✓</span> {entitlements.limits.picksPerDay} park pick
-                      per day
+                      <span class="text-forest">✓</span> {entitlements.limits.picksPerDay} park{" "}
+                      {entitlements.limits.picksPerDay === 1 ? "pick" : "picks"} per day
                     </li>
                     <li class="text-mist/70 flex items-center gap-2 text-sm">
                       <span class="text-mist/50">-</span>{" "}

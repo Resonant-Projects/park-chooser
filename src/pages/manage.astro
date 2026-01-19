@@ -249,7 +249,7 @@ const isAtLimit = !canAddPark && isFreeUser;
       html += `</div>
         <button
           class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
-          data-remove="${park.parkId}"
+          data-remove="${escapeHtml(park.parkId)}"
           aria-label="Remove ${escapeHtml(park.name)}"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,12 +376,19 @@ const isAtLimit = !canAddPark && isFreeUser;
       }
       if (addParksHeader) addParksHeader.textContent = `Add Parks (${addParksCount})`;
 
-      // Check if at limit and disable add buttons
+      // Check if at limit and disable/enable add buttons accordingly
       if (isFreeUser && maxParks > 0 && myParksCount >= maxParks) {
         document.querySelectorAll(".add-btn").forEach((btn) => {
           btn.disabled = true;
           btn.classList.remove("bg-gold/20", "hover:bg-gold/30", "text-gold");
           btn.classList.add("bg-mist/10", "text-mist/50", "cursor-not-allowed");
+        });
+      } else {
+        // Re-enable add buttons when below limit
+        document.querySelectorAll(".add-btn").forEach((btn) => {
+          btn.disabled = false;
+          btn.classList.remove("bg-mist/10", "text-mist/50", "cursor-not-allowed");
+          btn.classList.add("bg-gold/20", "hover:bg-gold/30", "text-gold");
         });
       }
     }

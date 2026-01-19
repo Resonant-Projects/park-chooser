@@ -212,6 +212,11 @@ export const updateUserPark = mutation({
     if (args.customName !== undefined) updates.customName = args.customName;
     if (args.notes !== undefined) updates.notes = args.notes;
 
+    // Skip db.patch if there are no updates to make
+    if (Object.keys(updates).length === 0) {
+      return { updated: false };
+    }
+
     await ctx.db.patch(args.userParkId, updates);
     return { updated: true };
   },

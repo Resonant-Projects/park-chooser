@@ -346,11 +346,17 @@ export function parseLimitError(error: unknown): LimitError | null {
     const message = error.message;
     for (const code of Object.values(ENTITLEMENT_ERROR_CODES)) {
       if (message.includes(code)) {
+        // Try to extract tier and limit from message
+        const tierMatch = message.match(/tier[:\s]+"?(free|premium)"?/i);
+        const limitMatch = message.match(/limit[:\s]+(\d+)/i);
+        const tier = tierMatch ? (tierMatch[1].toLowerCase() as "free" | "premium") : "free";
+        const limit = limitMatch ? parseInt(limitMatch[1], 10) : 0;
+
         return {
           code,
           message,
-          tier: "free",
-          limit: -1,
+          tier,
+          limit,
         };
       }
     }

@@ -23,6 +23,16 @@ export const get = query({
 });
 
 /**
+ * Get a single park by ID (internal).
+ */
+export const getById = internalQuery({
+  args: { id: v.id("parks") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+/**
  * Get the current sync state (internal).
  */
 export const getSyncState = internalQuery({

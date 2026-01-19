@@ -91,6 +91,16 @@ export const pickPark = action({
     const randomIndex = Math.floor(Math.random() * poolToPickFrom.length);
     const selectedPark: UserParkWithDetails = poolToPickFrom[randomIndex];
 
+    // Validate that the park still exists before recording
+    const parkExists = await ctx.runQuery(internal.parks.getById, {
+      id: selectedPark.parkId,
+    });
+    if (!parkExists) {
+      throw new Error(
+        "PARK_NOT_FOUND: The selected park no longer exists. Please refresh and try again."
+      );
+    }
+
     // Record this pick
     await ctx.runMutation(internal.picks.recordPick, {
       parkId: selectedPark.parkId,

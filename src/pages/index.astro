@@ -459,6 +459,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             `;
             display.replaceChildren(noParksCard);
           } else {
+            // Log the actual error for debugging but show user-friendly message
+            console.error("Unexpected error picking park:", err);
+
             const errorContainer = document.createElement("div");
             errorContainer.className =
               "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
@@ -469,7 +472,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
             const message = document.createElement("p");
             message.className = "text-lg text-cream font-medium";
-            message.textContent = err.message;
+            // Show generic message to avoid exposing internal details
+            message.textContent = "Something went wrong. Please try again later.";
 
             errorContainer.appendChild(icon);
             errorContainer.appendChild(message);
