@@ -28,6 +28,7 @@ export default defineSchema({
     lng: v.optional(v.number()), // Longitude for distance calculations
     discoveredAt: v.optional(v.number()), // When first discovered via nearby search
     primaryType: v.optional(v.string()), // e.g., "park", "playground", "dog_park"
+    visitCount: v.optional(v.number()), // Legacy field - visit tracking moved to userParks
   }).index("by_placeId", ["placeId"]),
 
   // User-specific park list (junction table)
