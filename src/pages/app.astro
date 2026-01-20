@@ -1,0 +1,645 @@
+---
+import { getConvexUrl, getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
+import { UserButton } from "@clerk/astro/components";
+import Analytics from "@vercel/analytics/astro";
+import SEO from "../components/SEO.astro";
+import JsonLd from "../components/JsonLd.astro";
+import { homepageSchema } from "../lib/schemas";
+import { SITE_NAME, APP_SUBTITLE } from "../lib/config";
+import "../styles/starwind.css";
+import "../styles/global.css";
+import Button from "../components/starwind/button/Button.astro";
+import Card from "../components/starwind/card/Card.astro";
+import CardContent from "../components/starwind/card/CardContent.astro";
+import Spinner from "../components/starwind/spinner/Spinner.astro";
+
+const convexUrl = getConvexUrl();
+
+// Get the Clerk token for Convex
+const { getToken } = Astro.locals.auth();
+const convexToken = await getToken({ template: "convex" });
+
+// Fetch user entitlements for SSR display
+let entitlements: UserEntitlements | null = null;
+if (convexToken) {
+  try {
+    entitlements = await getUserEntitlements(convexToken);
+  } catch (err) {
+    console.error("Failed to fetch entitlements:", err);
+  }
+}
+
+// Calculate limit status for display
+const isFreeUser = entitlements?.tier === "free";
+const canPick = entitlements?.canPick ?? true;
+
+// Check if this is a first-time user (no parks in their list)
+const isFirstTimeUser = convexToken && entitlements?.usage.currentParks === 0;
+
+// Get referral code from cookie (for new user signups)
+const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#c9a227" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <SEO
+      title={`${SITE_NAME} - ${APP_SUBTITLE}`}
+      description={`End the 'which park?' debate! ${SITE_NAME} randomly picks your next family adventure from your curated list of local parks. Free to try.`}
+    >
+      <JsonLd schema={homepageSchema} />
+    </SEO>
+    <!-- Font preconnects -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- API preconnects for faster park loading -->
+    <link rel="preconnect" href="https://places.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://www.google.com" />
+    <!-- Async font loading for faster initial render -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <Analytics />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="mb-2 flex items-start justify-between">
+          <div>
+            <h1 class="title">{SITE_NAME}</h1>
+            <p class="subtitle">{APP_SUBTITLE}</p>
+          </div>
+          <div class="mt-1">
+            <UserButton afterSignOutUrl="/sign-in">
+              <UserButton.MenuItems>
+                <UserButton.Link label="Manage Parks" href="/manage">
+                  <svg
+                    slot="label-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                  >
+                    <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z"></path>
+                  </svg>
+                </UserButton.Link>
+              </UserButton.MenuItems>
+            </UserButton>
+          </div>
+        </div>
+      </header>
+
+      <main id="park-display">
+        {
+          isFirstTimeUser ? (
+            <Card
+              id="onboarding-card"
+              class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl"
+            >
+              <CardContent class="px-8 py-12">
+                <div class="mb-4 text-5xl">🎉</div>
+                <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                  Welcome to Your Random Park Picker!
+                </h2>
+                <p class="text-mist mb-6">
+                  End the "which park?" debate. Add parks to your list and let us pick your next
+                  family adventure.
+                </p>
+                <div class="flex flex-col items-center gap-4">
+                  <Button
+                    id="seed-recommended"
+                    variant="primary"
+                    size="default"
+                    class="rounded-full"
+                  >
+                    <span class="seed-text">Add Recommended Parks</span>
+                    <Spinner class="seed-spinner hidden size-5" />
+                  </Button>
+                  <div class="text-mist text-sm">or</div>
+                  <a
+                    href="/manage"
+                    class="text-gold hover:text-cream font-semibold transition-colors"
+                  >
+                    Browse park catalog →
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          ) : !canPick && isFreeUser ? (
+            <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
+              <div class="mb-4 text-5xl">⏰</div>
+              <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                Daily Pick Limit Reached
+              </h2>
+              <p class="text-mist mb-6">
+                Free accounts get 1 random park pick per day. Come back tomorrow for a new
+                adventure!
+              </p>
+              <a
+                href="/pricing"
+                class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors"
+              >
+                <span>⭐</span>
+                <span>Upgrade for Unlimited Picks</span>
+              </a>
+            </div>
+          ) : (
+            <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
+              <CardContent class="px-8 py-12">
+                <div class="mb-4 text-5xl">🌲</div>
+                <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                  Ready for a Park Adventure?
+                </h2>
+                <p class="text-mist mb-6">
+                  Click below to randomly pick your next park destination!
+                </p>
+                <div class="text-gold animate-bounce text-3xl">↓</div>
+              </CardContent>
+            </Card>
+          )
+        }
+      </main>
+
+      <div
+        class="actions"
+        id="pick-button-container"
+        style={isFirstTimeUser ? "display: none;" : ""}
+      >
+        <Button
+          id="pick-again"
+          variant="primary"
+          size="toddler"
+          class="hover:shadow-3xl rounded-full shadow-2xl transition-all hover:-translate-y-1 active:scale-95 active:shadow-lg"
+        >
+          <span class="button-text">Pick a Park</span>
+          <Spinner class="button-spinner hidden size-5" />
+        </Button>
+      </div>
+
+      <footer class="mt-8 text-center">
+        <p class="text-mist text-sm opacity-80">
+          Parks are chosen randomly, with no repeats in the last 5 picks.
+        </p>
+        <p class="text-mist mt-2 text-sm opacity-80">
+          <a href="/manage" class="text-gold hover:text-cream font-semibold transition-colors"
+            >Manage parks</a
+          >
+          <span class="text-mist/50 mx-2">·</span>
+          <a href="/stats" class="text-gold hover:text-cream font-semibold transition-colors"
+            >View stats</a
+          >
+        </p>
+        <nav class="text-mist mt-4 flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
+          <a href="/about" class="hover:text-cream transition-colors">About</a>
+          <a href="/help" class="hover:text-cream transition-colors">Help</a>
+          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script
+      define:vars={{ convexUrl, convexToken, canPick, isFreeUser, isFirstTimeUser, referralCode }}
+    >
+      const button = document.getElementById("pick-again");
+      const display = document.getElementById("park-display");
+
+      // Disable button if user has reached daily limit
+      if (!canPick && isFreeUser) {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        button.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+      // Helper to check if error is a limit error
+      function isLimitError(errorMessage) {
+        return (
+          errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
+          errorMessage.includes("Daily pick limit reached")
+        );
+      }
+
+      // Helper to check if error is a "no parks" error
+      function isNoParksError(errorMessage) {
+        return errorMessage.includes("NO_PARKS");
+      }
+
+      // Show limit reached UI
+      function showLimitReachedUI() {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        button.querySelector(".button-spinner").classList.add("hidden");
+        button.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+      // Store user on page load (with optional referral code)
+      async function storeUser() {
+        if (!convexToken) return;
+
+        try {
+          const args = {};
+          if (referralCode) {
+            args.referralCode = referralCode;
+          }
+
+          const response = await fetch(`${convexUrl}/api/mutation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${convexToken}`,
+            },
+            body: JSON.stringify({
+              path: "users:store",
+              args,
+              format: "json",
+            }),
+          });
+
+          // Clear referral cookie after successful store (via API endpoint)
+          if (response.ok && referralCode) {
+            fetch("/api/clear-referral-cookie", {
+              method: "POST",
+              credentials: "include",
+              keepalive: true, // Ensure request completes even if page navigates
+            }).catch(() => {}); // Fire and forget
+          }
+        } catch (err) {
+          console.error("Failed to store user:", err);
+        }
+      }
+
+      storeUser();
+
+      // Handle "Add Recommended Parks" button for first-time users
+      const seedButton = document.getElementById("seed-recommended");
+      if (seedButton && isFirstTimeUser) {
+        seedButton.addEventListener("click", async () => {
+          seedButton.disabled = true;
+          seedButton.querySelector(".seed-text").textContent = "Adding parks...";
+          seedButton.querySelector(".seed-spinner").classList.remove("hidden");
+
+          try {
+            const headers = { "Content-Type": "application/json" };
+            if (convexToken) {
+              headers["Authorization"] = `Bearer ${convexToken}`;
+            }
+
+            const response = await fetch(`${convexUrl}/api/action`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                path: "actions/seedUser:seedUserWithRecommendedParks",
+                args: {},
+                format: "json",
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.status === "error") {
+              throw new Error(result.errorMessage || "Failed to add parks");
+            }
+
+            // Reload the page to show the normal "Pick a Park" UI
+            window.location.reload();
+          } catch (err) {
+            console.error("Failed to seed parks:", err);
+            seedButton.disabled = false;
+            seedButton.querySelector(".seed-text").textContent = "Add Recommended Parks";
+            seedButton.querySelector(".seed-spinner").classList.add("hidden");
+
+            // Clear any existing error messages first
+            const existingError = seedButton.parentElement.querySelector(".text-red-400");
+            if (existingError) existingError.remove();
+
+            // Show error message
+            const errorDiv = document.createElement("p");
+            errorDiv.className = "text-red-400 text-sm mt-3";
+            errorDiv.textContent = "Failed to add parks. Please try again.";
+            seedButton.parentElement.appendChild(errorDiv);
+          }
+        });
+      }
+
+      // Debounce guards to prevent rapid multiple taps
+      let isPickingPark = false;
+      const DEBOUNCE_MS = 500;
+      let lastClickTime = 0;
+
+      async function pickNewPark() {
+        // Debounce guard - prevent rapid clicks
+        const now = Date.now();
+        if (isPickingPark || now - lastClickTime < DEBOUNCE_MS) {
+          console.log("Pick request debounced");
+          return;
+        }
+
+        lastClickTime = now;
+        isPickingPark = true;
+
+        button.disabled = true;
+        button.classList.add("button-loading");
+        button.querySelector(".button-text").textContent = "Finding park...";
+        button.querySelector(".button-spinner").classList.remove("hidden");
+
+        try {
+          const headers = { "Content-Type": "application/json" };
+          if (convexToken) {
+            headers["Authorization"] = `Bearer ${convexToken}`;
+          }
+
+          const response = await fetch(`${convexUrl}/api/action`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              path: "actions/pickPark:pickPark",
+              args: {},
+              format: "json",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.status === "error") {
+            throw new Error(result.errorMessage || "Failed to pick park");
+          }
+
+          const park = result.value;
+
+          display.innerHTML = `
+            <article class="bg-cream rounded-3xl overflow-hidden shadow-2xl animate-card-appear w-full">
+              ${
+                park.photoUrl
+                  ? `
+                <div class="relative w-full aspect-[16/10] overflow-hidden">
+                  <img
+                    src="${park.photoUrl}"
+                    alt="Photo of ${park.name}"
+                    class="w-full h-full object-cover transition-transform duration-400 hover:scale-[1.03]"
+                    loading="eager"
+                  />
+                  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-forest/15 pointer-events-none"></div>
+                </div>
+              `
+                  : ""
+              }
+              <div class="relative p-7">
+                ${park.customName ? `<p class="text-sm font-semibold text-sunset uppercase tracking-widest mb-1">${park.customName}</p>` : ""}
+                <h2 class="font-[Fraunces] text-2xl font-semibold text-forest mb-2 leading-tight">${park.name}</h2>
+                ${park.address ? `<p class="text-base text-moss mb-5 leading-relaxed">${park.address}</p>` : ""}
+                <div class="travel-time-badge absolute bottom-7 right-7 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-md flex items-center justify-center min-w-20 opacity-0 animate-badge-fade-in" data-place-id="${park.placeId}">
+                  <span class="travel-time-spinner w-4 h-4 border-2 border-mist border-t-forest rounded-full animate-spin"></span>
+                </div>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(park.name)}&query_place_id=${park.placeId}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="maps-link inline-flex items-center gap-1 text-[0.9375rem] font-semibold text-sunset hover:text-bark transition-colors"
+                  data-park-id="${park._id}"
+                >
+                  Open in Google Maps →
+                </a>
+              </div>
+            </article>
+          `;
+        } catch (err) {
+          // Check if this is a limit error
+          if (isLimitError(err.message)) {
+            showLimitReachedUI();
+
+            // Show a friendly message in the display area
+            const limitCard = document.createElement("div");
+            limitCard.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            limitCard.innerHTML = `
+              <div class="text-5xl mb-4">⏰</div>
+              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">Daily Limit Reached</h2>
+              <p class="text-mist mb-6">Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!</p>
+              <a
+                href="/pricing"
+                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
+              >
+                <span>⭐</span>
+                <span>Upgrade for Unlimited Picks</span>
+              </a>
+            `;
+            display.replaceChildren(limitCard);
+          } else if (isNoParksError(err.message)) {
+            // Show helpful UI for users with no parks
+            const noParksCard = document.createElement("div");
+            noParksCard.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+            noParksCard.innerHTML = `
+              <div class="text-5xl mb-4">🌲</div>
+              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">No Parks Yet</h2>
+              <p class="text-mist mb-6">Add parks to your list to start picking!</p>
+              <a
+                href="/manage"
+                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
+              >
+                <span>Add Parks</span>
+              </a>
+            `;
+            display.replaceChildren(noParksCard);
+          } else {
+            // Log the actual error for debugging but show user-friendly message
+            console.error("Unexpected error picking park:", err);
+
+            const errorContainer = document.createElement("div");
+            errorContainer.className =
+              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+
+            const icon = document.createElement("div");
+            icon.className = "text-4xl mb-4";
+            icon.textContent = "⚠️";
+
+            const message = document.createElement("p");
+            message.className = "text-lg text-cream font-medium";
+            // Show generic message to avoid exposing internal details
+            message.textContent = "Something went wrong. Please try again later.";
+
+            errorContainer.appendChild(icon);
+            errorContainer.appendChild(message);
+            display.replaceChildren(errorContainer);
+          }
+        } finally {
+          isPickingPark = false;
+          button.classList.remove("button-loading");
+          button.querySelector(".button-spinner").classList.add("hidden");
+
+          // Only re-enable if not at limit
+          if (!button.classList.contains("cursor-not-allowed")) {
+            button.disabled = false;
+            button.querySelector(".button-text").textContent = "Pick Another Park";
+          }
+        }
+      }
+
+      // Track visits when clicking "Open in Google Maps"
+      // Uses fetch with keepalive for reliable fire-and-forget tracking that survives navigation
+      function trackVisit(parkId) {
+        const headers = { "Content-Type": "application/json" };
+        if (convexToken) {
+          headers["Authorization"] = `Bearer ${convexToken}`;
+        }
+
+        fetch(`${convexUrl}/api/action`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            path: "actions/trackVisit:trackVisit",
+            args: { parkId },
+            format: "json",
+          }),
+          keepalive: true, // Ensures request completes even if page unloads
+        }).catch(() => {}); // Silently ignore errors for fire-and-forget
+      }
+
+      // Geolocation and travel time calculation
+      let userLocation = null;
+
+      async function getUserLocation() {
+        if (userLocation) return userLocation;
+
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocation not supported"));
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              resolve(userLocation);
+            },
+            (error) => {
+              console.warn("Geolocation error:", error);
+              reject(error);
+            },
+            {
+              timeout: 10000,
+              maximumAge: 300000, // Cache for 5 minutes
+            }
+          );
+        });
+      }
+
+      async function updateTravelTime() {
+        const badge = document.querySelector(".travel-time-badge");
+        if (!badge) return;
+
+        const placeId = badge.dataset.placeId;
+        if (!placeId) return;
+
+        try {
+          const location = await getUserLocation();
+
+          const headers = { "Content-Type": "application/json" };
+          if (convexToken) {
+            headers["Authorization"] = `Bearer ${convexToken}`;
+          }
+
+          const response = await fetch(`${convexUrl}/api/action`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              path: "actions/getTravelTime:calculateTravelTime",
+              args: {
+                originLat: location.lat,
+                originLng: location.lng,
+                placeId: placeId,
+              },
+              format: "json",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.status === "error" || !result.value) {
+            throw new Error(result.errorMessage || "Failed to calculate travel time");
+          }
+
+          const travelData = result.value;
+
+          badge.innerHTML = `
+            <div class="flex flex-col items-center gap-0.5">
+              <span class="text-sm font-semibold text-forest whitespace-nowrap">${travelData.durationText}</span>
+              <span class="text-[0.6875rem] text-sage whitespace-nowrap">${travelData.distanceText}</span>
+            </div>
+          `;
+          badge.classList.add("loaded");
+          badge.classList.remove("opacity-0");
+        } catch (error) {
+          console.warn("Could not get travel time:", error);
+          badge.style.display = "none";
+        }
+      }
+
+      // Attach click handlers to maps links
+      function attachMapsLinkHandlers() {
+        document.querySelectorAll(".maps-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            const parkId = link.dataset.parkId;
+            if (parkId) {
+              trackVisit(parkId);
+            }
+          });
+        });
+      }
+
+      // Attach handlers on initial load
+      attachMapsLinkHandlers();
+
+      // Re-attach after picking a new park
+      const originalPickNewPark = pickNewPark;
+      // eslint-disable-next-line no-func-assign
+      pickNewPark = async function () {
+        await originalPickNewPark();
+        attachMapsLinkHandlers();
+        updateTravelTime();
+      };
+
+      // Track touch events to prevent double invocation
+      let lastTouchTime = 0;
+
+      button.addEventListener("click", () => {
+        // Skip if this click came from a touch event (within 300ms)
+        if (Date.now() - lastTouchTime < 300) return;
+        pickNewPark();
+      });
+
+      // Touch event handler to prevent double-tap zoom on mobile
+      button.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault(); // Prevent double-tap zoom
+          lastTouchTime = Date.now();
+          if (!isPickingPark) {
+            pickNewPark();
+          }
+        },
+        { passive: false }
+      );
+    </script>
+  </body>
+</html>
