@@ -42,19 +42,88 @@ const breadcrumbs = [
 ---
 
 <PageLayout
-  title="Choose Your Plan"
-  subtitle="Simple pricing for your park adventures"
+  title="Pick Your Plan"
+  subtitle="Less planning, more playing"
   pageTitle={`Pricing - ${SITE_NAME}`}
 >
   <SEO
     slot="head"
     title={`Pricing - ${SITE_NAME} | Free & Premium Plans`}
-    description={`Simple, transparent pricing for ${SITE_NAME}. Start free with 1 daily pick, or go unlimited with Premium. Cancel anytime.`}
+    description={`End the "where should we go?" debate. Start free with 5 parks and 1 daily pick, or unlock everything for just $1/month. Cancel anytime.`}
   >
     <JsonLd schema={createFaqSchema(pricingFaqs)} />
     <JsonLd schema={createBreadcrumbSchema(breadcrumbs)} />
   </SEO>
-  <!-- Pricing Table from Clerk -->
+  <!-- Custom Pricing Cards -->
+  <div class="mb-8 grid gap-6 md:grid-cols-2">
+    <!-- Free Plan -->
+    <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+      <CardContent class="p-6">
+        <div class="mb-4 flex items-baseline justify-between">
+          <h2 class="text-cream font-[Fraunces] text-2xl font-bold">Free</h2>
+          <span class="text-gold text-xl font-semibold">$0</span>
+        </div>
+        <p class="text-mist mb-6 leading-relaxed">
+          End the "where should we go?" debate. Let your kid tap the button and pick your next
+          adventure.
+        </p>
+        <ul class="text-cream space-y-3 text-sm">
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            5 parks to discover
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            1 pick per day
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            Photos & travel time included
+          </li>
+        </ul>
+      </CardContent>
+    </Card>
+
+    <!-- Monthly Plan -->
+    <Card class="border-gold/30 bg-gold/10 relative overflow-hidden backdrop-blur-xl">
+      <div
+        class="bg-gold text-forest absolute top-0 right-0 rounded-bl-lg px-3 py-1 text-xs font-bold"
+      >
+        BEST VALUE
+      </div>
+      <CardContent class="p-6">
+        <div class="mb-4 flex items-baseline justify-between">
+          <h2 class="text-cream font-[Fraunces] text-2xl font-bold">Monthly</h2>
+          <span class="text-gold text-xl font-semibold"
+            >$1<span class="text-mist text-sm">/month</span></span
+          >
+        </div>
+        <p class="text-mist mb-6 leading-relaxed">
+          No limits, no stress. Every park unlocked, pick whenever you want. Less than a coffee.
+        </p>
+        <ul class="text-cream space-y-3 text-sm">
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            All parks unlocked
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            Unlimited picks
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            Visit tracking
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-gold">✓</span>
+            Cancel anytime
+          </li>
+        </ul>
+      </CardContent>
+    </Card>
+  </div>
+
+  <!-- Pricing Table from Clerk (for actual subscription management) -->
   <div class="pricing-table-wrapper">
     <PricingTable />
   </div>
