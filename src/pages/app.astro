@@ -215,11 +215,97 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       </footer>
     </div>
 
-    <script
-      define:vars={{ convexUrl, convexToken, canPick, isFreeUser, isFirstTimeUser, referralCode }}
-    >
+    <!-- Pass config to module script (not tokens - those are fetched fresh) -->
+    <script define:vars={{ convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode }}>
+      window.__APP_CONFIG__ = { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode };
+    </script>
+
+    <!-- Module script for logic with fresh token support -->
+    <script>
+      import { $clerkStore } from "@clerk/astro/client";
+
+      // Get config from SSR
+      const { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode } =
+        window.__APP_CONFIG__;
+
+      // DOM elements
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
+
+      // ========== Token & Headers Helpers ==========
+
+      // Get fresh token from Clerk before each request (handles token expiration)
+      async function getFreshToken() {
+        const clerk = $clerkStore.get();
+        if (clerk?.session) {
+          return await clerk.session.getToken({ template: "convex" });
+        }
+        return null;
+      }
+
+      // Build headers with fresh token for Convex requests
+      async function getConvexHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        const token = await getFreshToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        return headers;
+      }
+
+      // Synchronous headers for fire-and-forget requests (uses cached token)
+      let cachedToken = null;
+      function getConvexHeadersSync() {
+        const headers = { "Content-Type": "application/json" };
+        if (cachedToken) {
+          headers["Authorization"] = `Bearer ${cachedToken}`;
+        }
+        return headers;
+      }
+
+      // ========== Error Helpers ==========
+
+      function isLimitError(errorMessage) {
+        return (
+          errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
+          errorMessage.includes("Daily pick limit reached")
+        );
+      }
+
+      function isNoParksError(errorMessage) {
+        return errorMessage.includes("NO_PARKS");
+      }
+
+      function isAuthError(errorMessage) {
+        return (
+          errorMessage.includes("Authentication required") ||
+          errorMessage.includes("Unauthorized") ||
+          errorMessage.includes("Invalid token")
+        );
+      }
+
+      // Create standardized error/info card
+      function createInfoCard(emoji, title, message, actionHtml = "") {
+        const card = document.createElement("div");
+        card.className =
+          "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
+        card.innerHTML = `
+          <div class="text-5xl mb-4">${emoji}</div>
+          <h2 class="font-[Fraunces] text-2xl text-cream mb-3">${title}</h2>
+          <p class="text-mist mb-6">${message}</p>
+          ${actionHtml}
+        `;
+        return card;
+      }
+
+      function showLimitReachedUI() {
+        button.disabled = true;
+        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        button.querySelector(".button-spinner").classList.add("hidden");
+        button.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+      // ========== Initial Setup ==========
 
       // Disable button if user has reached daily limit
       if (!canPick && isFreeUser) {
@@ -228,30 +314,11 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         button.classList.add("opacity-60", "cursor-not-allowed");
       }
 
-      // Helper to check if error is a limit error
-      function isLimitError(errorMessage) {
-        return (
-          errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
-          errorMessage.includes("Daily pick limit reached")
-        );
-      }
-
-      // Helper to check if error is a "no parks" error
-      function isNoParksError(errorMessage) {
-        return errorMessage.includes("NO_PARKS");
-      }
-
-      // Show limit reached UI
-      function showLimitReachedUI() {
-        button.disabled = true;
-        button.querySelector(".button-text").textContent = "Daily Limit Reached";
-        button.querySelector(".button-spinner").classList.add("hidden");
-        button.classList.add("opacity-60", "cursor-not-allowed");
-      }
-
       // Store user on page load (with optional referral code)
       async function storeUser() {
-        if (!convexToken) return;
+        const token = await getFreshToken();
+        if (!token) return;
+        cachedToken = token; // Cache for sync operations
 
         try {
           const args = {};
@@ -261,10 +328,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
           const response = await fetch(`${convexUrl}/api/mutation`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
+            headers: await getConvexHeaders(),
             body: JSON.stringify({
               path: "users:store",
               args,
@@ -272,13 +336,13 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             }),
           });
 
-          // Clear referral cookie after successful store (via API endpoint)
+          // Clear referral cookie after successful store
           if (response.ok && referralCode) {
             fetch("/api/clear-referral-cookie", {
               method: "POST",
               credentials: "include",
-              keepalive: true, // Ensure request completes even if page navigates
-            }).catch(() => {}); // Fire and forget
+              keepalive: true,
+            }).catch(() => {});
           }
         } catch (err) {
           console.error("Failed to store user:", err);
@@ -287,7 +351,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       storeUser();
 
-      // Handle "Add Recommended Parks" button for first-time users
+      // ========== First-Time User Seeding ==========
+
       const seedButton = document.getElementById("seed-recommended");
       if (seedButton && isFirstTimeUser) {
         seedButton.addEventListener("click", async () => {
@@ -296,14 +361,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           seedButton.querySelector(".seed-spinner").classList.remove("hidden");
 
           try {
-            const headers = { "Content-Type": "application/json" };
-            if (convexToken) {
-              headers["Authorization"] = `Bearer ${convexToken}`;
-            }
-
             const response = await fetch(`${convexUrl}/api/action`, {
               method: "POST",
-              headers,
+              headers: await getConvexHeaders(),
               body: JSON.stringify({
                 path: "actions/seedUser:seedUserWithRecommendedParks",
                 args: {},
@@ -317,7 +377,6 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
               throw new Error(result.errorMessage || "Failed to add parks");
             }
 
-            // Reload the page to show the normal "Pick a Park" UI
             window.location.reload();
           } catch (err) {
             console.error("Failed to seed parks:", err);
@@ -325,11 +384,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             seedButton.querySelector(".seed-text").textContent = "Add Recommended Parks";
             seedButton.querySelector(".seed-spinner").classList.add("hidden");
 
-            // Clear any existing error messages first
             const existingError = seedButton.parentElement.querySelector(".text-red-400");
             if (existingError) existingError.remove();
 
-            // Show error message
             const errorDiv = document.createElement("p");
             errorDiv.className = "text-red-400 text-sm mt-3";
             errorDiv.textContent = "Failed to add parks. Please try again.";
@@ -338,20 +395,17 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         });
       }
 
-      // Debounce guards to prevent rapid multiple taps
+      // ========== Park Picking ==========
+
       let isPickingPark = false;
-      const DEBOUNCE_MS = 500;
-      let lastClickTime = 0;
 
       async function pickNewPark() {
         // Debounce guard - prevent rapid clicks
-        const now = Date.now();
-        if (isPickingPark || now - lastClickTime < DEBOUNCE_MS) {
+        if (isPickingPark) {
           console.log("Pick request debounced");
           return;
         }
 
-        lastClickTime = now;
         isPickingPark = true;
 
         button.disabled = true;
@@ -360,10 +414,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         button.querySelector(".button-spinner").classList.remove("hidden");
 
         try {
-          const headers = { "Content-Type": "application/json" };
-          if (convexToken) {
-            headers["Authorization"] = `Bearer ${convexToken}`;
-          }
+          const headers = await getConvexHeaders();
+          cachedToken = headers["Authorization"]?.replace("Bearer ", "") || null;
 
           const response = await fetch(`${convexUrl}/api/action`, {
             method: "POST",
@@ -419,65 +471,46 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
               </div>
             </article>
           `;
+
+          // Attach handlers and update travel time for the new card
+          attachMapsLinkHandlers();
+          updateTravelTime();
         } catch (err) {
-          // Check if this is a limit error
           if (isLimitError(err.message)) {
             showLimitReachedUI();
-
-            // Show a friendly message in the display area
-            const limitCard = document.createElement("div");
-            limitCard.className =
-              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
-            limitCard.innerHTML = `
-              <div class="text-5xl mb-4">⏰</div>
-              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">Daily Limit Reached</h2>
-              <p class="text-mist mb-6">Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!</p>
-              <a
-                href="/pricing"
-                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
-              >
+            const limitCard = createInfoCard(
+              "⏰",
+              "Daily Limit Reached",
+              "Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!",
+              `<a href="/pricing" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
                 <span>⭐</span>
                 <span>Upgrade for Unlimited Picks</span>
-              </a>
-            `;
+              </a>`
+            );
             display.replaceChildren(limitCard);
           } else if (isNoParksError(err.message)) {
-            // Show helpful UI for users with no parks
-            const noParksCard = document.createElement("div");
-            noParksCard.className =
-              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
-            noParksCard.innerHTML = `
-              <div class="text-5xl mb-4">🌲</div>
-              <h2 class="font-[Fraunces] text-2xl text-cream mb-3">No Parks Yet</h2>
-              <p class="text-mist mb-6">Add parks to your list to start picking!</p>
-              <a
-                href="/manage"
-                class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors"
-              >
+            const noParksCard = createInfoCard(
+              "🌲",
+              "No Parks Yet",
+              "Add parks to your list to start picking!",
+              `<a href="/manage" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
                 <span>Add Parks</span>
-              </a>
-            `;
+              </a>`
+            );
             display.replaceChildren(noParksCard);
+          } else if (isAuthError(err.message)) {
+            // Auth error - redirect to sign-in
+            console.warn("Authentication error, redirecting to sign-in:", err.message);
+            window.location.href = "/sign-in";
+            return;
           } else {
-            // Log the actual error for debugging but show user-friendly message
             console.error("Unexpected error picking park:", err);
-
-            const errorContainer = document.createElement("div");
-            errorContainer.className =
-              "bg-white/10 backdrop-blur-xl rounded-3xl p-10 text-center border border-white/15 w-full";
-
-            const icon = document.createElement("div");
-            icon.className = "text-4xl mb-4";
-            icon.textContent = "⚠️";
-
-            const message = document.createElement("p");
-            message.className = "text-lg text-cream font-medium";
-            // Show generic message to avoid exposing internal details
-            message.textContent = "Something went wrong. Please try again later.";
-
-            errorContainer.appendChild(icon);
-            errorContainer.appendChild(message);
-            display.replaceChildren(errorContainer);
+            const errorCard = createInfoCard(
+              "⚠️",
+              "Something Went Wrong",
+              "Please try again later."
+            );
+            display.replaceChildren(errorCard);
           }
         } finally {
           isPickingPark = false;
@@ -492,27 +525,38 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         }
       }
 
-      // Track visits when clicking "Open in Google Maps"
-      // Uses fetch with keepalive for reliable fire-and-forget tracking that survives navigation
-      function trackVisit(parkId) {
-        const headers = { "Content-Type": "application/json" };
-        if (convexToken) {
-          headers["Authorization"] = `Bearer ${convexToken}`;
-        }
+      // ========== Visit Tracking ==========
 
+      // Uses cached token and keepalive for reliable fire-and-forget
+      function trackVisit(parkId) {
         fetch(`${convexUrl}/api/action`, {
           method: "POST",
-          headers,
+          headers: getConvexHeadersSync(),
           body: JSON.stringify({
             path: "actions/trackVisit:trackVisit",
             args: { parkId },
             format: "json",
           }),
-          keepalive: true, // Ensures request completes even if page unloads
-        }).catch(() => {}); // Silently ignore errors for fire-and-forget
+          keepalive: true,
+        }).catch(() => {});
       }
 
-      // Geolocation and travel time calculation
+      function attachMapsLinkHandlers() {
+        document.querySelectorAll(".maps-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            const parkId = link.dataset.parkId;
+            if (parkId) {
+              trackVisit(parkId);
+            }
+          });
+        });
+      }
+
+      // Attach handlers on initial load
+      attachMapsLinkHandlers();
+
+      // ========== Geolocation & Travel Time ==========
+
       let userLocation = null;
 
       async function getUserLocation() {
@@ -538,7 +582,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             },
             {
               timeout: 10000,
-              maximumAge: 300000, // Cache for 5 minutes
+              maximumAge: 300000,
             }
           );
         });
@@ -554,14 +598,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         try {
           const location = await getUserLocation();
 
-          const headers = { "Content-Type": "application/json" };
-          if (convexToken) {
-            headers["Authorization"] = `Bearer ${convexToken}`;
-          }
-
           const response = await fetch(`${convexUrl}/api/action`, {
             method: "POST",
-            headers,
+            headers: await getConvexHeaders(),
             body: JSON.stringify({
               path: "actions/getTravelTime:calculateTravelTime",
               args: {
@@ -595,31 +634,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         }
       }
 
-      // Attach click handlers to maps links
-      function attachMapsLinkHandlers() {
-        document.querySelectorAll(".maps-link").forEach((link) => {
-          link.addEventListener("click", () => {
-            const parkId = link.dataset.parkId;
-            if (parkId) {
-              trackVisit(parkId);
-            }
-          });
-        });
-      }
+      // ========== Button Event Handlers ==========
 
-      // Attach handlers on initial load
-      attachMapsLinkHandlers();
-
-      // Re-attach after picking a new park
-      const originalPickNewPark = pickNewPark;
-      // eslint-disable-next-line no-func-assign
-      pickNewPark = async function () {
-        await originalPickNewPark();
-        attachMapsLinkHandlers();
-        updateTravelTime();
-      };
-
-      // Track touch events to prevent double invocation
       let lastTouchTime = 0;
 
       button.addEventListener("click", () => {
@@ -628,11 +644,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         pickNewPark();
       });
 
-      // Touch event handler to prevent double-tap zoom on mobile
       button.addEventListener(
         "touchstart",
         (e) => {
-          e.preventDefault(); // Prevent double-tap zoom
+          e.preventDefault();
           lastTouchTime = Date.now();
           if (!isPickingPark) {
             pickNewPark();
