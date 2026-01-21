@@ -3,7 +3,7 @@
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
-import { getPhotoUrl } from "../lib/googleMaps";
+import { getPhotoUrls, getFreshPhotoRefs } from "../lib/googleMaps";
 import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
 
 export interface PickedPark {
@@ -12,6 +12,7 @@ export interface PickedPark {
   customName?: string;
   address?: string;
   photoUrl?: string;
+  photoUrls?: string[]; // All available photos for carousel
   placeId: string;
 }
 
@@ -113,10 +114,31 @@ export const pickPark = action({
       userId: user._id,
     });
 
-    // Generate photo URL if we have a photo reference
+    // Generate photo URLs - ALWAYS fetch fresh refs because Google photo names expire
     let photoUrl: string | undefined;
-    if (selectedPark.photoRefs && selectedPark.photoRefs.length > 0 && apiKey) {
-      photoUrl = getPhotoUrl(selectedPark.photoRefs[0], apiKey, 1200);
+    let photoUrls: string[] = [];
+
+    if (apiKey) {
+      // Always fetch fresh photo references - stored refs expire and return 404
+      console.log(
+        `[pickPark] Fetching fresh photo refs for "${selectedPark.name}" (placeId: ${selectedPark.placeId})`
+      );
+      const freshPhotoRefs = await getFreshPhotoRefs(selectedPark.placeId, apiKey, 10);
+
+      if (freshPhotoRefs.length > 0) {
+        // Generate URLs for all available photos (up to 5)
+        photoUrls = getPhotoUrls(freshPhotoRefs, apiKey, 1200, 5);
+        photoUrl = photoUrls[0]; // First photo for backwards compatibility
+        console.log(
+          `[pickPark] Generated ${photoUrls.length} photo URLs for "${selectedPark.name}"`
+        );
+      } else {
+        console.warn(
+          `[pickPark] No photos available for park "${selectedPark.name}" (placeId: ${selectedPark.placeId})`
+        );
+      }
+    } else {
+      console.error("[pickPark] GOOGLE_MAPS_API_KEY not configured - photos will not load!");
     }
 
     return {
@@ -125,6 +147,7 @@ export const pickPark = action({
       customName: selectedPark.customName,
       address: selectedPark.address,
       photoUrl,
+      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       placeId: selectedPark.placeId,
     };
   },

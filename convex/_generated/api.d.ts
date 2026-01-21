@@ -9,6 +9,7 @@
  */
 
 import type * as actions_backfillEntitlements from "../actions/backfillEntitlements.js";
+import type * as actions_getTodaysPick from "../actions/getTodaysPick.js";
 import type * as actions_getTravelTime from "../actions/getTravelTime.js";
 import type * as actions_pickPark from "../actions/pickPark.js";
 import type * as actions_processReferralConversion from "../actions/processReferralConversion.js";
@@ -51,6 +52,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actions/backfillEntitlements": typeof actions_backfillEntitlements;
+  "actions/getTodaysPick": typeof actions_getTodaysPick;
   "actions/getTravelTime": typeof actions_getTravelTime;
   "actions/pickPark": typeof actions_pickPark;
   "actions/processReferralConversion": typeof actions_processReferralConversion;

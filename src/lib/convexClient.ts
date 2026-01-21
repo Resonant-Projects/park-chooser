@@ -515,4 +515,12 @@ export async function getMyReferralStats(token: string): Promise<MyReferralStats
   );
 }
 
+/**
+ * Generate a Google Places photo URL from a photo reference.
+ * For use in SSR contexts where we have access to the API key.
+ */
+export function getPhotoUrlFromRef(photoRef: string, apiKey: string, maxWidth = 400): string {
+  return `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=${maxWidth}&key=${apiKey}`;
+}
+
 export { callAction, callQuery, callMutation };

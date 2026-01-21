@@ -83,6 +83,7 @@ interface PickedPark {
   customName?: string;
   address?: string;
   photoUrl?: string;
+  photoUrls?: string[]; // All available photos for carousel
   placeId: string;
 }
 
@@ -106,7 +107,19 @@ interface NearbyPark {
   distanceMiles: string;
   primaryType?: string;
   photoUrl?: string;
+  photoUrls?: string[]; // All available photos
   isInUserList: boolean;
+}
+
+interface TodaysPickResult {
+  _id: string;
+  name: string;
+  customName?: string;
+  address?: string;
+  photoUrl?: string;
+  photoUrls?: string[]; // All available photos for carousel
+  placeId: string;
+  chosenAt: number;
 }
 
 export const server = {
@@ -309,6 +322,29 @@ export const server = {
             originLng: input.originLng,
             placeId: input.placeId,
           },
+          token
+        );
+        return result;
+      } catch (error) {
+        throw mapConvexError(error);
+      }
+    },
+  }),
+
+  /**
+   * Get today's pick for the current user.
+   * Returns the park picked today (if any) or null.
+   */
+  getTodaysPick: defineAction({
+    handler: async (_input, context) => {
+      const token = await getConvexToken(context);
+      const convexUrl = getConvexUrl();
+
+      try {
+        const result = await callAction<TodaysPickResult | null>(
+          convexUrl,
+          "actions/getTodaysPick:getTodaysPick",
+          {},
           token
         );
         return result;

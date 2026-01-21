@@ -7,7 +7,7 @@ import { Id } from "../_generated/dataModel";
 import {
   searchNearbyParks as searchNearbyParksApi,
   calculateDistanceMiles,
-  getPhotoUrl,
+  getPhotoUrls,
 } from "../lib/googleMaps";
 
 export interface NearbyParkResult {
@@ -16,6 +16,7 @@ export interface NearbyParkResult {
   name: string;
   address?: string;
   photoUrl?: string;
+  photoUrls?: string[]; // All available photos
   distanceMiles: number;
   isInUserList: boolean;
   primaryType?: string;
@@ -89,20 +90,31 @@ export const searchNearbyParks = action({
     // Build results with distances and user flags
     // Filter out parks that failed to upsert (no dbId)
     const results: NearbyParkResult[] = [];
+    let parksWithPhotos = 0;
+    let parksWithoutPhotos = 0;
+
     for (const park of nearbyParks) {
       const dbId = placeIdToDbId.get(park.placeId);
       if (!dbId) {
         // Park wasn't successfully upserted, skip it
-        console.warn(`Park ${park.placeId} (${park.name}) not found in upserted results`);
+        console.warn(
+          `[searchNearbyParks] Park ${park.placeId} (${park.name}) not found in upserted results`
+        );
         continue;
       }
       const dbIdStr = dbId.toString();
       const distance = calculateDistanceMiles(args.lat, args.lng, park.lat, park.lng);
 
-      // Generate photo URL if available
+      // Generate photo URLs if available
       let photoUrl: string | undefined;
+      let photoUrls: string[] = [];
+
       if (park.photoRefs.length > 0) {
-        photoUrl = getPhotoUrl(park.photoRefs[0], apiKey, 800);
+        photoUrls = getPhotoUrls(park.photoRefs, apiKey, 800, 5);
+        photoUrl = photoUrls[0];
+        parksWithPhotos++;
+      } else {
+        parksWithoutPhotos++;
       }
 
       results.push({
@@ -111,11 +123,17 @@ export const searchNearbyParks = action({
         name: park.name,
         address: park.address,
         photoUrl,
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         distanceMiles: Math.round(distance * 10) / 10, // Round to 1 decimal
         isInUserList: userParkIdSet.has(dbIdStr),
         primaryType: park.primaryType,
       });
     }
+
+    // Log photo summary
+    console.log(
+      `[searchNearbyParks] Found ${results.length} parks: ${parksWithPhotos} with photos, ${parksWithoutPhotos} without photos`
+    );
 
     // Sort by distance
     results.sort((a, b) => a.distanceMiles - b.distanceMiles);

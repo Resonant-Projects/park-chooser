@@ -1,7 +1,7 @@
 ---
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
-import { getAvailableParks } from "../lib/convexClient";
+import { getAvailableParks, getPhotoUrlFromRef } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import { SITE_NAME } from "../lib/config";
 
@@ -18,6 +18,16 @@ if (!token) {
 
 // Pre-fetch available parks for fallback (Sarasota recommended)
 const availableParks = await getAvailableParks(token);
+
+// Generate photo URLs for fallback parks (SSR)
+const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
+  ...park,
+  photoUrl:
+    park.photoRefs?.[0] && googleMapsApiKey
+      ? getPhotoUrlFromRef(park.photoRefs[0], googleMapsApiKey, 128)
+      : null,
+}));
 ---
 
 <PageLayout
@@ -155,30 +165,45 @@ const availableParks = await getAvailableParks(token);
     </div>
     <div id="fallback-parks-list" class="grid gap-3">
       {
-        availableParks.slice(0, 10).map((park: any) => (
+        availableParksWithPhotos.map((park: any) => (
           <article
-            class="park-card flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
+            class="park-card flex gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
             data-available-id={park._id}
           >
-            <div class="min-w-0 flex-1">
-              <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
-              {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
-              {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+            {/* Photo thumbnail */}
+            {park.photoUrl ? (
+              <img
+                src={park.photoUrl}
+                alt=""
+                class="fallback-thumbnail h-16 w-16 shrink-0 rounded-lg object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                <span class="text-2xl">🌲</span>
+              </div>
+            )}
+            <div class="flex min-w-0 flex-1 items-center justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
+                {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
+                {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+              </div>
+              <button
+                class="add-btn bg-gold/20 hover:bg-gold/30 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+                data-add={park._id}
+                aria-label={`Add ${park.name}`}
+              >
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
             </div>
-            <button
-              class="add-btn bg-gold/20 hover:bg-gold/30 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
-              data-add={park._id}
-              aria-label={`Add ${park.name}`}
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
           </article>
         ))
       }
@@ -200,6 +225,8 @@ const availableParks = await getAvailableParks(token);
 </PageLayout>
 
 <script>
+  import { actions } from "astro:actions";
+
   // State
   let currentRadius = 5;
   let userLat = null;
@@ -284,8 +311,6 @@ const availableParks = await getAvailableParks(token);
     nearbyParksSection.classList.add("hidden");
 
     try {
-      // Import actions dynamically to avoid SSR issues
-      const { actions } = await import("astro:actions");
       const { data: parks, error } = await actions.searchNearbyParks({
         lat: userLat,
         lng: userLng,
@@ -326,13 +351,11 @@ const availableParks = await getAvailableParks(token);
       article.dataset.parkId = park._id;
 
       // Photo thumbnail (if available)
+      const photoFallbackHtml =
+        '<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0"><span class="text-2xl">🌲</span></div>';
       const photoHtml = park.photoUrl
-        ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0" loading="lazy" />`
-        : `<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                 <svg class="w-8 h-8 text-mist/50" fill="currentColor" viewBox="0 0 24 24">
-                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                 </svg>
-               </div>`;
+        ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0 park-thumbnail" loading="lazy" />`
+        : photoFallbackHtml;
 
       // Type badge
       const typeLabel = formatParkType(park.primaryType);
@@ -379,6 +402,23 @@ const availableParks = await getAvailableParks(token);
 
     nearbyParksSection.classList.remove("hidden");
     setupNearbyAddButtons();
+    setupImageErrorHandlers();
+  }
+
+  function setupImageErrorHandlers() {
+    document.querySelectorAll(".park-thumbnail").forEach((img) => {
+      img.addEventListener(
+        "error",
+        function () {
+          const fallback = document.createElement("div");
+          fallback.className =
+            "w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0";
+          fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+          this.replaceWith(fallback);
+        },
+        { once: true }
+      );
+    });
   }
 
   function formatParkType(type) {
@@ -403,7 +443,7 @@ const availableParks = await getAvailableParks(token);
 
         try {
           // Import actions dynamically to avoid SSR issues
-          const { actions } = await import("astro:actions");
+          const actions = await getActions();
           const { error } = await actions.addPark({ parkId });
 
           if (error) {
@@ -452,7 +492,7 @@ const availableParks = await getAvailableParks(token);
 
         try {
           // Import actions dynamically to avoid SSR issues
-          const { actions } = await import("astro:actions");
+          const actions = await getActions();
           const { error } = await actions.addPark({ parkId });
 
           if (error) {
@@ -505,5 +545,20 @@ const availableParks = await getAvailableParks(token);
     if (userLat && userLng) {
       fetchNearbyParks();
     }
+  });
+
+  // Setup error handlers for server-rendered fallback thumbnails
+  document.querySelectorAll(".fallback-thumbnail").forEach((img) => {
+    img.addEventListener(
+      "error",
+      function () {
+        const fallback = document.createElement("div");
+        fallback.className =
+          "flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5";
+        fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+        this.replaceWith(fallback);
+      },
+      { once: true }
+    );
   });
 </script>

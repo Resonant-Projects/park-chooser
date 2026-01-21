@@ -1,5 +1,10 @@
 ---
-import { getConvexUrl, getUserEntitlements, type UserEntitlements } from "../lib/convexClient";
+import {
+  getConvexUrl,
+  getUserEntitlements,
+  callAction,
+  type UserEntitlements,
+} from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import Analytics from "@vercel/analytics/astro";
 import SEO from "../components/SEO.astro";
@@ -39,6 +44,33 @@ const isFirstTimeUser = convexToken && entitlements?.usage.currentParks === 0;
 
 // Get referral code from cookie (for new user signups)
 const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
+
+// Today's pick result type
+interface TodaysPickResult {
+  _id: string;
+  name: string;
+  customName?: string;
+  address?: string;
+  photoUrl?: string;
+  photoUrls?: string[]; // All available photos for carousel
+  placeId: string;
+  chosenAt: number;
+}
+
+// Fetch today's pick if limit reached and user has picks today
+let todaysPick: TodaysPickResult | null = null;
+if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0) {
+  try {
+    todaysPick = await callAction<TodaysPickResult | null>(
+      getConvexUrl(),
+      "actions/getTodaysPick:getTodaysPick",
+      {},
+      convexToken
+    );
+  } catch (err) {
+    console.error("Failed to fetch today's pick:", err);
+  }
+}
 ---
 
 <!doctype html>
@@ -77,6 +109,81 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       />
     </noscript>
     <Analytics />
+    <style is:global>
+      /* Photo Carousel Styles */
+      .photo-carousel {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16/10;
+        overflow: hidden;
+      }
+      .photo-carousel-scroll {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        height: 100%;
+        width: 100%;
+      }
+      .photo-carousel-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      .photo-carousel-slide {
+        flex: 0 0 100%;
+        min-width: 100%;
+        scroll-snap-align: start;
+        height: 100%;
+      }
+      .photo-carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .photo-carousel-dots {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        z-index: 10;
+      }
+      .photo-carousel-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition:
+          background-color 0.2s,
+          transform 0.2s;
+      }
+      .photo-carousel-dot.active {
+        background: white;
+        transform: scale(1.2);
+      }
+      .photo-carousel-dot:hover {
+        background: rgba(255, 255, 255, 0.8);
+      }
+      /* Fallback placeholder for broken images */
+      .photo-fallback {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #2d5a47 0%, #1a3a2e 100%);
+        color: #c9a227;
+        font-size: 4rem;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -127,8 +234,8 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
                   <Button
                     id="seed-recommended"
                     variant="primary"
-                    size="default"
-                    class="rounded-full"
+                    size="lg"
+                    class="text-forest rounded-full"
                   >
                     <span class="seed-text">Add Recommended Parks</span>
                     <Spinner class="seed-spinner hidden size-5" />
@@ -144,23 +251,97 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
               </CardContent>
             </Card>
           ) : !canPick && isFreeUser ? (
-            <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
-              <div class="mb-4 text-5xl">⏰</div>
-              <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
-                Daily Pick Limit Reached
-              </h2>
-              <p class="text-mist mb-6">
-                Free accounts get 1 random park pick per day. Come back tomorrow for a new
-                adventure!
-              </p>
-              <a
-                href="/pricing"
-                class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors"
-              >
-                <span>⭐</span>
-                <span>Upgrade for Unlimited Picks</span>
-              </a>
-            </div>
+            todaysPick ? (
+              <div class="w-full">
+                <article class="bg-cream mb-6 w-full overflow-hidden rounded-3xl shadow-2xl">
+                  {(todaysPick.photoUrls?.length || todaysPick.photoUrl) && (
+                    <div class="photo-carousel">
+                      <div class="photo-carousel-scroll" data-carousel>
+                        {(todaysPick.photoUrls || [todaysPick.photoUrl])
+                          .filter(Boolean)
+                          .map((url, i) => (
+                            <div class="photo-carousel-slide">
+                              <img
+                                src={url}
+                                alt={`Photo ${i + 1} of ${todaysPick.name}`}
+                                loading={i === 0 ? "eager" : "lazy"}
+                                class="carousel-img"
+                              />
+                            </div>
+                          ))}
+                      </div>
+                      {(todaysPick.photoUrls?.length || 0) > 1 && (
+                        <div class="photo-carousel-dots" data-carousel-dots>
+                          {todaysPick.photoUrls?.map((_, i) => (
+                            <button
+                              class={`photo-carousel-dot ${i === 0 ? "active" : ""}`}
+                              data-index={i}
+                              aria-label={`Go to photo ${i + 1}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div class="relative p-7">
+                    {todaysPick.customName && (
+                      <p class="text-sunset mb-1 text-sm font-semibold tracking-widest uppercase">
+                        {todaysPick.customName}
+                      </p>
+                    )}
+                    <h2 class="text-forest mb-2 font-[Fraunces] text-2xl leading-tight font-semibold">
+                      {todaysPick.name}
+                    </h2>
+                    {todaysPick.address && (
+                      <p class="text-moss mb-5 text-base leading-relaxed">{todaysPick.address}</p>
+                    )}
+                    <div class="flex items-center justify-between">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(todaysPick.name)}&query_place_id=${todaysPick.placeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="maps-link text-sunset hover:text-bark inline-flex items-center gap-1 text-[0.9375rem] font-semibold transition-colors"
+                        data-park-id={todaysPick._id}
+                      >
+                        Open in Google Maps →
+                      </a>
+                      <span class="text-mist text-sm">Today's Pick</span>
+                    </div>
+                  </div>
+                </article>
+
+                <div class="rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl">
+                  <p class="text-mist mb-4 text-sm">
+                    Want to pick another park? Upgrade for unlimited daily picks.
+                  </p>
+                  <a
+                    href="/pricing"
+                    class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors"
+                  >
+                    <span>⭐</span>
+                    <span>Upgrade to Premium</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div class="w-full rounded-3xl border border-white/15 bg-white/10 p-10 text-center backdrop-blur-xl">
+                <div class="mb-4 text-5xl">⏰</div>
+                <h2 class="text-cream mb-3 font-[Fraunces] text-2xl font-semibold">
+                  Daily Pick Limit Reached
+                </h2>
+                <p class="text-mist mb-6">
+                  Free accounts get 1 random park pick per day. Come back tomorrow for a new
+                  adventure!
+                </p>
+                <a
+                  href="/pricing"
+                  class="bg-gold text-forest hover:bg-cream inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors"
+                >
+                  <span>⭐</span>
+                  <span>Upgrade for Unlimited Picks</span>
+                </a>
+              </div>
+            )
           ) : (
             <Card class="w-full border border-white/15 bg-white/10 text-center backdrop-blur-xl">
               <CardContent class="px-8 py-12">
@@ -217,8 +398,24 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
     </div>
 
     <!-- Pass config to module script (convexUrl needed for trackVisit keepalive) -->
-    <script define:vars={{ convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode }}>
-      window.__APP_CONFIG__ = { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode };
+    <script
+      define:vars={{
+        convexUrl,
+        canPick,
+        isFreeUser,
+        isFirstTimeUser,
+        referralCode,
+        hasTodaysPick: !!todaysPick,
+      }}
+    >
+      window.__APP_CONFIG__ = {
+        convexUrl,
+        canPick,
+        isFreeUser,
+        isFirstTimeUser,
+        referralCode,
+        hasTodaysPick,
+      };
     </script>
 
     <!-- Module script using Astro Actions -->
@@ -226,7 +423,7 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       import { actions } from "astro:actions";
 
       // Get config from SSR
-      const { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode } =
+      const { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode, hasTodaysPick } =
         window.__APP_CONFIG__;
 
       // DOM elements
@@ -281,7 +478,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       // Disable button if user has reached daily limit
       if (!canPick && isFreeUser) {
         button.disabled = true;
-        button.querySelector(".button-text").textContent = "Daily Limit Reached";
+        // Show friendlier text when today's pick is displayed
+        button.querySelector(".button-text").textContent = hasTodaysPick
+          ? "Come Back Tomorrow"
+          : "Daily Limit Reached";
         button.classList.add("opacity-60", "cursor-not-allowed");
       }
 
@@ -398,23 +598,57 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             throw new Error(error.message || "Failed to pick park");
           }
 
+          // Build photo carousel HTML
+          const photos = park.photoUrls || (park.photoUrl ? [park.photoUrl] : []);
+          let carouselHtml = "";
+          if (photos.length > 0) {
+            const slidesHtml = photos
+              .map(
+                (url, i) => `
+              <div class="photo-carousel-slide">
+                <img
+                  src="${url}"
+                  alt="Photo ${i + 1} of ${park.name}"
+                  loading="${i === 0 ? "eager" : "lazy"}"
+                  class="carousel-img"
+                />
+              </div>
+            `
+              )
+              .join("");
+
+            const dotsHtml =
+              photos.length > 1
+                ? `
+              <div class="photo-carousel-dots" data-carousel-dots>
+                ${photos
+                  .map(
+                    (_, i) => `
+                  <button
+                    class="photo-carousel-dot ${i === 0 ? "active" : ""}"
+                    data-index="${i}"
+                    aria-label="Go to photo ${i + 1}"
+                  ></button>
+                `
+                  )
+                  .join("")}
+              </div>
+            `
+                : "";
+
+            carouselHtml = `
+              <div class="photo-carousel">
+                <div class="photo-carousel-scroll" data-carousel>
+                  ${slidesHtml}
+                </div>
+                ${dotsHtml}
+              </div>
+            `;
+          }
+
           display.innerHTML = `
             <article class="bg-cream rounded-3xl overflow-hidden shadow-2xl animate-card-appear w-full">
-              ${
-                park.photoUrl
-                  ? `
-                <div class="relative w-full aspect-[16/10] overflow-hidden">
-                  <img
-                    src="${park.photoUrl}"
-                    alt="Photo of ${park.name}"
-                    class="w-full h-full object-cover transition-transform duration-400 hover:scale-[1.03]"
-                    loading="eager"
-                  />
-                  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-forest/15 pointer-events-none"></div>
-                </div>
-              `
-                  : ""
-              }
+              ${carouselHtml}
               <div class="relative p-7">
                 ${park.customName ? `<p class="text-sm font-semibold text-sunset uppercase tracking-widest mb-1">${park.customName}</p>` : ""}
                 <h2 class="font-[Fraunces] text-2xl font-semibold text-forest mb-2 leading-tight">${park.name}</h2>
@@ -435,8 +669,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             </article>
           `;
 
-          // Attach handlers and update travel time for the new card
+          // Attach handlers, init carousel, and update travel time for the new card
           attachMapsLinkHandlers();
+          initCarousels();
+          initCarouselImageErrors();
           updateTravelTime();
         } catch (err) {
           console.error("Unexpected error picking park:", err);
@@ -482,8 +718,62 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         });
       }
 
+      // ========== Photo Carousel ==========
+
+      function initCarousels() {
+        document.querySelectorAll("[data-carousel]").forEach((carousel) => {
+          const dots = carousel.parentElement.querySelector("[data-carousel-dots]");
+          if (!dots) return;
+
+          const dotButtons = dots.querySelectorAll(".photo-carousel-dot");
+
+          // Update dots on scroll
+          carousel.addEventListener("scroll", () => {
+            const scrollLeft = carousel.scrollLeft;
+            const slideWidth = carousel.offsetWidth;
+            const activeIndex = Math.round(scrollLeft / slideWidth);
+
+            dotButtons.forEach((dot, i) => {
+              dot.classList.toggle("active", i === activeIndex);
+            });
+          });
+
+          // Click on dot to scroll
+          dotButtons.forEach((dot) => {
+            dot.addEventListener("click", () => {
+              const index = parseInt(dot.dataset.index, 10);
+              const slideWidth = carousel.offsetWidth;
+              carousel.scrollTo({
+                left: index * slideWidth,
+                behavior: "smooth",
+              });
+            });
+          });
+        });
+      }
+
+      function initCarouselImageErrors() {
+        document.querySelectorAll(".carousel-img").forEach((img) => {
+          img.addEventListener(
+            "error",
+            function () {
+              const parent = this.parentElement;
+              if (!parent) return;
+              const fallback = document.createElement("div");
+              fallback.className = "photo-fallback";
+              fallback.textContent = "🌲";
+              parent.innerHTML = "";
+              parent.appendChild(fallback);
+            },
+            { once: true }
+          );
+        });
+      }
+
       // Attach handlers on initial load
       attachMapsLinkHandlers();
+      initCarousels();
+      initCarouselImageErrors();
 
       // ========== Geolocation & Travel Time ==========
 

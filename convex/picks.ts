@@ -71,3 +71,45 @@ export const listAll = query({
     return picksWithParks;
   },
 });
+
+/**
+ * Get today's pick for a user (internal).
+ * Returns the most recent pick made today (UTC) or null if none exists.
+ */
+export const getTodaysPickForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Get start of today (UTC)
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayTimestamp = todayStart.getTime();
+
+    // Query the most recent pick for this user today
+    const todaysPick = await ctx.db
+      .query("picks")
+      .withIndex("by_user_chosenAt", (q) =>
+        q.eq("userId", args.userId).gte("chosenAt", todayTimestamp)
+      )
+      .order("desc")
+      .first();
+
+    if (!todaysPick) return null;
+
+    // Get park details
+    const park = await ctx.db.get(todaysPick.parkId);
+    if (!park) return null;
+
+    // Get user's custom name for this park
+    const userPark = todaysPick.userParkId ? await ctx.db.get(todaysPick.userParkId) : null;
+
+    return {
+      parkId: park._id,
+      placeId: park.placeId,
+      name: park.name,
+      customName: userPark?.customName ?? park.customName,
+      address: park.address,
+      photoRefs: park.photoRefs,
+      chosenAt: todaysPick.chosenAt,
+    };
+  },
+});

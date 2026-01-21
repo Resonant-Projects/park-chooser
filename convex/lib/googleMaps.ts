@@ -136,10 +136,91 @@ export async function fetchPlaceDetails(
 /**
  * Generate a photo URL from a Places API photo reference.
  * The photo name format from Places API (New) is: places/{placeId}/photos/{photoRef}
+ *
+ * IMPORTANT: Photo names expire! If images fail to load, the photoRef may be stale.
+ * Use getFreshPhotoUrls() to fetch new refs when needed.
  */
 export function getPhotoUrl(photoName: string, apiKey: string, maxWidth = 800): string {
   // Places API (New) photo media endpoint
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${apiKey}`;
+}
+
+/**
+ * Generate multiple photo URLs from photo references.
+ * Returns up to `limit` URLs (default 5).
+ */
+export function getPhotoUrls(
+  photoNames: string[],
+  apiKey: string,
+  maxWidth = 800,
+  limit = 5
+): string[] {
+  return photoNames.slice(0, limit).map((name) => getPhotoUrl(name, apiKey, maxWidth));
+}
+
+/**
+ * Fetch fresh photo references from Google Places API.
+ * Use this when stored photoRefs may have expired (they expire after some time).
+ *
+ * @param placeId The Google Place ID
+ * @param apiKey Google Maps API key
+ * @param maxPhotos Maximum number of photos to return (default 10)
+ * @returns Array of fresh photo reference names
+ */
+export async function getFreshPhotoRefs(
+  placeId: string,
+  apiKey: string,
+  maxPhotos = 10
+): Promise<string[]> {
+  const url = `${PLACES_API_BASE}/${placeId}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "photos",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`[Photo Refresh] Failed to fetch photos for ${placeId}: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const photos = (data.photos || []).slice(0, maxPhotos);
+
+    if (photos.length === 0) {
+      console.warn(`[Photo Refresh] No photos available for place ${placeId}`);
+    }
+
+    return photos.map((p: { name: string }) => p.name);
+  } catch (error) {
+    console.error(`[Photo Refresh] Error fetching photos for ${placeId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Fetch fresh photo URLs directly from Google Places API.
+ * This is the recommended approach when displaying photos, as stored photoRefs expire.
+ *
+ * @param placeId The Google Place ID
+ * @param apiKey Google Maps API key
+ * @param maxWidth Maximum width in pixels (1-4800)
+ * @param maxPhotos Maximum number of photos to return
+ * @returns Array of photo URLs ready to display
+ */
+export async function getFreshPhotoUrls(
+  placeId: string,
+  apiKey: string,
+  maxWidth = 800,
+  maxPhotos = 5
+): Promise<string[]> {
+  const photoRefs = await getFreshPhotoRefs(placeId, apiKey, maxPhotos);
+  return getPhotoUrls(photoRefs, apiKey, maxWidth, maxPhotos);
 }
 
 export interface TravelTimeResult {
