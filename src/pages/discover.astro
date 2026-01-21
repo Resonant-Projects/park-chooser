@@ -1,7 +1,7 @@
 ---
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
-import { getConvexUrl, getAvailableParks } from "../lib/convexClient";
+import { getAvailableParks } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import { SITE_NAME } from "../lib/config";
 
@@ -15,7 +15,6 @@ const token = await getToken({ template: "convex" });
 if (!token) {
   return Astro.redirect("/sign-in");
 }
-const convexUrl = getConvexUrl();
 
 // Pre-fetch available parks for fallback (Sarasota recommended)
 const availableParks = await getAvailableParks(token);
@@ -200,7 +199,7 @@ const availableParks = await getAvailableParks(token);
   </footer>
 </PageLayout>
 
-<script define:vars={{ convexUrl, convexToken: token }}>
+<script>
   // State
   let currentRadius = 5;
   let userLat = null;
@@ -285,27 +284,19 @@ const availableParks = await getAvailableParks(token);
     nearbyParksSection.classList.add("hidden");
 
     try {
-      const response = await fetch(`${convexUrl}/api/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${convexToken}`,
-        },
-        body: JSON.stringify({
-          path: "actions/searchNearbyParks:searchNearbyParks",
-          args: { lat: userLat, lng: userLng, radiusMiles: currentRadius },
-          format: "json",
-        }),
+      // Import actions dynamically to avoid SSR issues
+      const { actions } = await import("astro:actions");
+      const { data: parks, error } = await actions.searchNearbyParks({
+        lat: userLat,
+        lng: userLng,
+        radiusMiles: currentRadius,
       });
 
-      const result = await response.json();
-
-      if (result.status === "error") {
-        throw new Error(result.errorMessage);
+      if (error) {
+        throw error;
       }
 
-      const parks = result.value || [];
-      renderNearbyParks(parks);
+      renderNearbyParks(parks || []);
     } catch (err) {
       console.error("Failed to fetch nearby parks:", err);
       nearbyEmpty.textContent = "Failed to load nearby parks. Please try again.";
@@ -411,26 +402,12 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:addParkToUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          // Import actions dynamically to avoid SSR issues
+          const { actions } = await import("astro:actions");
+          const { error } = await actions.addPark({ parkId });
 
-          if (!response.ok) {
-            throw new Error(`Failed to add park: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to add park");
+          if (error) {
+            throw error;
           }
 
           // Update UI to show added state
@@ -474,26 +451,12 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:addParkToUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          // Import actions dynamically to avoid SSR issues
+          const { actions } = await import("astro:actions");
+          const { error } = await actions.addPark({ parkId });
 
-          if (!response.ok) {
-            throw new Error(`Failed to add park: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to add park");
+          if (error) {
+            throw error;
           }
 
           // Fade out and remove the card

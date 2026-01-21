@@ -13,9 +13,10 @@ import Card from "../components/starwind/card/Card.astro";
 import CardContent from "../components/starwind/card/CardContent.astro";
 import Spinner from "../components/starwind/spinner/Spinner.astro";
 
+// Convex URL still needed for trackVisit (keepalive pattern)
 const convexUrl = getConvexUrl();
 
-// Get the Clerk token for Convex
+// Get the Clerk token for Convex (SSR entitlements check)
 const { getToken } = Astro.locals.auth();
 const convexToken = await getToken({ template: "convex" });
 
@@ -215,14 +216,14 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       </footer>
     </div>
 
-    <!-- Pass config to module script (not tokens - those are fetched fresh) -->
+    <!-- Pass config to module script (convexUrl needed for trackVisit keepalive) -->
     <script define:vars={{ convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode }}>
       window.__APP_CONFIG__ = { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode };
     </script>
 
-    <!-- Module script for logic with fresh token support -->
+    <!-- Module script using Astro Actions -->
     <script>
-      import { $clerkStore } from "@clerk/astro/client";
+      import { actions } from "astro:actions";
 
       // Get config from SSR
       const { convexUrl, canPick, isFreeUser, isFirstTimeUser, referralCode } =
@@ -232,56 +233,26 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
       const button = document.getElementById("pick-again");
       const display = document.getElementById("park-display");
 
-      // ========== Token & Headers Helpers ==========
-
-      // Get fresh token from Clerk before each request (handles token expiration)
-      async function getFreshToken() {
-        const clerk = $clerkStore.get();
-        if (clerk?.session) {
-          return await clerk.session.getToken({ template: "convex" });
-        }
-        return null;
-      }
-
-      // Build headers with fresh token for Convex requests
-      async function getConvexHeaders() {
-        const headers = { "Content-Type": "application/json" };
-        const token = await getFreshToken();
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        return headers;
-      }
-
-      // Synchronous headers for fire-and-forget requests (uses cached token)
-      let cachedToken = null;
-      function getConvexHeadersSync() {
-        const headers = { "Content-Type": "application/json" };
-        if (cachedToken) {
-          headers["Authorization"] = `Bearer ${cachedToken}`;
-        }
-        return headers;
-      }
-
       // ========== Error Helpers ==========
 
-      function isLimitError(errorMessage) {
+      function isLimitError(error) {
+        if (!error) return false;
+        const message = error.message || "";
         return (
-          errorMessage.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
-          errorMessage.includes("Daily pick limit reached")
+          error.code === "FORBIDDEN" ||
+          message.includes("DAILY_PICK_LIMIT_EXCEEDED") ||
+          message.includes("Daily pick limit")
         );
       }
 
-      function isNoParksError(errorMessage) {
-        return errorMessage.includes("NO_PARKS");
+      function isNoParksError(error) {
+        if (!error) return false;
+        return error.code === "NOT_FOUND" || (error.message || "").includes("NO_PARKS");
       }
 
-      function isAuthError(errorMessage) {
-        return (
-          errorMessage.includes("Authentication required") ||
-          errorMessage.includes("Unauthorized") ||
-          errorMessage.includes("Invalid token")
-        );
+      function isAuthError(error) {
+        if (!error) return false;
+        return error.code === "UNAUTHORIZED";
       }
 
       // Create standardized error/info card
@@ -316,28 +287,17 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       // Store user on page load (with optional referral code)
       async function storeUser() {
-        const token = await getFreshToken();
-        if (!token) return;
-        cachedToken = token; // Cache for sync operations
-
         try {
-          const args = {};
-          if (referralCode) {
-            args.referralCode = referralCode;
+          const args = referralCode ? { referralCode } : undefined;
+          const { error } = await actions.storeUser(args);
+
+          if (error) {
+            console.error("Failed to store user:", error.message);
+            return;
           }
 
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: await getConvexHeaders(),
-            body: JSON.stringify({
-              path: "users:store",
-              args,
-              format: "json",
-            }),
-          });
-
           // Clear referral cookie after successful store
-          if (response.ok && referralCode) {
+          if (referralCode) {
             fetch("/api/clear-referral-cookie", {
               method: "POST",
               credentials: "include",
@@ -360,26 +320,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           seedButton.querySelector(".seed-text").textContent = "Adding parks...";
           seedButton.querySelector(".seed-spinner").classList.remove("hidden");
 
-          try {
-            const response = await fetch(`${convexUrl}/api/action`, {
-              method: "POST",
-              headers: await getConvexHeaders(),
-              body: JSON.stringify({
-                path: "actions/seedUser:seedUserWithRecommendedParks",
-                args: {},
-                format: "json",
-              }),
-            });
+          const { error } = await actions.seedUserWithRecommendedParks();
 
-            const result = await response.json();
-
-            if (result.status === "error") {
-              throw new Error(result.errorMessage || "Failed to add parks");
-            }
-
-            window.location.reload();
-          } catch (err) {
-            console.error("Failed to seed parks:", err);
+          if (error) {
+            console.error("Failed to seed parks:", error.message);
             seedButton.disabled = false;
             seedButton.querySelector(".seed-text").textContent = "Add Recommended Parks";
             seedButton.querySelector(".seed-spinner").classList.add("hidden");
@@ -391,7 +335,10 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
             errorDiv.className = "text-red-400 text-sm mt-3";
             errorDiv.textContent = "Failed to add parks. Please try again.";
             seedButton.parentElement.appendChild(errorDiv);
+            return;
           }
+
+          window.location.reload();
         });
       }
 
@@ -414,26 +361,42 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         button.querySelector(".button-spinner").classList.remove("hidden");
 
         try {
-          const headers = await getConvexHeaders();
-          cachedToken = headers["Authorization"]?.replace("Bearer ", "") || null;
+          const { data: park, error } = await actions.pickPark();
 
-          const response = await fetch(`${convexUrl}/api/action`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              path: "actions/pickPark:pickPark",
-              args: {},
-              format: "json",
-            }),
-          });
-
-          const result = await response.json();
-
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to pick park");
+          if (error) {
+            if (isLimitError(error)) {
+              showLimitReachedUI();
+              const limitCard = createInfoCard(
+                "⏰",
+                "Daily Limit Reached",
+                "Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!",
+                `<a href="/pricing" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
+                  <span>⭐</span>
+                  <span>Upgrade for Unlimited Picks</span>
+                </a>`
+              );
+              display.replaceChildren(limitCard);
+              return;
+            }
+            if (isNoParksError(error)) {
+              const noParksCard = createInfoCard(
+                "🌲",
+                "No Parks Yet",
+                "Add parks to your list to start picking!",
+                `<a href="/manage" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
+                  <span>Add Parks</span>
+                </a>`
+              );
+              display.replaceChildren(noParksCard);
+              return;
+            }
+            if (isAuthError(error)) {
+              console.warn("Authentication error, redirecting to sign-in:", error.message);
+              window.location.href = "/sign-in";
+              return;
+            }
+            throw new Error(error.message || "Failed to pick park");
           }
-
-          const park = result.value;
 
           display.innerHTML = `
             <article class="bg-cream rounded-3xl overflow-hidden shadow-2xl animate-card-appear w-full">
@@ -476,42 +439,9 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
           attachMapsLinkHandlers();
           updateTravelTime();
         } catch (err) {
-          if (isLimitError(err.message)) {
-            showLimitReachedUI();
-            const limitCard = createInfoCard(
-              "⏰",
-              "Daily Limit Reached",
-              "Free accounts get 1 park pick per day. Come back tomorrow for a new adventure!",
-              `<a href="/pricing" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
-                <span>⭐</span>
-                <span>Upgrade for Unlimited Picks</span>
-              </a>`
-            );
-            display.replaceChildren(limitCard);
-          } else if (isNoParksError(err.message)) {
-            const noParksCard = createInfoCard(
-              "🌲",
-              "No Parks Yet",
-              "Add parks to your list to start picking!",
-              `<a href="/manage" class="inline-flex items-center gap-2 bg-gold text-forest font-semibold px-5 py-3 rounded-full hover:bg-cream transition-colors">
-                <span>Add Parks</span>
-              </a>`
-            );
-            display.replaceChildren(noParksCard);
-          } else if (isAuthError(err.message)) {
-            // Auth error - redirect to sign-in
-            console.warn("Authentication error, redirecting to sign-in:", err.message);
-            window.location.href = "/sign-in";
-            return;
-          } else {
-            console.error("Unexpected error picking park:", err);
-            const errorCard = createInfoCard(
-              "⚠️",
-              "Something Went Wrong",
-              "Please try again later."
-            );
-            display.replaceChildren(errorCard);
-          }
+          console.error("Unexpected error picking park:", err);
+          const errorCard = createInfoCard("⚠️", "Something Went Wrong", "Please try again later.");
+          display.replaceChildren(errorCard);
         } finally {
           isPickingPark = false;
           button.classList.remove("button-loading");
@@ -527,11 +457,11 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
 
       // ========== Visit Tracking ==========
 
-      // Uses cached token and keepalive for reliable fire-and-forget
+      // Uses keepalive for reliable fire-and-forget (stays as direct Convex call)
       function trackVisit(parkId) {
         fetch(`${convexUrl}/api/action`, {
           method: "POST",
-          headers: getConvexHeadersSync(),
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             path: "actions/trackVisit:trackVisit",
             args: { parkId },
@@ -598,27 +528,15 @@ const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
         try {
           const location = await getUserLocation();
 
-          const response = await fetch(`${convexUrl}/api/action`, {
-            method: "POST",
-            headers: await getConvexHeaders(),
-            body: JSON.stringify({
-              path: "actions/getTravelTime:calculateTravelTime",
-              args: {
-                originLat: location.lat,
-                originLng: location.lng,
-                placeId: placeId,
-              },
-              format: "json",
-            }),
+          const { data: travelData, error } = await actions.getTravelTime({
+            originLat: location.lat,
+            originLng: location.lng,
+            placeId: placeId,
           });
 
-          const result = await response.json();
-
-          if (result.status === "error" || !result.value) {
-            throw new Error(result.errorMessage || "Failed to calculate travel time");
+          if (error || !travelData) {
+            throw new Error(error?.message || "Failed to calculate travel time");
           }
-
-          const travelData = result.value;
 
           badge.innerHTML = `
             <div class="flex flex-col items-center gap-0.5">

@@ -1,10 +1,5 @@
 ---
-import {
-  getConvexUrl,
-  getUserParks,
-  getAvailableParks,
-  getUserEntitlements,
-} from "../lib/convexClient";
+import { getUserParks, getAvailableParks, getUserEntitlements } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import PageLayout from "../layouts/PageLayout.astro";
 
@@ -18,7 +13,6 @@ const token = await getToken({ template: "convex" });
 if (!token) {
   return Astro.redirect("/sign-in");
 }
-const convexUrl = getConvexUrl();
 
 // Fetch parks and entitlements server-side
 const [userParks, availableParks, entitlements] = await Promise.all([
@@ -204,17 +198,20 @@ const isAtLimit = !canAddPark && isFreeUser;
     </nav>
   </footer>
 
-  <script slot="scripts" define:vars={{ convexUrl, convexToken: token, isFreeUser, maxParks }}>
+  <script slot="scripts" define:vars={{ isFreeUser, maxParks }}>
     // Track current park count for dynamic limit checking
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let currentCount = 0;
 
-    // Helper to check if error is a limit error
-    function isLimitError(errorMessage) {
+    // Helper to check if error is a limit error (works with ActionError)
+    function isLimitError(error) {
+      if (!error) return false;
+      const message = error.message || String(error);
       return (
-        errorMessage.includes("PARK_LIMIT_EXCEEDED") ||
-        errorMessage.includes("park limit") ||
-        errorMessage.includes("Maximum parks")
+        error.code === "FORBIDDEN" ||
+        message.includes("PARK_LIMIT_EXCEEDED") ||
+        message.includes("park limit") ||
+        message.includes("Maximum parks")
       );
     }
 
@@ -308,7 +305,7 @@ const isAtLimit = !canAddPark && isFreeUser;
       });
     }
 
-    // Attach remove handler to a button (extracted for reuse)
+    // Attach remove handler to a button (extracted for reuse, using Astro Actions)
     function attachRemoveHandler(btn) {
       btn.addEventListener("click", async (e) => {
         const button = e.currentTarget;
@@ -320,23 +317,12 @@ const isAtLimit = !canAddPark && isFreeUser;
           '<span class="w-4 h-4 border-2 border-sunset border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:removeParkFromUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          // Import actions dynamically to avoid SSR issues
+          const { actions } = await import("astro:actions");
+          const { error } = await actions.removePark({ parkId });
 
-          const result = await response.json();
-
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to remove park");
+          if (error) {
+            throw error;
           }
 
           // Optimistic UI: fade out and remove card
@@ -418,7 +404,7 @@ const isAtLimit = !canAddPark && isFreeUser;
       }
     }
 
-    // Handle add park with optimistic UI
+    // Handle add park with optimistic UI (using Astro Actions)
     document.querySelectorAll(".add-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const button = e.currentTarget;
@@ -433,28 +419,17 @@ const isAtLimit = !canAddPark && isFreeUser;
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:addParkToUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          // Import actions dynamically to avoid SSR issues
+          const { actions } = await import("astro:actions");
+          const { data, error } = await actions.addPark({ parkId });
 
-          const result = await response.json();
-
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to add park");
+          if (error) {
+            throw error;
           }
 
           // Add park to "My Parks" section
-          if (result.value && result.value.park) {
-            addParkToMyParksSection(result.value.park);
+          if (data && data.park) {
+            addParkToMyParksSection(data.park);
           }
 
           // Optimistic UI: fade out and remove card from "Add Parks" section
@@ -474,7 +449,7 @@ const isAtLimit = !canAddPark && isFreeUser;
             '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
 
           // Check if this is a limit error and show appropriate UI
-          if (isLimitError(err.message)) {
+          if (isLimitError(err)) {
             showLimitError();
             updateCounts(); // Will disable all add buttons if at limit
           }
