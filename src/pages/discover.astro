@@ -394,8 +394,8 @@ const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
             <div class="park-card-collapsed">
               ${photoHtml}
               <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-2">
-                  <h3 class="font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
+                <div class="min-w-0 flex items-start justify-between gap-2">
+                  <h3 class="min-w-0 font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
                   <span class="shrink-0 text-sm text-gold font-medium">${escapeHtml(park.distanceMiles)} mi</span>
                 </div>
                 ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${escapeHtml(park.address)}</p>` : ""}

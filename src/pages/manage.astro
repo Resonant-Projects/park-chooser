@@ -86,9 +86,18 @@ const isAtLimit = !canAddPark && isFreeUser;
   <div class="space-y-8">
     <!-- My Parks Section -->
     <section>
-      <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
-        My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
-      </h2>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-cream font-[Fraunces] text-xl">
+          My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
+        </h2>
+        <span
+          id="location-status"
+          class="text-mist flex items-center gap-1.5 text-xs opacity-0 transition-opacity duration-300"
+        >
+          <span id="location-status-icon"></span>
+          <span id="location-status-text"></span>
+        </span>
+      </div>
 
       {
         userParks.length === 0 ? (
@@ -618,6 +627,25 @@ const isAtLimit = !canAddPark && isFreeUser;
       return allDistances;
     }
 
+    // Location status UI helpers
+    const locationStatus = document.getElementById("location-status");
+    const locationIcon = document.getElementById("location-status-icon");
+    const locationText = document.getElementById("location-status-text");
+
+    function showLocationStatus(icon, text, isError = false) {
+      if (!locationStatus || !locationIcon || !locationText) return;
+      locationIcon.innerHTML = icon;
+      locationText.textContent = text;
+      locationStatus.classList.toggle("text-sunset", isError);
+      locationStatus.classList.toggle("text-mist", !isError);
+      locationStatus.classList.remove("opacity-0");
+    }
+
+    function hideLocationStatus() {
+      if (!locationStatus) return;
+      locationStatus.classList.add("opacity-0");
+    }
+
     // Initialize distance fetching
     async function initDistances() {
       // Collect all unique placeIds from park cards
@@ -631,13 +659,29 @@ const isAtLimit = !canAddPark && isFreeUser;
 
       // Request geolocation
       if (!navigator.geolocation) {
-        console.log("Geolocation not supported");
+        showLocationStatus(
+          '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>',
+          "Location not supported",
+          true
+        );
         return;
       }
+
+      // Show loading state
+      showLocationStatus(
+        '<span class="w-3 h-3 border-2 border-mist border-t-cream rounded-full animate-spin inline-block"></span>',
+        "Fetching location..."
+      );
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+
+          // Update status while fetching distances
+          showLocationStatus(
+            '<span class="w-3 h-3 border-2 border-mist border-t-cream rounded-full animate-spin inline-block"></span>',
+            "Calculating distances..."
+          );
 
           // Fetch all distances
           const distances = await fetchDistances(Array.from(placeIds), latitude, longitude);
@@ -651,10 +695,23 @@ const isAtLimit = !canAddPark && isFreeUser;
 
           // Sort "Add Parks" section by distance
           sortAddParksByDistance();
+
+          // Hide status after success (brief flash to show completion)
+          setTimeout(hideLocationStatus, 1500);
         },
         (error) => {
-          // Graceful degradation - page works without distances
-          console.log("Geolocation denied or unavailable:", error.message);
+          // Show user-friendly error
+          let errorText = "Location unavailable";
+          if (error.code === error.PERMISSION_DENIED) {
+            errorText = "Location access denied";
+          } else if (error.code === error.TIMEOUT) {
+            errorText = "Location timed out";
+          }
+          showLocationStatus(
+            '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>',
+            errorText,
+            true
+          );
         },
         { enableHighAccuracy: false, timeout: 10000 }
       );
