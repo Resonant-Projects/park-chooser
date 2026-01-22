@@ -778,6 +778,11 @@ const availableParksWithPhotos: AvailableParkWithPhoto[] = availableParks
           console.error("Failed to fetch photo URLs:", err);
           photoUrls = [];
         }
+
+        // Guard against stale updates: user may have collapsed/switched cards during fetch
+        if (card.dataset.expanded !== "true") {
+          return;
+        }
       }
     }
 
@@ -824,8 +829,13 @@ const availableParksWithPhotos: AvailableParkWithPhoto[] = availableParks
 
   /**
    * Setup click handlers for card expansion.
+   * Uses a guard to prevent duplicate event listeners when called multiple times.
    */
+  let cardExpansionInitialized = false;
   function setupCardExpansion() {
+    if (cardExpansionInitialized) return;
+    cardExpansionInitialized = true;
+
     // Delegate clicks on park cards
     [nearbyParksList, document.getElementById("fallback-parks-list")].forEach((list) => {
       if (!list) return;

@@ -251,6 +251,10 @@ const isAtLimit = !canAddPark && isFreeUser;
     let userLatitude = null;
     let userLongitude = null;
 
+    // Store distances for sorting (placeId -> distance in miles as number)
+    // Declared here because createMyParkCard() accesses it before the distance feature section
+    const distanceData = new Map();
+
     // Helper to check if error message indicates a limit error
     function isLimitError(errorMessage) {
       if (!errorMessage) return false;
@@ -583,9 +587,6 @@ const isAtLimit = !canAddPark && isFreeUser;
     // ============================================================
     // Distance Display Feature
     // ============================================================
-
-    // Store distances for sorting (placeId -> distance in miles as number)
-    const distanceData = new Map();
 
     // Parse distance text to miles number (e.g., "5.2 mi" -> 5.2)
     function parseDistanceToMiles(distanceText) {

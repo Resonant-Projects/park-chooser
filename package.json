@@ -17,6 +17,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.6",
     "@astrojs/sitemap": "^3.7.0",
     "@astrojs/vercel": "^9.0.4",
     "@clerk/astro": "^2.16.12",
