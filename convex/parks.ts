@@ -33,6 +33,19 @@ export const getById = internalQuery({
 });
 
 /**
+ * Get a single park by placeId.
+ */
+export const getByPlaceId = query({
+  args: { placeId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("parks")
+      .withIndex("by_placeId", (q) => q.eq("placeId", args.placeId))
+      .first();
+  },
+});
+
+/**
  * Get the current sync state (internal).
  */
 export const getSyncState = internalQuery({

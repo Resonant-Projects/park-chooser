@@ -1,9 +1,13 @@
 ---
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
-import { getConvexUrl, getAvailableParks } from "../lib/convexClient";
+import { getAvailableParks, getPhotoUrlFromRef, type AvailablePark } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import { SITE_NAME } from "../lib/config";
+
+interface AvailableParkWithPhoto extends AvailablePark {
+  photoUrl: string | null;
+}
 
 // Auth check
 const { userId, getToken } = Astro.locals.auth();
@@ -15,10 +19,21 @@ const token = await getToken({ template: "convex" });
 if (!token) {
   return Astro.redirect("/sign-in");
 }
-const convexUrl = getConvexUrl();
 
 // Pre-fetch available parks for fallback (Sarasota recommended)
 const availableParks = await getAvailableParks(token);
+
+// Generate photo URLs for fallback parks (SSR)
+const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+const availableParksWithPhotos: AvailableParkWithPhoto[] = availableParks
+  .slice(0, 10)
+  .map((park) => ({
+    ...park,
+    photoUrl:
+      park.photoRefs?.[0] && googleMapsApiKey
+        ? getPhotoUrlFromRef(park.photoRefs[0], googleMapsApiKey, 128)
+        : null,
+  }));
 ---
 
 <PageLayout
@@ -156,30 +171,51 @@ const availableParks = await getAvailableParks(token);
     </div>
     <div id="fallback-parks-list" class="grid gap-3">
       {
-        availableParks.slice(0, 10).map((park: any) => (
+        availableParksWithPhotos.map((park) => (
           <article
-            class="park-card flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
+            class="park-card rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
             data-available-id={park._id}
+            data-place-id={park.placeId}
+            data-photo-refs={JSON.stringify(park.photoRefs || [])}
+            data-expanded="false"
           >
-            <div class="min-w-0 flex-1">
-              <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
-              {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
-              {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
-            </div>
-            <button
-              class="add-btn bg-gold/20 hover:bg-gold/30 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
-              data-add={park._id}
-              aria-label={`Add ${park.name}`}
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
+            <div class="park-card-collapsed">
+              {/* Photo thumbnail */}
+              {park.photoUrl ? (
+                <img
+                  src={park.photoUrl}
+                  alt=""
+                  class="fallback-thumbnail h-16 w-16 shrink-0 rounded-lg object-cover"
+                  loading="lazy"
                 />
-              </svg>
-            </button>
+              ) : (
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                  <span class="text-2xl">🌲</span>
+                </div>
+              )}
+              <div class="flex min-w-0 flex-1 items-center justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
+                  {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
+                  {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+                </div>
+                <button
+                  class="add-btn bg-gold/20 hover:bg-gold/30 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+                  data-add={park._id}
+                  aria-label={`Add ${park.name}`}
+                >
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="park-card-expanded" />
           </article>
         ))
       }
@@ -200,7 +236,9 @@ const availableParks = await getAvailableParks(token);
   </footer>
 </PageLayout>
 
-<script define:vars={{ convexUrl, convexToken: token }}>
+<script>
+  import { actions } from "astro:actions";
+
   // State
   let currentRadius = 5;
   let userLat = null;
@@ -285,27 +323,17 @@ const availableParks = await getAvailableParks(token);
     nearbyParksSection.classList.add("hidden");
 
     try {
-      const response = await fetch(`${convexUrl}/api/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${convexToken}`,
-        },
-        body: JSON.stringify({
-          path: "actions/searchNearbyParks:searchNearbyParks",
-          args: { lat: userLat, lng: userLng, radiusMiles: currentRadius },
-          format: "json",
-        }),
+      const { data: parks, error } = await actions.searchNearbyParks({
+        lat: userLat,
+        lng: userLng,
+        radiusMiles: currentRadius,
       });
 
-      const result = await response.json();
-
-      if (result.status === "error") {
-        throw new Error(result.errorMessage);
+      if (error) {
+        throw error;
       }
 
-      const parks = result.value || [];
-      renderNearbyParks(parks);
+      renderNearbyParks(parks || []);
     } catch (err) {
       console.error("Failed to fetch nearby parks:", err);
       nearbyEmpty.textContent = "Failed to load nearby parks. Please try again.";
@@ -331,17 +359,18 @@ const availableParks = await getAvailableParks(token);
     parks.forEach((park) => {
       const article = document.createElement("article");
       article.className =
-        "park-card bg-white/10 backdrop-blur-xl rounded-xl p-4 flex gap-4 border border-white/15 transition-opacity duration-200";
+        "park-card bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/15 transition-opacity duration-200";
       article.dataset.parkId = park._id;
+      article.dataset.placeId = park.placeId;
+      article.dataset.photoUrls = JSON.stringify(park.photoUrls || []);
+      article.dataset.expanded = "false";
 
       // Photo thumbnail (if available)
+      const photoFallbackHtml =
+        '<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0"><span class="text-2xl">🌲</span></div>';
       const photoHtml = park.photoUrl
-        ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0" loading="lazy" />`
-        : `<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                 <svg class="w-8 h-8 text-mist/50" fill="currentColor" viewBox="0 0 24 24">
-                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                 </svg>
-               </div>`;
+        ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0 park-thumbnail" loading="lazy" />`
+        : photoFallbackHtml;
 
       // Type badge
       const typeLabel = formatParkType(park.primaryType);
@@ -368,19 +397,22 @@ const availableParks = await getAvailableParks(token);
                </button>`;
 
       article.innerHTML = `
-            ${photoHtml}
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
-                <span class="shrink-0 text-sm text-gold font-medium">${escapeHtml(park.distanceMiles)} mi</span>
+            <div class="park-card-collapsed">
+              ${photoHtml}
+              <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex items-start justify-between gap-2">
+                  <h3 class="min-w-0 font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
+                  <span class="shrink-0 text-sm text-gold font-medium">${escapeHtml(park.distanceMiles)} mi</span>
+                </div>
+                ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${escapeHtml(park.address)}</p>` : ""}
+                <div class="flex items-center gap-2 mt-2">
+                  ${typeBadge}
+                  ${isAdded ? '<span class="text-xs text-gold/70">In your list</span>' : ""}
+                </div>
               </div>
-              ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${escapeHtml(park.address)}</p>` : ""}
-              <div class="flex items-center gap-2 mt-2">
-                ${typeBadge}
-                ${isAdded ? '<span class="text-xs text-gold/70">In your list</span>' : ""}
-              </div>
+              ${actionButton}
             </div>
-            ${actionButton}
+            <div class="park-card-expanded"></div>
           `;
 
       nearbyParksList.appendChild(article);
@@ -388,6 +420,24 @@ const availableParks = await getAvailableParks(token);
 
     nearbyParksSection.classList.remove("hidden");
     setupNearbyAddButtons();
+    setupImageErrorHandlers();
+    setupCardExpansion();
+  }
+
+  function setupImageErrorHandlers() {
+    document.querySelectorAll(".park-thumbnail").forEach((img) => {
+      img.addEventListener(
+        "error",
+        function () {
+          const fallback = document.createElement("div");
+          fallback.className =
+            "w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0";
+          fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+          this.replaceWith(fallback);
+        },
+        { once: true }
+      );
+    });
   }
 
   function formatParkType(type) {
@@ -411,26 +461,10 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:addParkToUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          const { error } = await actions.addPark({ parkId });
 
-          if (!response.ok) {
-            throw new Error(`Failed to add park: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to add park");
+          if (error) {
+            throw error;
           }
 
           // Update UI to show added state
@@ -474,26 +508,10 @@ const availableParks = await getAvailableParks(token);
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          const response = await fetch(`${convexUrl}/api/mutation`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${convexToken}`,
-            },
-            body: JSON.stringify({
-              path: "userParks:addParkToUserList",
-              args: { parkId },
-              format: "json",
-            }),
-          });
+          const { error } = await actions.addPark({ parkId });
 
-          if (!response.ok) {
-            throw new Error(`Failed to add park: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (result.status === "error") {
-            throw new Error(result.errorMessage || "Failed to add park");
+          if (error) {
+            throw error;
           }
 
           // Fade out and remove the card
@@ -541,6 +559,323 @@ const availableParks = await getAvailableParks(token);
   document.getElementById("refresh-btn").addEventListener("click", () => {
     if (userLat && userLng) {
       fetchNearbyParks();
+    }
+  });
+
+  // Setup error handlers for server-rendered fallback thumbnails
+  document.querySelectorAll(".fallback-thumbnail").forEach((img) => {
+    img.addEventListener(
+      "error",
+      function () {
+        const fallback = document.createElement("div");
+        fallback.className =
+          "flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5";
+        fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+        this.replaceWith(fallback);
+      },
+      { once: true }
+    );
+  });
+
+  // ============================================
+  // Expandable Park Cards with Photo Carousel
+  // ============================================
+
+  let expandedCard = null;
+  const photoUrlCache = new Map(); // Cache fetched photo URLs by placeId
+
+  /**
+   * Generate carousel HTML from photo URLs.
+   */
+  function createCarouselHtml(photoUrls, parkName) {
+    if (!photoUrls || photoUrls.length === 0) {
+      return `
+        <div class="carousel-container single-photo">
+          <div class="carousel-slide">
+            <div class="photo-fallback">🌲</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const isSinglePhoto = photoUrls.length === 1;
+    const slides = photoUrls
+      .map(
+        (url, i) => `
+        <div class="carousel-slide">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(parkName)} photo ${i + 1}" loading="lazy" />
+        </div>
+      `
+      )
+      .join("");
+
+    const dots = photoUrls
+      .map(
+        (_, i) => `
+        <button class="carousel-dot${i === 0 ? " active" : ""}" data-index="${i}" aria-label="Go to photo ${i + 1}"></button>
+      `
+      )
+      .join("");
+
+    return `
+      <div class="carousel-container${isSinglePhoto ? " single-photo" : ""}">
+        <div class="carousel-slides">
+          ${slides}
+        </div>
+        <button class="carousel-nav prev" aria-label="Previous photo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button class="carousel-nav next" aria-label="Next photo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <button class="carousel-close" aria-label="Close">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div class="carousel-dots">
+          ${dots}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Initialize carousel interactions (scroll sync, navigation).
+   */
+  function initCarousel(container) {
+    const slidesContainer = container.querySelector(".carousel-slides");
+    const dots = container.querySelectorAll(".carousel-dot");
+    const prevBtn = container.querySelector(".carousel-nav.prev");
+    const nextBtn = container.querySelector(".carousel-nav.next");
+    const closeBtn = container.querySelector(".carousel-close");
+
+    if (!slidesContainer) return;
+
+    let currentIndex = 0;
+    const slideCount = slidesContainer.children.length;
+
+    // Update active dot based on scroll position
+    function updateDots() {
+      const scrollLeft = slidesContainer.scrollLeft;
+      const slideWidth = slidesContainer.offsetWidth;
+      const newIndex = Math.round(scrollLeft / slideWidth);
+      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < slideCount) {
+        currentIndex = newIndex;
+        dots.forEach((dot, i) => {
+          dot.classList.toggle("active", i === currentIndex);
+        });
+      }
+    }
+
+    // Scroll to specific slide
+    function scrollToSlide(index) {
+      const slideWidth = slidesContainer.offsetWidth;
+      slidesContainer.scrollTo({ left: index * slideWidth, behavior: "smooth" });
+    }
+
+    // Scroll event for dot sync
+    slidesContainer.addEventListener("scroll", updateDots);
+
+    // Dot click navigation
+    dots.forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const index = parseInt(dot.dataset.index);
+        scrollToSlide(index);
+      });
+    });
+
+    // Arrow navigation
+    if (prevBtn) {
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) scrollToSlide(currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex < slideCount - 1) scrollToSlide(currentIndex + 1);
+      });
+    }
+
+    // Close button
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const card = container.closest(".park-card");
+        if (card) collapseCard(card);
+      });
+    }
+
+    // Image error fallback
+    container.querySelectorAll(".carousel-slide img").forEach((img) => {
+      img.addEventListener(
+        "error",
+        function () {
+          this.outerHTML = '<div class="photo-fallback">🌲</div>';
+        },
+        { once: true }
+      );
+    });
+  }
+
+  /**
+   * Expand a card to show the photo carousel.
+   */
+  async function expandCard(card) {
+    // Collapse any previously expanded card
+    if (expandedCard && expandedCard !== card) {
+      collapseCard(expandedCard);
+    }
+
+    const expandedDiv = card.querySelector(".park-card-expanded");
+    if (!expandedDiv) return;
+
+    // Check if we have photo URLs or need to fetch them
+    let photoUrls = [];
+    const photoUrlsData = card.dataset.photoUrls;
+    const photoRefsData = card.dataset.photoRefs;
+    const placeId = card.dataset.placeId;
+
+    if (photoUrlsData) {
+      // JS-rendered cards have photoUrls directly
+      try {
+        photoUrls = JSON.parse(photoUrlsData);
+      } catch {
+        photoUrls = [];
+      }
+    } else if (photoRefsData && placeId) {
+      // SSR cards have photoRefs - need to fetch fresh URLs
+      if (photoUrlCache.has(placeId)) {
+        photoUrls = photoUrlCache.get(placeId);
+      } else {
+        // Show loading state
+        expandedDiv.innerHTML = `
+          <div class="carousel-loading">
+            <span class="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>
+          </div>
+        `;
+        card.dataset.expanded = "true";
+        expandedCard = card;
+
+        try {
+          const { data, error } = await actions.getFreshPhotoUrls({
+            placeId,
+            maxPhotos: 5,
+          });
+
+          if (error) throw error;
+          photoUrls = data || [];
+          photoUrlCache.set(placeId, photoUrls);
+        } catch (err) {
+          console.error("Failed to fetch photo URLs:", err);
+          photoUrls = [];
+        }
+
+        // Guard against stale updates: user may have collapsed/switched cards during fetch
+        if (card.dataset.expanded !== "true") {
+          return;
+        }
+      }
+    }
+
+    // Get park name from the card
+    const nameEl = card.querySelector("h3");
+    const parkName = nameEl ? nameEl.textContent : "Park";
+
+    // Render carousel
+    expandedDiv.innerHTML = createCarouselHtml(photoUrls, parkName);
+    card.dataset.expanded = "true";
+    expandedCard = card;
+
+    // Initialize carousel interactions
+    const container = expandedDiv.querySelector(".carousel-container");
+    if (container) {
+      initCarousel(container);
+    }
+  }
+
+  /**
+   * Collapse an expanded card.
+   */
+  function collapseCard(card) {
+    card.dataset.expanded = "false";
+    const expandedDiv = card.querySelector(".park-card-expanded");
+    if (expandedDiv) {
+      expandedDiv.innerHTML = "";
+    }
+    if (expandedCard === card) {
+      expandedCard = null;
+    }
+  }
+
+  /**
+   * Toggle card expansion.
+   */
+  function toggleCardExpansion(card) {
+    if (card.dataset.expanded === "true") {
+      collapseCard(card);
+    } else {
+      expandCard(card);
+    }
+  }
+
+  /**
+   * Setup click handlers for card expansion.
+   * Uses a guard to prevent duplicate event listeners when called multiple times.
+   */
+  let cardExpansionInitialized = false;
+  function setupCardExpansion() {
+    if (cardExpansionInitialized) return;
+    cardExpansionInitialized = true;
+
+    // Delegate clicks on park cards
+    [nearbyParksList, document.getElementById("fallback-parks-list")].forEach((list) => {
+      if (!list) return;
+
+      list.addEventListener("click", (e) => {
+        const target = e.target;
+
+        // Ignore clicks on add buttons
+        if (target.closest(".add-btn") || target.closest(".add-nearby-btn")) {
+          return;
+        }
+
+        // Ignore clicks on carousel controls
+        if (
+          target.closest(".carousel-nav") ||
+          target.closest(".carousel-dot") ||
+          target.closest(".carousel-close")
+        ) {
+          return;
+        }
+
+        // Find the park card
+        const card = target.closest(".park-card");
+        if (card) {
+          toggleCardExpansion(card);
+        }
+      });
+    });
+  }
+
+  // Setup card expansion for SSR fallback cards
+  setupCardExpansion();
+
+  // Outside click to collapse
+  document.addEventListener("click", (e) => {
+    if (!expandedCard) return;
+
+    // If click is outside the expanded card, collapse it
+    if (!expandedCard.contains(e.target)) {
+      collapseCard(expandedCard);
     }
   });
 </script>

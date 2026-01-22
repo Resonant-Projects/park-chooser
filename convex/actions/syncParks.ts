@@ -76,7 +76,20 @@ export const syncParks = action({
       lastSyncedAt: now,
     });
 
-    console.log(`Synced ${parks.length} parks successfully`);
+    // Log photo sync summary
+    const parksWithPhotos = parks.filter((p) => p.photoRefs.length > 0);
+    const parksWithoutPhotos = parks.filter((p) => p.photoRefs.length === 0);
+
+    console.log(
+      `[Sync Complete] Synced ${parks.length} parks: ${parksWithPhotos.length} with photos, ${parksWithoutPhotos.length} without photos`
+    );
+
+    if (parksWithoutPhotos.length > 0) {
+      console.warn(
+        `[Sync Warning] Parks without photos: ${parksWithoutPhotos.map((p) => p.name).join(", ")}`
+      );
+    }
+
     return { synced: true, count: parks.length };
   },
 });

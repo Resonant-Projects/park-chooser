@@ -18,6 +18,7 @@ const token = await getToken({ template: "convex" });
 if (!token) {
   return Astro.redirect("/sign-in");
 }
+
 const convexUrl = getConvexUrl();
 
 // Fetch parks and entitlements server-side
@@ -85,9 +86,18 @@ const isAtLimit = !canAddPark && isFreeUser;
   <div class="space-y-8">
     <!-- My Parks Section -->
     <section>
-      <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
-        My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
-      </h2>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-cream font-[Fraunces] text-xl">
+          My Parks ({currentParkCount}{isFreeUser && maxParks > 0 ? `/${maxParks}` : ""})
+        </h2>
+        <span
+          id="location-status"
+          class="text-mist flex items-center gap-1.5 text-xs opacity-0 transition-opacity duration-300"
+        >
+          <span id="location-status-icon"></span>
+          <span id="location-status-text"></span>
+        </span>
+      </div>
 
       {
         userParks.length === 0 ? (
@@ -98,21 +108,28 @@ const isAtLimit = !canAddPark && isFreeUser;
             <p class="text-mist">No parks yet. Add some below to get started.</p>
           </div>
         ) : (
-          <div class="grid gap-3">
+          <div class="grid gap-3" id="my-parks-grid">
             {userParks.map((park: any) => (
               <article
                 class="park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200"
                 data-park-id={park.parkId}
+                data-place-id={park.placeId}
               >
                 <div class="min-w-0 flex-1">
                   <h3 class="text-forest truncate font-[Fraunces] font-semibold">{park.name}</h3>
                   {park.customName && <p class="text-sunset truncate text-sm">{park.customName}</p>}
                   {park.address && <p class="text-moss truncate text-sm">{park.address}</p>}
-                  {park.visitCount > 0 && (
-                    <span class="bg-gold/20 text-forest mt-1 inline-block rounded-full px-2 py-0.5 text-xs">
-                      {park.visitCount} visit{park.visitCount !== 1 ? "s" : ""}
-                    </span>
-                  )}
+                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                    {park.visitCount > 0 && (
+                      <span class="bg-gold/20 text-forest inline-block rounded-full px-2 py-0.5 text-xs">
+                        {park.visitCount} visit{park.visitCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    <span
+                      class="distance-badge text-moss hidden text-xs"
+                      data-distance-for={park.placeId}
+                    />
+                  </div>
                 </div>
                 <button
                   class="remove-btn bg-sunset/10 hover:bg-sunset/20 text-sunset flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
@@ -147,16 +164,21 @@ const isAtLimit = !canAddPark && isFreeUser;
             <p class="text-mist">You've added all available parks!</p>
           </div>
         ) : (
-          <div class="grid gap-3">
+          <div class="grid gap-3" id="add-parks-grid">
             {availableParks.map((park: any) => (
               <article
                 class="park-card flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
                 data-available-id={park._id}
+                data-place-id={park.placeId}
               >
                 <div class="min-w-0 flex-1">
                   <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
                   {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
                   {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+                  <span
+                    class="distance-badge text-mist mt-1 hidden text-xs"
+                    data-distance-for={park.placeId}
+                  />
                 </div>
                 <button
                   class={`add-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
@@ -204,13 +226,38 @@ const isAtLimit = !canAddPark && isFreeUser;
     </nav>
   </footer>
 
+  <!-- Config script to pass SSR variables -->
   <script slot="scripts" define:vars={{ convexUrl, convexToken: token, isFreeUser, maxParks }}>
+    window.__MANAGE_CONFIG__ = {
+      convexUrl,
+      convexToken,
+      isFreeUser,
+      maxParks,
+    };
+  </script>
+
+  <!-- Module script using Astro Actions -->
+  <script>
+    import { actions } from "astro:actions";
+
+    // Get config from SSR
+    const { convexUrl, convexToken, isFreeUser, maxParks } = window.__MANAGE_CONFIG__;
+
     // Track current park count for dynamic limit checking
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let currentCount = 0;
 
-    // Helper to check if error is a limit error
+    // Store user coordinates for fetching travel time for newly added parks
+    let userLatitude = null;
+    let userLongitude = null;
+
+    // Store distances for sorting (placeId -> distance in miles as number)
+    // Declared here because createMyParkCard() accesses it before the distance feature section
+    const distanceData = new Map();
+
+    // Helper to check if error message indicates a limit error
     function isLimitError(errorMessage) {
+      if (!errorMessage) return false;
       return (
         errorMessage.includes("PARK_LIMIT_EXCEEDED") ||
         errorMessage.includes("park limit") ||
@@ -232,6 +279,9 @@ const isAtLimit = !canAddPark && isFreeUser;
       article.className =
         "park-card bg-cream flex items-center justify-between gap-4 rounded-xl p-4 transition-opacity duration-200";
       article.dataset.parkId = park.parkId;
+      if (park.placeId) {
+        article.dataset.placeId = park.placeId;
+      }
 
       // Build inner HTML
       let html = `
@@ -244,7 +294,27 @@ const isAtLimit = !canAddPark && isFreeUser;
       if (park.address) {
         html += `<p class="text-moss truncate text-sm">${escapeHtml(park.address)}</p>`;
       }
+
+      // Distance badge + visit count container
+      html += `<div class="mt-1 flex flex-wrap items-center gap-2">`;
       // New parks have visitCount = 0, so no badge needed
+      // Distance badge placeholder (will be populated if distance data is available)
+      if (park.placeId) {
+        const existingDistance = distanceData.get(park.placeId);
+        if (existingDistance && existingDistance !== Infinity) {
+          // If we already have distance data, show it
+          const distanceText =
+            document.querySelector(`[data-distance-for="${park.placeId}"]`)?.textContent || "";
+          if (distanceText) {
+            html += `<span class="distance-badge text-moss text-xs" data-distance-for="${escapeHtml(park.placeId)}">${escapeHtml(distanceText)}</span>`;
+          } else {
+            html += `<span class="distance-badge text-moss hidden text-xs" data-distance-for="${escapeHtml(park.placeId)}"></span>`;
+          }
+        } else {
+          html += `<span class="distance-badge text-moss hidden text-xs" data-distance-for="${escapeHtml(park.placeId)}"></span>`;
+        }
+      }
+      html += `</div>`;
 
       html += `</div>
         <button
@@ -272,6 +342,7 @@ const isAtLimit = !canAddPark && isFreeUser;
         // Replace with a grid container
         const grid = document.createElement("div");
         grid.className = "grid gap-3";
+        grid.id = "my-parks-grid";
         emptyMessage.replaceWith(grid);
       }
 
@@ -280,6 +351,7 @@ const isAtLimit = !canAddPark && isFreeUser;
       if (!grid) {
         grid = document.createElement("div");
         grid.className = "grid gap-3";
+        grid.id = "my-parks-grid";
         const h2 = myParksSection.querySelector("h2");
         if (h2) {
           h2.after(grid);
@@ -306,6 +378,35 @@ const isAtLimit = !canAddPark && isFreeUser;
         card.style.opacity = "1";
         card.style.transform = "translateX(0)";
       });
+
+      // Fetch travel time for the newly added park if we have user coordinates
+      if (userLatitude !== null && userLongitude !== null && park.placeId) {
+        fetchTravelTimeForPark(park.placeId);
+      }
+    }
+
+    // Fetch travel time for a single park and update its distance badge
+    async function fetchTravelTimeForPark(placeId) {
+      try {
+        const { data, error } = await actions.getTravelTime({
+          originLat: userLatitude,
+          originLng: userLongitude,
+          placeId,
+        });
+
+        if (error) {
+          console.error("Failed to fetch travel time:", error);
+          return;
+        }
+
+        if (data && data.distanceText) {
+          updateDistanceBadge(placeId, data.distanceText);
+          // Also update the distanceData map for sorting
+          distanceData.set(placeId, parseDistanceToMiles(data.distanceText));
+        }
+      } catch (err) {
+        console.error("Error fetching travel time:", err);
+      }
     }
 
     // Attach remove handler to a button (extracted for reuse)
@@ -332,9 +433,7 @@ const isAtLimit = !canAddPark && isFreeUser;
               format: "json",
             }),
           });
-
           const result = await response.json();
-
           if (result.status === "error") {
             throw new Error(result.errorMessage || "Failed to remove park");
           }
@@ -445,9 +544,7 @@ const isAtLimit = !canAddPark && isFreeUser;
               format: "json",
             }),
           });
-
           const result = await response.json();
-
           if (result.status === "error") {
             throw new Error(result.errorMessage || "Failed to add park");
           }
@@ -486,5 +583,189 @@ const isAtLimit = !canAddPark && isFreeUser;
     document.querySelectorAll(".remove-btn").forEach((btn) => {
       attachRemoveHandler(btn);
     });
+
+    // ============================================================
+    // Distance Display Feature
+    // ============================================================
+
+    // Parse distance text to miles number (e.g., "5.2 mi" -> 5.2)
+    function parseDistanceToMiles(distanceText) {
+      if (!distanceText) return Infinity;
+      const match = distanceText.match(/([\d.]+)\s*(mi|ft)/i);
+      if (!match) return Infinity;
+      const value = parseFloat(match[1]);
+      const unit = match[2].toLowerCase();
+      // Convert feet to miles if needed
+      return unit === "ft" ? value / 5280 : value;
+    }
+
+    // Update distance badge for a placeId
+    function updateDistanceBadge(placeId, distanceText) {
+      const badges = document.querySelectorAll(`[data-distance-for="${placeId}"]`);
+      badges.forEach((badge) => {
+        badge.textContent = distanceText;
+        badge.classList.remove("hidden");
+      });
+      // Store for sorting
+      distanceData.set(placeId, parseDistanceToMiles(distanceText));
+    }
+
+    // Sort "Add Parks" section by distance (closest first)
+    function sortAddParksByDistance() {
+      const grid = document.getElementById("add-parks-grid");
+      if (!grid) return;
+
+      const cards = Array.from(grid.querySelectorAll(".park-card"));
+      if (cards.length === 0) return;
+
+      // Sort cards by distance (closest first)
+      cards.sort((a, b) => {
+        const placeIdA = a.dataset.placeId;
+        const placeIdB = b.dataset.placeId;
+        const distA = distanceData.get(placeIdA) ?? Infinity;
+        const distB = distanceData.get(placeIdB) ?? Infinity;
+        return distA - distB;
+      });
+
+      // Re-append cards in sorted order (this preserves event listeners)
+      cards.forEach((card) => grid.appendChild(card));
+    }
+
+    // Fetch distances in batches
+    async function fetchDistances(placeIds, originLat, originLng) {
+      // Batch into groups of 25 (API limit)
+      const batches = [];
+      for (let i = 0; i < placeIds.length; i += 25) {
+        batches.push(placeIds.slice(i, i + 25));
+      }
+
+      // Fetch all batches in parallel using Astro Actions
+      const batchPromises = batches.map(async (batch) => {
+        try {
+          const { data, error } = await actions.getBatchTravelTime({
+            originLat,
+            originLng,
+            placeIds: batch,
+          });
+
+          if (error) {
+            console.error("Failed to fetch batch distances:", error);
+            return {};
+          }
+
+          return data || {};
+        } catch (err) {
+          console.error("Error fetching batch distances:", err);
+          return {};
+        }
+      });
+
+      const results = await Promise.all(batchPromises);
+
+      // Merge all results
+      const allDistances = {};
+      results.forEach((batchResult) => {
+        Object.assign(allDistances, batchResult);
+      });
+
+      return allDistances;
+    }
+
+    // Location status UI helpers
+    const locationStatus = document.getElementById("location-status");
+    const locationIcon = document.getElementById("location-status-icon");
+    const locationText = document.getElementById("location-status-text");
+
+    function showLocationStatus(icon, text, isError = false) {
+      if (!locationStatus || !locationIcon || !locationText) return;
+      locationIcon.innerHTML = icon;
+      locationText.textContent = text;
+      locationStatus.classList.toggle("text-sunset", isError);
+      locationStatus.classList.toggle("text-mist", !isError);
+      locationStatus.classList.remove("opacity-0");
+    }
+
+    function hideLocationStatus() {
+      if (!locationStatus) return;
+      locationStatus.classList.add("opacity-0");
+    }
+
+    // Initialize distance fetching
+    async function initDistances() {
+      // Collect all unique placeIds from park cards
+      const placeIds = new Set();
+      document.querySelectorAll("[data-place-id]").forEach((el) => {
+        const placeId = el.dataset.placeId;
+        if (placeId) placeIds.add(placeId);
+      });
+
+      if (placeIds.size === 0) return;
+
+      // Request geolocation
+      if (!navigator.geolocation) {
+        showLocationStatus(
+          '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>',
+          "Location not supported",
+          true
+        );
+        return;
+      }
+
+      // Show loading state
+      showLocationStatus(
+        '<span class="w-3 h-3 border-2 border-mist border-t-cream rounded-full animate-spin inline-block"></span>',
+        "Fetching location..."
+      );
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          // Store coordinates for newly added parks
+          userLatitude = latitude;
+          userLongitude = longitude;
+
+          // Update status while fetching distances
+          showLocationStatus(
+            '<span class="w-3 h-3 border-2 border-mist border-t-cream rounded-full animate-spin inline-block"></span>',
+            "Calculating distances..."
+          );
+
+          // Fetch all distances
+          const distances = await fetchDistances(Array.from(placeIds), latitude, longitude);
+
+          // Update UI with distance badges
+          for (const [placeId, result] of Object.entries(distances)) {
+            if (result && result.distanceText) {
+              updateDistanceBadge(placeId, result.distanceText);
+            }
+          }
+
+          // Sort "Add Parks" section by distance
+          sortAddParksByDistance();
+
+          // Hide status after success (brief flash to show completion)
+          setTimeout(hideLocationStatus, 1500);
+        },
+        (error) => {
+          // Show user-friendly error
+          let errorText = "Location unavailable";
+          if (error.code === error.PERMISSION_DENIED) {
+            errorText = "Location access denied";
+          } else if (error.code === error.TIMEOUT) {
+            errorText = "Location timed out";
+          }
+          showLocationStatus(
+            '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>',
+            errorText,
+            true
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    }
+
+    // Start fetching distances when page loads
+    initDistances();
   </script>
 </PageLayout>

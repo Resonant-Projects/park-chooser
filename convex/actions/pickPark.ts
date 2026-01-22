@@ -3,7 +3,7 @@
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
-import { getPhotoUrl } from "../lib/googleMaps";
+import { loadFreshPhotos } from "../lib/googleMaps";
 import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
 
 export interface PickedPark {
@@ -12,6 +12,7 @@ export interface PickedPark {
   customName?: string;
   address?: string;
   photoUrl?: string;
+  photoUrls?: string[]; // All available photos for carousel
   placeId: string;
 }
 
@@ -113,18 +114,21 @@ export const pickPark = action({
       userId: user._id,
     });
 
-    // Generate photo URL if we have a photo reference
-    let photoUrl: string | undefined;
-    if (selectedPark.photoRefs && selectedPark.photoRefs.length > 0 && apiKey) {
-      photoUrl = getPhotoUrl(selectedPark.photoRefs[0], apiKey, 1200);
-    }
+    // Generate photo URLs - ALWAYS fetch fresh refs because Google photo names expire
+    const photos = await loadFreshPhotos(
+      selectedPark.placeId,
+      selectedPark.name,
+      apiKey,
+      "pickPark"
+    );
 
     return {
       _id: selectedPark.parkId.toString(),
       name: selectedPark.name,
       customName: selectedPark.customName,
       address: selectedPark.address,
-      photoUrl,
+      photoUrl: photos.photoUrl,
+      photoUrls: photos.photoUrls.length > 0 ? photos.photoUrls : undefined,
       placeId: selectedPark.placeId,
     };
   },
