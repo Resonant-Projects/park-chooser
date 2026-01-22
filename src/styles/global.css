@@ -34,6 +34,7 @@ body {
 }
 
 .container {
+  width: 100%;
   max-width: 640px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
@@ -154,6 +155,10 @@ main {
 @media (max-width: 480px) {
   .title {
     font-size: 2.25rem;
+  }
+
+  .container {
+    padding: 1.5rem 1rem;
   }
 }
 

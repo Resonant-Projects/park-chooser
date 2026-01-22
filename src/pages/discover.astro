@@ -455,8 +455,6 @@ const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          // Import actions dynamically to avoid SSR issues
-          const actions = await getActions();
           const { error } = await actions.addPark({ parkId });
 
           if (error) {
@@ -504,8 +502,6 @@ const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
           '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
 
         try {
-          // Import actions dynamically to avoid SSR issues
-          const actions = await getActions();
           const { error } = await actions.addPark({ parkId });
 
           if (error) {
