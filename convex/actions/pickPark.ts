@@ -2,7 +2,7 @@
 
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
 import { loadFreshPhotos } from "../lib/googleMaps";
 import { ENTITLEMENT_ERRORS, createLimitError, getNextMidnightUTC } from "../lib/entitlements";
 

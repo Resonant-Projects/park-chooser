@@ -1,5 +1,5 @@
-import { DatabaseReader, DatabaseWriter } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
+import type { DatabaseReader, DatabaseWriter } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 /**
  * Fraud detection for referral system.

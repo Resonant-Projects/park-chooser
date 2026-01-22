@@ -2,7 +2,7 @@
 
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Doc } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 
 interface BackfillResult {
   success: boolean;
