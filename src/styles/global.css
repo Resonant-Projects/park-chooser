@@ -370,9 +370,9 @@ main {
   display: none;
 }
 
-/* Mobile: always show nav arrows */
+/* Mobile: always show nav arrows (except disabled) */
 @media (max-width: 768px) {
-  .carousel-nav {
+  .carousel-nav:not(:disabled) {
     opacity: 0.8;
   }
 }
