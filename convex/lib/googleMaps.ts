@@ -223,6 +223,52 @@ export async function getFreshPhotoUrls(
   return getPhotoUrls(photoRefs, apiKey, maxWidth, maxPhotos);
 }
 
+export interface FreshPhotosResult {
+  photoUrl?: string;
+  photoUrls: string[];
+}
+
+/**
+ * Load fresh photos for a place with logging.
+ * Consolidates the common pattern of fetching fresh photo refs and generating URLs.
+ *
+ * @param placeId The Google Place ID
+ * @param parkName The park name for logging
+ * @param apiKey Google Maps API key (or undefined to skip)
+ * @param caller The calling function name for log context
+ * @param maxWidth Maximum width in pixels (default 1200)
+ * @param maxPhotos Maximum number of photos (default 5)
+ * @returns Object with photoUrl (first photo) and photoUrls array
+ */
+export async function loadFreshPhotos(
+  placeId: string,
+  parkName: string,
+  apiKey: string | undefined,
+  caller: string,
+  maxWidth = 1200,
+  maxPhotos = 5
+): Promise<FreshPhotosResult> {
+  if (!apiKey) {
+    console.error(`[${caller}] GOOGLE_MAPS_API_KEY not configured - photos will not load!`);
+    return { photoUrls: [] };
+  }
+
+  console.log(`[${caller}] Fetching fresh photo refs for "${parkName}" (placeId: ${placeId})`);
+  const freshPhotoRefs = await getFreshPhotoRefs(placeId, apiKey, maxPhotos * 2);
+
+  if (freshPhotoRefs.length > 0) {
+    const photoUrls = getPhotoUrls(freshPhotoRefs, apiKey, maxWidth, maxPhotos);
+    console.log(`[${caller}] Generated ${photoUrls.length} photo URLs for "${parkName}"`);
+    return {
+      photoUrl: photoUrls[0],
+      photoUrls,
+    };
+  }
+
+  console.warn(`[${caller}] No photos available for park "${parkName}" (placeId: ${placeId})`);
+  return { photoUrls: [] };
+}
+
 export interface TravelTimeResult {
   durationText: string; // e.g., "15 mins"
   distanceText: string; // e.g., "5.2 mi"
@@ -301,11 +347,11 @@ export async function getTravelTimeBatch(
   // Distance Matrix API supports max 25 destinations per request
   if (destinationPlaceIds.length > 25) {
     console.warn("getTravelTimeBatch: Truncating to 25 destinations (API limit)");
-    destinationPlaceIds = destinationPlaceIds.slice(0, 25);
   }
+  const placeIds = destinationPlaceIds.slice(0, 25);
 
   // Build pipe-separated destinations string
-  const destinations = destinationPlaceIds.map((id) => `place_id:${id}`).join("|");
+  const destinations = placeIds.map((id) => `place_id:${id}`).join("|");
 
   const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
   url.searchParams.set("origins", `${originLat},${originLng}`);
@@ -320,7 +366,7 @@ export async function getTravelTimeBatch(
     if (!response.ok) {
       console.error(`Distance Matrix API batch error: ${response.status}`);
       // Return null for all destinations on API error
-      for (const placeId of destinationPlaceIds) {
+      for (const placeId of placeIds) {
         results.set(placeId, null);
       }
       return results;
@@ -330,7 +376,7 @@ export async function getTravelTimeBatch(
 
     if (data.status !== "OK") {
       console.error(`Distance Matrix API batch status: ${data.status}`);
-      for (const placeId of destinationPlaceIds) {
+      for (const placeId of placeIds) {
         results.set(placeId, null);
       }
       return results;
@@ -339,8 +385,8 @@ export async function getTravelTimeBatch(
     // Process results - elements array corresponds to destinations array
     const elements = data.rows?.[0]?.elements || [];
 
-    for (let i = 0; i < destinationPlaceIds.length; i++) {
-      const placeId = destinationPlaceIds[i];
+    for (let i = 0; i < placeIds.length; i++) {
+      const placeId = placeIds[i];
       const element = elements[i];
 
       if (element && element.status === "OK") {
@@ -357,7 +403,7 @@ export async function getTravelTimeBatch(
   } catch (error) {
     console.error("Error fetching batch travel times:", error);
     // Return null for all destinations on error
-    for (const placeId of destinationPlaceIds) {
+    for (const placeId of placeIds) {
       results.set(placeId, null);
     }
     return results;

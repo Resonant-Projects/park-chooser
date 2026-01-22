@@ -2,7 +2,7 @@
 
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { getPhotoUrls, getFreshPhotoRefs } from "../lib/googleMaps";
+import { loadFreshPhotos } from "../lib/googleMaps";
 
 export interface TodaysPickResult {
   _id: string;
@@ -34,38 +34,20 @@ export const getTodaysPick = action({
     if (!todaysPick) return null;
 
     // Generate photo URLs - ALWAYS fetch fresh refs because Google photo names expire
-    let photoUrl: string | undefined;
-    let photoUrls: string[] = [];
-
-    if (apiKey) {
-      // Always fetch fresh photo references - stored refs expire and return 404
-      console.log(
-        `[getTodaysPick] Fetching fresh photo refs for "${todaysPick.name}" (placeId: ${todaysPick.placeId})`
-      );
-      const freshPhotoRefs = await getFreshPhotoRefs(todaysPick.placeId, apiKey, 10);
-
-      if (freshPhotoRefs.length > 0) {
-        photoUrls = getPhotoUrls(freshPhotoRefs, apiKey, 1200, 5);
-        photoUrl = photoUrls[0];
-        console.log(
-          `[getTodaysPick] Generated ${photoUrls.length} photo URLs for "${todaysPick.name}"`
-        );
-      } else {
-        console.warn(
-          `[getTodaysPick] No photos available for park "${todaysPick.name}" (placeId: ${todaysPick.placeId})`
-        );
-      }
-    } else {
-      console.error("[getTodaysPick] GOOGLE_MAPS_API_KEY not configured - photos will not load!");
-    }
+    const photos = await loadFreshPhotos(
+      todaysPick.placeId,
+      todaysPick.name,
+      apiKey,
+      "getTodaysPick"
+    );
 
     return {
       _id: todaysPick.parkId.toString(),
       name: todaysPick.name,
       customName: todaysPick.customName,
       address: todaysPick.address,
-      photoUrl,
-      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+      photoUrl: photos.photoUrl,
+      photoUrls: photos.photoUrls.length > 0 ? photos.photoUrls : undefined,
       placeId: todaysPick.placeId,
       chosenAt: todaysPick.chosenAt,
     };

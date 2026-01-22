@@ -5,6 +5,7 @@ import {
   callAction,
   type UserEntitlements,
 } from "../lib/convexClient";
+import type { TodaysPickResult } from "../../convex/actions/getTodaysPick";
 import { UserButton } from "@clerk/astro/components";
 import Analytics from "@vercel/analytics/astro";
 import SEO from "../components/SEO.astro";
@@ -44,18 +45,6 @@ const isFirstTimeUser = convexToken && entitlements?.usage.currentParks === 0;
 
 // Get referral code from cookie (for new user signups)
 const referralCode = Astro.cookies.get("referral_code")?.value ?? null;
-
-// Today's pick result type
-interface TodaysPickResult {
-  _id: string;
-  name: string;
-  customName?: string;
-  address?: string;
-  photoUrl?: string;
-  photoUrls?: string[]; // All available photos for carousel
-  placeId: string;
-  chosenAt: number;
-}
 
 // Fetch today's pick if limit reached and user has picks today
 let todaysPick: TodaysPickResult | null = null;
@@ -109,81 +98,6 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
       />
     </noscript>
     <Analytics />
-    <style is:global>
-      /* Photo Carousel Styles */
-      .photo-carousel {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 16/10;
-        overflow: hidden;
-      }
-      .photo-carousel-scroll {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        height: 100%;
-        width: 100%;
-      }
-      .photo-carousel-scroll::-webkit-scrollbar {
-        display: none;
-      }
-      .photo-carousel-slide {
-        flex: 0 0 100%;
-        min-width: 100%;
-        scroll-snap-align: start;
-        height: 100%;
-      }
-      .photo-carousel-slide img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .photo-carousel-dots {
-        position: absolute;
-        bottom: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 6px;
-        z-index: 10;
-      }
-      .photo-carousel-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.5);
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        transition:
-          background-color 0.2s,
-          transform 0.2s;
-      }
-      .photo-carousel-dot.active {
-        background: white;
-        transform: scale(1.2);
-      }
-      .photo-carousel-dot:hover {
-        background: rgba(255, 255, 255, 0.8);
-      }
-      /* Fallback placeholder for broken images */
-      .photo-fallback {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #2d5a47 0%, #1a3a2e 100%);
-        color: #c9a227;
-        font-size: 4rem;
-      }
-    </style>
   </head>
   <body>
     <div class="container">
@@ -255,12 +169,12 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
               <div class="w-full">
                 <article class="bg-cream mb-6 w-full overflow-hidden rounded-3xl shadow-2xl">
                   {(todaysPick.photoUrls?.length || todaysPick.photoUrl) && (
-                    <div class="photo-carousel">
-                      <div class="photo-carousel-scroll" data-carousel>
+                    <div class="carousel-container">
+                      <div class="carousel-slides" data-carousel>
                         {(todaysPick.photoUrls || [todaysPick.photoUrl])
                           .filter(Boolean)
                           .map((url, i) => (
-                            <div class="photo-carousel-slide">
+                            <div class="carousel-slide">
                               <img
                                 src={url}
                                 alt={`Photo ${i + 1} of ${todaysPick.name}`}
@@ -271,10 +185,10 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
                           ))}
                       </div>
                       {(todaysPick.photoUrls?.length || 0) > 1 && (
-                        <div class="photo-carousel-dots" data-carousel-dots>
+                        <div class="carousel-dots" data-carousel-dots>
                           {todaysPick.photoUrls?.map((_, i) => (
                             <button
-                              class={`photo-carousel-dot ${i === 0 ? "active" : ""}`}
+                              class={`carousel-dot ${i === 0 ? "active" : ""}`}
                               data-index={i}
                               aria-label={`Go to photo ${i + 1}`}
                             />
@@ -606,7 +520,7 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
             const slidesHtml = photos
               .map(
                 (url, i) => `
-              <div class="photo-carousel-slide">
+              <div class="carousel-slide">
                 <img
                   src="${url}"
                   alt="Photo ${i + 1} of ${park.name}"
@@ -621,12 +535,12 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
             const dotsHtml =
               photos.length > 1
                 ? `
-              <div class="photo-carousel-dots" data-carousel-dots>
+              <div class="carousel-dots" data-carousel-dots>
                 ${photos
                   .map(
                     (_, i) => `
                   <button
-                    class="photo-carousel-dot ${i === 0 ? "active" : ""}"
+                    class="carousel-dot ${i === 0 ? "active" : ""}"
                     data-index="${i}"
                     aria-label="Go to photo ${i + 1}"
                   ></button>
@@ -638,8 +552,8 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
                 : "";
 
             carouselHtml = `
-              <div class="photo-carousel">
-                <div class="photo-carousel-scroll" data-carousel>
+              <div class="carousel-container">
+                <div class="carousel-slides" data-carousel>
                   ${slidesHtml}
                 </div>
                 ${dotsHtml}
@@ -726,7 +640,7 @@ if (convexToken && !canPick && isFreeUser && entitlements?.usage.picksToday > 0)
           const dots = carousel.parentElement.querySelector("[data-carousel-dots]");
           if (!dots) return;
 
-          const dotButtons = dots.querySelectorAll(".photo-carousel-dot");
+          const dotButtons = dots.querySelectorAll(".carousel-dot");
 
           // Update dots on scroll
           carousel.addEventListener("scroll", () => {

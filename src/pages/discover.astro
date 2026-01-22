@@ -1,9 +1,13 @@
 ---
 import PageLayout from "../layouts/PageLayout.astro";
 import SEO from "../components/SEO.astro";
-import { getAvailableParks, getPhotoUrlFromRef } from "../lib/convexClient";
+import { getAvailableParks, getPhotoUrlFromRef, type AvailablePark } from "../lib/convexClient";
 import { UserButton } from "@clerk/astro/components";
 import { SITE_NAME } from "../lib/config";
+
+interface AvailableParkWithPhoto extends AvailablePark {
+  photoUrl: string | null;
+}
 
 // Auth check
 const { userId, getToken } = Astro.locals.auth();
@@ -21,13 +25,15 @@ const availableParks = await getAvailableParks(token);
 
 // Generate photo URLs for fallback parks (SSR)
 const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
-const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
-  ...park,
-  photoUrl:
-    park.photoRefs?.[0] && googleMapsApiKey
-      ? getPhotoUrlFromRef(park.photoRefs[0], googleMapsApiKey, 128)
-      : null,
-}));
+const availableParksWithPhotos: AvailableParkWithPhoto[] = availableParks
+  .slice(0, 10)
+  .map((park) => ({
+    ...park,
+    photoUrl:
+      park.photoRefs?.[0] && googleMapsApiKey
+        ? getPhotoUrlFromRef(park.photoRefs[0], googleMapsApiKey, 128)
+        : null,
+  }));
 ---
 
 <PageLayout
@@ -165,7 +171,7 @@ const availableParksWithPhotos = availableParks.slice(0, 10).map((park) => ({
     </div>
     <div id="fallback-parks-list" class="grid gap-3">
       {
-        availableParksWithPhotos.map((park: any) => (
+        availableParksWithPhotos.map((park) => (
           <article
             class="park-card rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
             data-available-id={park._id}

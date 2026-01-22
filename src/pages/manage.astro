@@ -226,10 +226,30 @@ const isAtLimit = !canAddPark && isFreeUser;
     </nav>
   </footer>
 
+  <!-- Config script to pass SSR variables -->
   <script slot="scripts" define:vars={{ convexUrl, convexToken: token, isFreeUser, maxParks }}>
+    window.__MANAGE_CONFIG__ = {
+      convexUrl,
+      convexToken,
+      isFreeUser,
+      maxParks,
+    };
+  </script>
+
+  <!-- Module script using Astro Actions -->
+  <script>
+    import { actions } from "astro:actions";
+
+    // Get config from SSR
+    const { convexUrl, convexToken, isFreeUser, maxParks } = window.__MANAGE_CONFIG__;
+
     // Track current park count for dynamic limit checking
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let currentCount = 0;
+
+    // Store user coordinates for fetching travel time for newly added parks
+    let userLatitude = null;
+    let userLongitude = null;
 
     // Helper to check if error message indicates a limit error
     function isLimitError(errorMessage) {
@@ -354,6 +374,35 @@ const isAtLimit = !canAddPark && isFreeUser;
         card.style.opacity = "1";
         card.style.transform = "translateX(0)";
       });
+
+      // Fetch travel time for the newly added park if we have user coordinates
+      if (userLatitude !== null && userLongitude !== null && park.placeId) {
+        fetchTravelTimeForPark(park.placeId);
+      }
+    }
+
+    // Fetch travel time for a single park and update its distance badge
+    async function fetchTravelTimeForPark(placeId) {
+      try {
+        const { data, error } = await actions.getTravelTime({
+          originLat: userLatitude,
+          originLng: userLongitude,
+          placeId,
+        });
+
+        if (error) {
+          console.error("Failed to fetch travel time:", error);
+          return;
+        }
+
+        if (data && data.distanceText) {
+          updateDistanceBadge(placeId, data.distanceText);
+          // Also update the distanceData map for sorting
+          distanceData.set(placeId, parseDistanceToMiles(data.distanceText));
+        }
+      } catch (err) {
+        console.error("Error fetching travel time:", err);
+      }
     }
 
     // Attach remove handler to a button (extracted for reuse)
@@ -592,24 +641,18 @@ const isAtLimit = !canAddPark && isFreeUser;
       // Fetch all batches in parallel using Astro Actions
       const batchPromises = batches.map(async (batch) => {
         try {
-          const response = await fetch("/_actions/getBatchTravelTime", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              originLat,
-              originLng,
-              placeIds: batch,
-            }),
+          const { data, error } = await actions.getBatchTravelTime({
+            originLat,
+            originLng,
+            placeIds: batch,
           });
 
-          if (!response.ok) {
-            console.error("Failed to fetch batch distances:", response.status);
+          if (error) {
+            console.error("Failed to fetch batch distances:", error);
             return {};
           }
 
-          const result = await response.json();
-          // Astro Actions wrap result in { data } or { error }
-          return result.data || {};
+          return data || {};
         } catch (err) {
           console.error("Error fetching batch distances:", err);
           return {};
@@ -676,6 +719,10 @@ const isAtLimit = !canAddPark && isFreeUser;
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+
+          // Store coordinates for newly added parks
+          userLatitude = latitude;
+          userLongitude = longitude;
 
           // Update status while fetching distances
           showLocationStatus(
