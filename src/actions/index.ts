@@ -9,7 +9,13 @@
 
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
-import { callAction, callMutation, callQuery, type UserEntitlements } from "../lib/convexClient";
+import {
+  callAction,
+  callMutation,
+  callQuery,
+  getPhotoUrlFromRef,
+  type UserEntitlements,
+} from "../lib/convexClient";
 
 // Get Convex URL from environment
 function getConvexUrl(): string {
@@ -332,6 +338,40 @@ export const server = {
   }),
 
   /**
+   * Calculate travel distances to multiple parks in a single batch API call.
+   * More efficient than individual calls. Max 25 place IDs per call.
+   */
+  getBatchTravelTime: defineAction({
+    input: z.object({
+      originLat: z.number().min(-90).max(90),
+      originLng: z.number().min(-180).max(180),
+      placeIds: z.array(z.string().min(1)).max(25),
+    }),
+    handler: async (input, context) => {
+      const token = await getConvexToken(context);
+      const convexUrl = getConvexUrl();
+
+      try {
+        const result = await callAction<{
+          [placeId: string]: { durationText: string; distanceText: string } | null;
+        }>(
+          convexUrl,
+          "actions/getTravelTime:calculateBatchTravelTime",
+          {
+            originLat: input.originLat,
+            originLng: input.originLng,
+            placeIds: input.placeIds,
+          },
+          token
+        );
+        return result;
+      } catch (error) {
+        throw mapConvexError(error);
+      }
+    },
+  }),
+
+  /**
    * Get today's pick for the current user.
    * Returns the park picked today (if any) or null.
    */
@@ -348,6 +388,52 @@ export const server = {
           token
         );
         return result;
+      } catch (error) {
+        throw mapConvexError(error);
+      }
+    },
+  }),
+
+  /**
+   * Get fresh photo URLs for a park.
+   * Used for SSR cards that have photoRefs but need generated URLs.
+   */
+  getFreshPhotoUrls: defineAction({
+    input: z.object({
+      placeId: z.string().min(1, "Place ID is required"),
+      maxPhotos: z.number().min(1).max(10).default(5),
+    }),
+    handler: async (input, context) => {
+      const token = await getConvexToken(context);
+      const convexUrl = getConvexUrl();
+      const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+
+      if (!googleMapsApiKey) {
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Google Maps API key not configured",
+        });
+      }
+
+      try {
+        // Query the park by placeId to get photoRefs
+        const park = await callQuery<{ photoRefs?: string[] } | null>(
+          convexUrl,
+          "parks:getByPlaceId",
+          { placeId: input.placeId },
+          token
+        );
+
+        if (!park || !park.photoRefs || park.photoRefs.length === 0) {
+          return [];
+        }
+
+        // Generate photo URLs from refs
+        const photoUrls = park.photoRefs.slice(0, input.maxPhotos).map((ref) => {
+          return getPhotoUrlFromRef(ref, googleMapsApiKey, 800);
+        });
+
+        return photoUrls;
       } catch (error) {
         throw mapConvexError(error);
       }

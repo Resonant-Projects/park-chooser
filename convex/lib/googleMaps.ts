@@ -276,6 +276,94 @@ export async function getTravelTime(
   }
 }
 
+/**
+ * Calculate driving distances from origin to multiple destinations in a single API call.
+ * Uses Google Distance Matrix API with pipe-separated destinations (max 25 per call).
+ *
+ * @param originLat Origin latitude
+ * @param originLng Origin longitude
+ * @param destinationPlaceIds Array of Google Place IDs (max 25)
+ * @param apiKey Google Maps API key
+ * @returns Map of placeId to TravelTimeResult (null for failed lookups)
+ */
+export async function getTravelTimeBatch(
+  originLat: number,
+  originLng: number,
+  destinationPlaceIds: string[],
+  apiKey: string
+): Promise<Map<string, TravelTimeResult | null>> {
+  const results = new Map<string, TravelTimeResult | null>();
+
+  if (destinationPlaceIds.length === 0) {
+    return results;
+  }
+
+  // Distance Matrix API supports max 25 destinations per request
+  if (destinationPlaceIds.length > 25) {
+    console.warn("getTravelTimeBatch: Truncating to 25 destinations (API limit)");
+    destinationPlaceIds = destinationPlaceIds.slice(0, 25);
+  }
+
+  // Build pipe-separated destinations string
+  const destinations = destinationPlaceIds.map((id) => `place_id:${id}`).join("|");
+
+  const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
+  url.searchParams.set("origins", `${originLat},${originLng}`);
+  url.searchParams.set("destinations", destinations);
+  url.searchParams.set("mode", "driving");
+  url.searchParams.set("units", "imperial");
+  url.searchParams.set("key", apiKey);
+
+  try {
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      console.error(`Distance Matrix API batch error: ${response.status}`);
+      // Return null for all destinations on API error
+      for (const placeId of destinationPlaceIds) {
+        results.set(placeId, null);
+      }
+      return results;
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK") {
+      console.error(`Distance Matrix API batch status: ${data.status}`);
+      for (const placeId of destinationPlaceIds) {
+        results.set(placeId, null);
+      }
+      return results;
+    }
+
+    // Process results - elements array corresponds to destinations array
+    const elements = data.rows?.[0]?.elements || [];
+
+    for (let i = 0; i < destinationPlaceIds.length; i++) {
+      const placeId = destinationPlaceIds[i];
+      const element = elements[i];
+
+      if (element && element.status === "OK") {
+        results.set(placeId, {
+          durationText: element.duration.text,
+          distanceText: element.distance.text,
+        });
+      } else {
+        results.set(placeId, null);
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Error fetching batch travel times:", error);
+    // Return null for all destinations on error
+    for (const placeId of destinationPlaceIds) {
+      results.set(placeId, null);
+    }
+    return results;
+  }
+}
+
 // ============================================================
 // Nearby Search (Location Discovery)
 // ============================================================
