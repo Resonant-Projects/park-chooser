@@ -411,9 +411,8 @@ const isPremium = entitlements?.tier === "premium";
             url: link,
           });
         } catch (err) {
-          if ((err as Error).name !== "AbortError") {
-            console.error("Share failed:", err);
-          }
+          if (err instanceof Error && err.name === "AbortError") return;
+          console.error("Share failed:", err);
         }
       });
     }

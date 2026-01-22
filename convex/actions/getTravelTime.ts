@@ -19,7 +19,7 @@ export const calculateTravelTime = action({
     originLng: v.number(),
     placeId: v.string(),
   },
-  handler: async (ctx, args): Promise<TravelTimeResponse | null> => {
+  handler: async (_ctx, args): Promise<TravelTimeResponse | null> => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
@@ -55,7 +55,7 @@ export const calculateBatchTravelTime = action({
     originLng: v.number(),
     placeIds: v.array(v.string()),
   },
-  handler: async (ctx, args): Promise<BatchTravelTimeResponse> => {
+  handler: async (_ctx, args): Promise<BatchTravelTimeResponse> => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
