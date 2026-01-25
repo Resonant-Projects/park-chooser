@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../../integrations/clerk/provider";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAction } from "convex/react";
 import { ArrowLeft, Heart, Star } from "lucide-react";

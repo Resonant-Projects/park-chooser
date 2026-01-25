@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../integrations/clerk/provider";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
