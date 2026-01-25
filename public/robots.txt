@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /pricing
+Allow: /help
+
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /app
+Disallow: /manage
+Disallow: /discover
+Disallow: /stats
+Disallow: /account
+Disallow: /api/
+
+Sitemap: https://pickapark.app/sitemap.xml

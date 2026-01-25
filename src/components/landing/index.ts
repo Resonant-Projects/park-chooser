@@ -1,0 +1,6 @@
+export { FloatingParticles } from './FloatingParticles'
+export { HeroSection } from './HeroSection'
+export { ProblemSection } from './ProblemSection'
+export { HowItWorksSection } from './HowItWorksSection'
+export { ValuePropsSection } from './ValuePropsSection'
+export { CTASection } from './CTASection'
