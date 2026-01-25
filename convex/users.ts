@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Store or update user from authentication.
@@ -69,15 +70,7 @@ export const store = mutation({
 export const getCurrent = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		return await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
+		return await getUserFromIdentity(ctx);
 	},
 });
 
@@ -102,15 +95,7 @@ export const getByToken = query({
 export const getCurrentUserInternal = internalQuery({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		return await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
+		return await getUserFromIdentity(ctx);
 	},
 });
 

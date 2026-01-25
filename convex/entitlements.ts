@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getEffectiveTier, getTodayDateString, TIER_LIMITS } from "./lib/entitlements";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Get current user's entitlement
@@ -8,16 +9,7 @@ import { getEffectiveTier, getTodayDateString, TIER_LIMITS } from "./lib/entitle
 export const getMyEntitlement = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return null;
 		}

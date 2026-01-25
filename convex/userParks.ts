@@ -6,6 +6,7 @@ import {
 	getEffectiveTier,
 	TIER_LIMITS,
 } from "./lib/entitlements";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Get user's park list with park details
@@ -13,16 +14,7 @@ import {
 export const getMyParks = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return [];
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return [];
 		}
@@ -54,16 +46,7 @@ export const getMyParks = query({
 export const getUserParkCount = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return 0;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return 0;
 		}
@@ -86,18 +69,9 @@ export const addPark = mutation({
 		customName: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			throw new Error("Must be authenticated to add parks");
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
-			throw new Error("User not found");
+			throw new Error("Must be authenticated to add parks");
 		}
 
 		// Check if park already in user's list
@@ -157,18 +131,9 @@ export const removePark = mutation({
 		userParkId: v.id("userParks"),
 	},
 	handler: async (ctx, args) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			throw new Error("Must be authenticated to remove parks");
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
-			throw new Error("User not found");
+			throw new Error("Must be authenticated to remove parks");
 		}
 
 		const userPark = await ctx.db.get(args.userParkId);
@@ -301,16 +266,7 @@ export const incrementUserParkVisit = internalMutation({
 export const getMyParksByVisits = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return [];
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return [];
 		}

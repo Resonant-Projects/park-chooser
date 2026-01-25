@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalQuery, mutation, query } from "./_generated/server";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Submit user feedback
@@ -12,20 +13,9 @@ export const submit = mutation({
 		featureRequestsText: v.optional(v.string()),
 	},
 	handler: async (ctx, { rating, likesText, improvementsText, featureRequestsText }) => {
-		// Verify the caller is authenticated
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			throw new Error("Must be authenticated to submit feedback");
-		}
-
-		// Get user from database
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
-			throw new Error("User not found");
+			throw new Error("Must be authenticated to submit feedback");
 		}
 
 		// Validate rating is an integer between 1-5
@@ -52,16 +42,7 @@ export const submit = mutation({
 export const getByCurrentUser = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return null;
 		}

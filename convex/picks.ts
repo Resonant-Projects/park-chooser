@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getTodayDateString } from "./lib/entitlements";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Get recent picks for display
@@ -8,16 +9,7 @@ import { getTodayDateString } from "./lib/entitlements";
 export const getRecent = query({
 	args: { limit: v.optional(v.number()) },
 	handler: async (ctx, args) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return [];
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return [];
 		}
@@ -119,16 +111,7 @@ export const getTodaysPickForUser = internalQuery({
 export const getTodaysPickCount = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return 0;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return 0;
 		}

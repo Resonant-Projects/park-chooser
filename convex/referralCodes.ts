@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
  * Generate a user-friendly referral code using cryptographically secure randomness.
@@ -37,18 +38,9 @@ function generateCode(name: string | undefined): string {
 export const getOrCreateMyCode = mutation({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			throw new Error("Authentication required");
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
-			throw new Error("User not found");
+			throw new Error("Authentication required");
 		}
 
 		// Check for existing active code
@@ -114,16 +106,7 @@ export const getOrCreateMyCode = mutation({
 export const getMyCode = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return null;
 		}
@@ -205,16 +188,7 @@ export const getCodeByString = internalQuery({
 export const getMyReferralStats = query({
 	args: {},
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) {
-			return null;
-		}
-
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-			.unique();
-
+		const user = await getUserFromIdentity(ctx);
 		if (!user) {
 			return null;
 		}
