@@ -6,32 +6,11 @@ When designing the schema please see this page on built in System fields and dat
 
 Here are some specifics that are often mishandled:
 
-## v (https://docs.convex.dev/api/modules/values#v)
+## Validators
 
-The validator builder.
+Use `v` from `convex/values` to build validators for schemas and function arguments.
 
-This builder allows you to build validators for Convex values.
-
-Validators can be used in schema definitions and as input validators for Convex functions.
-
-Type declaration
-Name	Type
-id	<TableName>(tableName: TableName) => VId<GenericId<TableName>, "required">
-null	() => VNull<null, "required">
-number	() => VFloat64<number, "required">
-float64	() => VFloat64<number, "required">
-bigint	() => VInt64<bigint, "required">
-int64	() => VInt64<bigint, "required">
-boolean	() => VBoolean<boolean, "required">
-string	() => VString<string, "required">
-bytes	() => VBytes<ArrayBuffer, "required">
-literal	<T>(literal: T) => VLiteral<T, "required">
-array	<T>(element: T) => VArray<T["type"][], T, "required">
-object	<T>(fields: T) => VObject<Expand<{ [Property in string | number | symbol]?: Exclude<Infer<T[Property]>, undefined> } & { [Property in string | number | symbol]: Infer<T[Property]> }>, T, "required", { [Property in string | number | symbol]: Property | `${Property & string}.${T[Property]["fieldPaths"]}` }[keyof T] & string>
-record	<Key, Value>(keys: Key, values: Value) => VRecord<Record<Infer<Key>, Value["type"]>, Key, Value, "required", string>
-union	<T>(...members: T) => VUnion<T[number]["type"], T, "required", T[number]["fieldPaths"]>
-any	() => VAny<any, "required", string>
-optional	<T>(value: T) => VOptional<T>
+See full validator API: https://docs.convex.dev/api/modules/values#v
 
 ## System fields (https://docs.convex.dev/database/types#system-fields)
 

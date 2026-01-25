@@ -1,16 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useMutation } from "convex/react";
-import {
-	AlertCircle,
-	Check,
-	Loader2,
-	MapPin,
-	Navigation,
-	Plus,
-} from "lucide-react";
+import { AlertCircle, Check, Loader2, MapPin, Navigation, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useLocation } from "../../hooks/useLocation";
 
 export const Route = createFileRoute("/_authenticated/discover")({
 	component: DiscoverPage,
@@ -21,72 +15,38 @@ interface NearbyPark {
 	placeId: string;
 	name: string;
 	address?: string;
-	photoUrl?: string;
+	photoRef?: string;
 	distanceMiles: number;
 	isInUserList: boolean;
 	primaryType?: string;
 }
 
+/**
+ * Build photo URL using the secure proxy endpoint.
+ * This avoids exposing the Google API key to the client.
+ */
+function getPhotoProxyUrl(photoRef: string, maxWidth = 800): string {
+	const convexUrl = import.meta.env.VITE_CONVEX_URL as string;
+	// Convert .cloud URL to site URL for HTTP endpoints
+	const siteUrl = convexUrl.replace(".cloud", ".site");
+	return `${siteUrl}/api/photo?ref=${encodeURIComponent(photoRef)}&maxwidth=${maxWidth}`;
+}
+
 function DiscoverPage() {
-	const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
-		null,
-	);
-	const [locationError, setLocationError] = useState<string | null>(null);
-	const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+	const {
+		location,
+		error: locationError,
+		isLoading: isLoadingLocation,
+		requestLocation,
+	} = useLocation();
 	const [isSearching, setIsSearching] = useState(false);
 	const [nearbyParks, setNearbyParks] = useState<NearbyPark[]>([]);
 	const [radiusMiles, setRadiusMiles] = useState(5);
 	const [addedParkIds, setAddedParkIds] = useState<Set<string>>(new Set());
 	const [hideAdded, setHideAdded] = useState(false);
 
-	const searchNearbyParks = useAction(
-		api.actions.searchNearbyParks.searchNearbyParks,
-	);
+	const searchNearbyParks = useAction(api.actions.searchNearbyParks.searchNearbyParks);
 	const addParkMutation = useMutation(api.userParks.addPark);
-
-	const requestLocation = () => {
-		setIsLoadingLocation(true);
-		setLocationError(null);
-
-		if (!navigator.geolocation) {
-			setLocationError("Geolocation is not supported by your browser");
-			setIsLoadingLocation(false);
-			return;
-		}
-
-		navigator.geolocation.getCurrentPosition(
-			(position) => {
-				setLocation({
-					lat: position.coords.latitude,
-					lng: position.coords.longitude,
-				});
-				setIsLoadingLocation(false);
-			},
-			(error) => {
-				switch (error.code) {
-					case error.PERMISSION_DENIED:
-						setLocationError(
-							"Location access denied. Please enable location permissions.",
-						);
-						break;
-					case error.POSITION_UNAVAILABLE:
-						setLocationError("Location unavailable. Please try again.");
-						break;
-					case error.TIMEOUT:
-						setLocationError("Location request timed out. Please try again.");
-						break;
-					default:
-						setLocationError("Failed to get location. Please try again.");
-				}
-				setIsLoadingLocation(false);
-			},
-			{
-				enableHighAccuracy: true,
-				timeout: 10000,
-				maximumAge: 0,
-			},
-		);
-	};
 
 	const handleSearch = useCallback(async () => {
 		if (!location) return;
@@ -101,9 +61,7 @@ function DiscoverPage() {
 			});
 			setNearbyParks(parks);
 			// Reset added parks on new search
-			setAddedParkIds(
-				new Set(parks.filter((p) => p.isInUserList).map((p) => p._id)),
-			);
+			setAddedParkIds(new Set(parks.filter((p) => p.isInUserList).map((p) => p._id)));
 		} catch (err) {
 			console.error("Failed to search nearby parks:", err);
 		} finally {
@@ -116,7 +74,7 @@ function DiscoverPage() {
 		if (location) {
 			handleSearch();
 		}
-	}, [location, radiusMiles, handleSearch]);
+	}, [location, handleSearch]);
 
 	const handleAddPark = async (parkId: string) => {
 		try {
@@ -144,9 +102,12 @@ function DiscoverPage() {
 					{locationError ? (
 						<>
 							<AlertCircle className="w-12 h-12 text-[var(--color-sunset)] mx-auto mb-4" />
-							<p className="text-[var(--color-cream)] mb-4">{locationError}</p>
+							<p className="text-[var(--color-cream)] mb-4">
+								{locationError.message}
+							</p>
 							<button
-								onClick={requestLocation}
+								type="button"
+								onClick={() => requestLocation(true)}
 								className="btn btn-primary btn-lg"
 							>
 								Try Again
@@ -159,7 +120,8 @@ function DiscoverPage() {
 								Allow location access to discover parks near you
 							</p>
 							<button
-								onClick={requestLocation}
+								type="button"
+								onClick={() => requestLocation()}
 								disabled={isLoadingLocation}
 								className="btn btn-primary btn-lg"
 							>
@@ -182,12 +144,11 @@ function DiscoverPage() {
 				<>
 					{/* Radius Selector - Larger touch targets */}
 					<div className="mb-6">
-						<span className="text-[var(--color-mist)] block mb-3">
-							Search radius:
-						</span>
+						<span className="text-[var(--color-mist)] block mb-3">Search radius:</span>
 						<div className="flex gap-3">
 							{[5, 10, 15].map((miles) => (
 								<button
+									type="button"
 									key={miles}
 									onClick={() => setRadiusMiles(miles)}
 									className={`btn touch-target ${
@@ -260,9 +221,9 @@ function DiscoverPage() {
 
 									return (
 										<div key={park._id} className="discover-card">
-											{park.photoUrl && (
+											{park.photoRef && (
 												<img
-													src={park.photoUrl}
+													src={getPhotoProxyUrl(park.photoRef)}
 													alt={park.name}
 													className="park-image"
 												/>
@@ -282,12 +243,19 @@ function DiscoverPage() {
 														{park.distanceMiles} mi away
 													</p>
 													<button
+														type="button"
 														onClick={() => handleAddPark(park._id)}
 														disabled={isAdded}
 														className={`btn touch-target ${
-															isAdded ? "btn-secondary" : "btn-primary"
+															isAdded
+																? "btn-secondary"
+																: "btn-primary"
 														}`}
-														title={isAdded ? "Already in list" : "Add to list"}
+														title={
+															isAdded
+																? "Already in list"
+																: "Add to list"
+														}
 													>
 														{isAdded ? (
 															<>

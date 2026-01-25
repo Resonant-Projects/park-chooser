@@ -63,4 +63,8 @@ bun --bun run check        # Biome lint + format
 ### Environment Variables
 - Client-side: `VITE_` prefix, defined in `src/env.ts` via T3 Env
 - Convex: Set via `bunx convex env set KEY=value`
-- Required: `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_CONVEX_URL`
+- Required client: `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_CONVEX_URL`
+- Required server (Convex): `CLERK_WEBHOOK_SECRET`, `GOOGLE_MAPS_API_KEY`
+
+### Webhook Signature Verification
+Clerk webhooks in `convex/http.ts` use Svix for signature verification. The `CLERK_WEBHOOK_SECRET` must be set in Convex environment. Webhook handlers validate signatures before processing to prevent spoofed requests.

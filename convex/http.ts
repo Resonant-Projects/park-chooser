@@ -1,9 +1,65 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { Webhook } from "svix";
+import { internal } from "./_generated/api";
+import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
+
+/**
+ * Photo Proxy Endpoint
+ *
+ * Securely fetches Google Places photos without exposing the API key to the client.
+ * Accepts a photo_reference query parameter and returns the image.
+ *
+ * Usage: GET /api/photo?ref=<photo_reference>&maxwidth=800
+ */
+http.route({
+	path: "/api/photo",
+	method: "GET",
+	handler: httpAction(async (_, request) => {
+		const url = new URL(request.url);
+		const photoRef = url.searchParams.get("ref");
+		const maxWidth = url.searchParams.get("maxwidth") ?? "800";
+
+		if (!photoRef) {
+			return new Response("Missing photo reference", { status: 400 });
+		}
+
+		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		if (!apiKey) {
+			console.error("[Photo Proxy] GOOGLE_MAPS_API_KEY not configured");
+			return new Response("Service unavailable", { status: 503 });
+		}
+
+		// Build Google Places Photo API URL (Legacy API format)
+		const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoRef)}&key=${apiKey}`;
+
+		try {
+			const response = await fetch(photoUrl);
+
+			if (!response.ok) {
+				console.error(`[Photo Proxy] Google API error: ${response.status}`);
+				return new Response("Failed to fetch photo", { status: response.status });
+			}
+
+			// Get the image data and content type
+			const imageData = await response.arrayBuffer();
+			const contentType = response.headers.get("content-type") ?? "image/jpeg";
+
+			// Return the image with caching headers
+			return new Response(imageData, {
+				status: 200,
+				headers: {
+					"Content-Type": contentType,
+					"Cache-Control": "public, max-age=86400", // Cache for 24 hours
+				},
+			});
+		} catch (error) {
+			console.error("[Photo Proxy] Error fetching photo:", error);
+			return new Response("Internal error", { status: 500 });
+		}
+	}),
+});
 
 /**
  * Clerk Billing Webhook Endpoint
@@ -21,304 +77,321 @@ const http = httpRouter();
  * Note: subscription.* events have a different payload structure with items[] array.
  */
 http.route({
-  path: "/webhooks/clerk-billing",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const result = await validateRequest(request);
-    if (!result.success) {
-      return new Response(result.error, { status: 400 });
-    }
-    const event = result.event;
+	path: "/webhooks/clerk-billing",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const result = await validateRequest(request);
+		if (!result.success) {
+			return new Response(result.error, { status: 400 });
+		}
+		const event = result.event;
 
-    console.log("Received Clerk Billing webhook:", event.type);
+		console.log("Received Clerk Billing webhook:", event.type);
 
-    try {
-      switch (event.type) {
-        // Handle user creation from Clerk
-        case "user.created": {
-          const data = event.data as ClerkUserData;
+		try {
+			switch (event.type) {
+				// Handle user creation from Clerk
+				case "user.created": {
+					const data = event.data as ClerkUserData;
 
-          // Get primary email
-          const primaryEmail = data.email_addresses.find(
-            (e) => e.id === data.primary_email_address_id
-          )?.email_address;
+					// Get primary email
+					const primaryEmail = data.email_addresses.find(
+						(e) => e.id === data.primary_email_address_id
+					)?.email_address;
 
-          await ctx.runMutation(internal.users.upsertFromClerkWebhook, {
-            clerkUserId: data.id,
-            email: primaryEmail,
-            firstName: data.first_name ?? undefined,
-            lastName: data.last_name ?? undefined,
-            imageUrl: data.image_url ?? undefined,
-          });
+					await ctx.runMutation(internal.users.upsertFromClerkWebhook, {
+						clerkUserId: data.id,
+						email: primaryEmail,
+						firstName: data.first_name ?? undefined,
+						lastName: data.last_name ?? undefined,
+						imageUrl: data.image_url ?? undefined,
+					});
 
-          console.log("User created from webhook:", data.id);
-          break;
-        }
+					console.log("User created from webhook:", data.id);
+					break;
+				}
 
-        case "subscriptionItem.created":
-        case "subscriptionItem.updated":
-        case "subscriptionItem.active": {
-          const data = event.data as ClerkSubscriptionItemData;
-          const clerkUserId = data.payer?.user_id;
+				case "subscriptionItem.created":
+				case "subscriptionItem.updated":
+				case "subscriptionItem.active": {
+					const data = event.data as ClerkSubscriptionItemData;
+					const clerkUserId = data.payer?.user_id;
 
-          if (!clerkUserId) {
-            console.warn("No user_id in subscription item:", data.id);
-            return new Response("Missing user_id", { status: 400 });
-          }
+					if (!clerkUserId) {
+						console.warn("No user_id in subscription item:", data.id);
+						return new Response("Missing user_id", { status: 400 });
+					}
 
-          // Look up user by Clerk ID
-          const user = await ctx.runQuery(internal.users.getUserByClerkId, { clerkUserId });
+					// Look up user by Clerk ID
+					const user = await ctx.runQuery(internal.users.getUserByClerkId, {
+						clerkUserId,
+					});
 
-          if (!user) {
-            console.warn("User not found for Clerk ID:", clerkUserId);
-            return new Response("User not found", { status: 404 });
-          }
+					if (!user) {
+						console.warn("User not found for Clerk ID:", clerkUserId);
+						return new Response("User not found", { status: 404 });
+					}
 
-          const entitlementResult = await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-            userId: user._id,
-            clerkSubscriptionId: data.subscription_id,
-            clerkSubscriptionItemId: data.id,
-            clerkPlanId: data.plan_id,
-            clerkPlanSlug: data.plan?.slug,
-            status: data.status,
-            periodStart: data.current_period_start
-              ? new Date(data.current_period_start).getTime()
-              : undefined,
-            periodEnd: data.current_period_end
-              ? new Date(data.current_period_end).getTime()
-              : undefined,
-            isFreeTrial: data.is_free_trial,
-          });
+					const entitlementResult = await ctx.runMutation(
+						internal.entitlements.upsertFromClerkWebhook,
+						{
+							userId: user._id,
+							clerkSubscriptionId: data.subscription_id,
+							clerkSubscriptionItemId: data.id,
+							clerkPlanId: data.plan_id,
+							clerkPlanSlug: data.plan?.slug,
+							status: data.status,
+							periodStart: data.current_period_start
+								? new Date(data.current_period_start).getTime()
+								: undefined,
+							periodEnd: data.current_period_end
+								? new Date(data.current_period_end).getTime()
+								: undefined,
+							isFreeTrial: data.is_free_trial,
+						}
+					);
 
-          console.log("Entitlement sync result:", entitlementResult);
+					console.log("Entitlement sync result:", entitlementResult);
 
-          // Process referral conversion for new active subscriptions
-          if (data.status === "active") {
-            const referralResult = await ctx.runAction(
-              internal.actions.processReferralConversion.processReferralConversion,
-              {
-                refereeId: user._id,
-                subscriptionStatus: data.status,
-              }
-            );
-            console.log("Referral conversion result:", referralResult);
-          }
+					// Process referral conversion for new active subscriptions
+					if (data.status === "active") {
+						const referralResult = await ctx.runAction(
+							internal.actions.processReferralConversion.processReferralConversion,
+							{
+								refereeId: user._id,
+								subscriptionStatus: data.status,
+							}
+						);
+						console.log("Referral conversion result:", referralResult);
+					}
 
-          break;
-        }
+					break;
+				}
 
-        case "subscriptionItem.deleted":
-        case "subscriptionItem.canceled":
-        case "subscriptionItem.ended": {
-          const data = event.data as ClerkSubscriptionItemData;
-          const clerkUserId = data.payer?.user_id;
+				case "subscriptionItem.deleted":
+				case "subscriptionItem.canceled":
+				case "subscriptionItem.ended": {
+					const data = event.data as ClerkSubscriptionItemData;
+					const clerkUserId = data.payer?.user_id;
 
-          if (clerkUserId) {
-            const user = await ctx.runQuery(internal.users.getUserByClerkId, { clerkUserId });
+					if (clerkUserId) {
+						const user = await ctx.runQuery(internal.users.getUserByClerkId, {
+							clerkUserId,
+						});
 
-            if (user) {
-              // Set status to canceled but preserve periodEnd for access until paid period ends
-              await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-                userId: user._id,
-                clerkSubscriptionId: data.subscription_id,
-                clerkSubscriptionItemId: data.id,
-                clerkPlanId: data.plan_id,
-                clerkPlanSlug: data.plan?.slug,
-                status: "canceled",
-                periodStart: data.current_period_start
-                  ? new Date(data.current_period_start).getTime()
-                  : undefined,
-                periodEnd: data.current_period_end
-                  ? new Date(data.current_period_end).getTime()
-                  : undefined,
-                isFreeTrial: data.is_free_trial,
-              });
-              console.log("Subscription canceled for user:", clerkUserId);
-            } else {
-              console.warn("User not found for canceled subscription:", clerkUserId);
-            }
-          }
-          break;
-        }
+						if (user) {
+							// Set status to canceled but preserve periodEnd for access until paid period ends
+							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+								userId: user._id,
+								clerkSubscriptionId: data.subscription_id,
+								clerkSubscriptionItemId: data.id,
+								clerkPlanId: data.plan_id,
+								clerkPlanSlug: data.plan?.slug,
+								status: "canceled",
+								periodStart: data.current_period_start
+									? new Date(data.current_period_start).getTime()
+									: undefined,
+								periodEnd: data.current_period_end
+									? new Date(data.current_period_end).getTime()
+									: undefined,
+								isFreeTrial: data.is_free_trial,
+							});
+							console.log("Subscription canceled for user:", clerkUserId);
+						} else {
+							console.warn("User not found for canceled subscription:", clerkUserId);
+						}
+					}
+					break;
+				}
 
-        // Handle subscription-level events (different structure than subscriptionItem.* events)
-        case "subscription.created":
-        case "subscription.updated":
-        case "subscription.active":
-        case "subscription.past_due": {
-          const data = event.data as ClerkSubscriptionData;
-          const clerkUserId = data.payer?.user_id;
+				// Handle subscription-level events (different structure than subscriptionItem.* events)
+				case "subscription.created":
+				case "subscription.updated":
+				case "subscription.active":
+				case "subscription.past_due": {
+					const data = event.data as ClerkSubscriptionData;
+					const clerkUserId = data.payer?.user_id;
 
-          if (!clerkUserId) {
-            console.warn("No user_id in subscription:", data.id);
-            return new Response("Missing user_id", { status: 400 });
-          }
+					if (!clerkUserId) {
+						console.warn("No user_id in subscription:", data.id);
+						return new Response("Missing user_id", { status: 400 });
+					}
 
-          // Look up user by Clerk ID
-          const user = await ctx.runQuery(internal.users.getUserByClerkId, { clerkUserId });
+					// Look up user by Clerk ID
+					const user = await ctx.runQuery(internal.users.getUserByClerkId, {
+						clerkUserId,
+					});
 
-          if (!user) {
-            console.warn("User not found for Clerk ID:", clerkUserId);
-            return new Response("User not found", { status: 404 });
-          }
+					if (!user) {
+						console.warn("User not found for Clerk ID:", clerkUserId);
+						return new Response("User not found", { status: 404 });
+					}
 
-          // Find the active subscription item, or fall back to most relevant one
-          const activeItem =
-            data.items.find((item) => item.status === "active") ??
-            data.items.find((item) => item.status !== "ended" && item.status !== "canceled") ??
-            data.items[data.items.length - 1]; // fallback to last item
+					// Find the active subscription item, or fall back to most relevant one
+					const activeItem =
+						data.items.find((item) => item.status === "active") ??
+						data.items.find(
+							(item) => item.status !== "ended" && item.status !== "canceled"
+						) ??
+						data.items[data.items.length - 1]; // fallback to last item
 
-          if (!activeItem) {
-            console.warn("No subscription items found in subscription:", data.id);
-            return new Response("No subscription items", { status: 400 });
-          }
+					if (!activeItem) {
+						console.warn("No subscription items found in subscription:", data.id);
+						return new Response("No subscription items", { status: 400 });
+					}
 
-          console.log("Processing subscription event:", {
-            subscriptionId: data.id,
-            subscriptionStatus: data.status,
-            activeItemId: activeItem.id,
-            activeItemStatus: activeItem.status,
-            planSlug: activeItem.plan?.slug,
-          });
+					console.log("Processing subscription event:", {
+						subscriptionId: data.id,
+						subscriptionStatus: data.status,
+						activeItemId: activeItem.id,
+						activeItemStatus: activeItem.status,
+						planSlug: activeItem.plan?.slug,
+					});
 
-          // For past_due events, use "past_due" status directly
-          const status = event.type === "subscription.past_due" ? "past_due" : activeItem.status;
+					// For past_due events, use "past_due" status directly
+					const status =
+						event.type === "subscription.past_due" ? "past_due" : activeItem.status;
 
-          const entitlementResult = await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-            userId: user._id,
-            clerkSubscriptionId: data.id,
-            clerkSubscriptionItemId: activeItem.id,
-            clerkPlanId: activeItem.plan_id,
-            clerkPlanSlug: activeItem.plan?.slug,
-            status,
-            periodStart: activeItem.period_start,
-            periodEnd: activeItem.period_end,
-            isFreeTrial: activeItem.is_free_trial,
-          });
+					const entitlementResult = await ctx.runMutation(
+						internal.entitlements.upsertFromClerkWebhook,
+						{
+							userId: user._id,
+							clerkSubscriptionId: data.id,
+							clerkSubscriptionItemId: activeItem.id,
+							clerkPlanId: activeItem.plan_id,
+							clerkPlanSlug: activeItem.plan?.slug,
+							status,
+							periodStart: activeItem.period_start,
+							periodEnd: activeItem.period_end,
+							isFreeTrial: activeItem.is_free_trial,
+						}
+					);
 
-          console.log("Entitlement sync result:", entitlementResult);
+					console.log("Entitlement sync result:", entitlementResult);
 
-          // Process referral conversion for active subscriptions
-          if (data.status === "active") {
-            const referralResult = await ctx.runAction(
-              internal.actions.processReferralConversion.processReferralConversion,
-              {
-                refereeId: user._id,
-                subscriptionStatus: data.status,
-              }
-            );
-            console.log("Referral conversion result:", referralResult);
-          }
+					// Process referral conversion for active subscriptions
+					if (data.status === "active") {
+						const referralResult = await ctx.runAction(
+							internal.actions.processReferralConversion.processReferralConversion,
+							{
+								refereeId: user._id,
+								subscriptionStatus: data.status,
+							}
+						);
+						console.log("Referral conversion result:", referralResult);
+					}
 
-          break;
-        }
+					break;
+				}
 
-        case "subscription.canceled":
-        case "subscription.ended": {
-          const data = event.data as ClerkSubscriptionData;
-          const clerkUserId = data.payer?.user_id;
+				case "subscription.canceled":
+				case "subscription.ended": {
+					const data = event.data as ClerkSubscriptionData;
+					const clerkUserId = data.payer?.user_id;
 
-          if (clerkUserId) {
-            const user = await ctx.runQuery(internal.users.getUserByClerkId, { clerkUserId });
+					if (clerkUserId) {
+						const user = await ctx.runQuery(internal.users.getUserByClerkId, {
+							clerkUserId,
+						});
 
-            if (user) {
-              // Find any item to get plan info (use first item as reference)
-              const item = data.items[0];
+						if (user) {
+							// Find any item to get plan info (use first item as reference)
+							const item = data.items[0];
 
-              // Preserve periodEnd for access until paid period ends
-              await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-                userId: user._id,
-                clerkSubscriptionId: data.id,
-                clerkSubscriptionItemId: item?.id ?? data.id,
-                clerkPlanId: item?.plan_id,
-                clerkPlanSlug: item?.plan?.slug,
-                status: "canceled",
-                periodStart: item?.period_start,
-                periodEnd: item?.period_end,
-                isFreeTrial: item?.is_free_trial,
-              });
-              console.log("Subscription canceled/ended for user:", clerkUserId);
-            } else {
-              console.warn("User not found for canceled subscription:", clerkUserId);
-            }
-          }
-          break;
-        }
+							// Preserve periodEnd for access until paid period ends
+							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+								userId: user._id,
+								clerkSubscriptionId: data.id,
+								clerkSubscriptionItemId: item?.id ?? data.id,
+								clerkPlanId: item?.plan_id,
+								clerkPlanSlug: item?.plan?.slug,
+								status: "canceled",
+								periodStart: item?.period_start,
+								periodEnd: item?.period_end,
+								isFreeTrial: item?.is_free_trial,
+							});
+							console.log("Subscription canceled/ended for user:", clerkUserId);
+						} else {
+							console.warn("User not found for canceled subscription:", clerkUserId);
+						}
+					}
+					break;
+				}
 
-        default:
-          console.log("Ignored Clerk Billing webhook event:", event.type);
-      }
+				default:
+					console.log("Ignored Clerk Billing webhook event:", event.type);
+			}
 
-      return new Response(null, { status: 200 });
-    } catch (error) {
-      console.error("Error processing Clerk Billing webhook:", error);
-      return new Response("Internal error", { status: 500 });
-    }
-  }),
+			return new Response(null, { status: 200 });
+		} catch (error) {
+			console.error("Error processing Clerk Billing webhook:", error);
+			return new Response("Internal error", { status: 500 });
+		}
+	}),
 });
 
 type ValidationResult =
-  | { success: true; event: ClerkWebhookEvent }
-  | { success: false; error: string };
+	| { success: true; event: ClerkWebhookEvent }
+	| { success: false; error: string };
 
 /**
  * Validate Svix webhook signature.
  */
 async function validateRequest(req: Request): Promise<ValidationResult> {
-  const payloadString = await req.text();
+	const payloadString = await req.text();
 
-  const svixId = req.headers.get("svix-id");
-  const svixTimestamp = req.headers.get("svix-timestamp");
-  const svixSignature = req.headers.get("svix-signature");
+	const svixId = req.headers.get("svix-id");
+	const svixTimestamp = req.headers.get("svix-timestamp");
+	const svixSignature = req.headers.get("svix-signature");
 
-  if (!svixId || !svixTimestamp || !svixSignature) {
-    console.error("Missing Svix headers");
-    return { success: false, error: "Missing Svix headers" };
-  }
+	if (!svixId || !svixTimestamp || !svixSignature) {
+		console.error("Missing Svix headers");
+		return { success: false, error: "Missing Svix headers" };
+	}
 
-  const webhookSecret = process.env.CLERK_BILLING_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("CLERK_BILLING_WEBHOOK_SECRET not configured");
-    return { success: false, error: "Webhook secret not configured" };
-  }
+	const webhookSecret = process.env.CLERK_BILLING_WEBHOOK_SECRET;
+	if (!webhookSecret) {
+		console.error("CLERK_BILLING_WEBHOOK_SECRET not configured");
+		return { success: false, error: "Webhook secret not configured" };
+	}
 
-  const wh = new Webhook(webhookSecret);
+	const wh = new Webhook(webhookSecret);
 
-  try {
-    const event = wh.verify(payloadString, {
-      "svix-id": svixId,
-      "svix-timestamp": svixTimestamp,
-      "svix-signature": svixSignature,
-    }) as unknown as ClerkWebhookEvent;
-    return { success: true, event };
-  } catch (error) {
-    console.error("Error verifying webhook signature:", error);
-    return { success: false, error: "Invalid webhook signature" };
-  }
+	try {
+		const event = wh.verify(payloadString, {
+			"svix-id": svixId,
+			"svix-timestamp": svixTimestamp,
+			"svix-signature": svixSignature,
+		}) as unknown as ClerkWebhookEvent;
+		return { success: true, event };
+	} catch (error) {
+		console.error("Error verifying webhook signature:", error);
+		return { success: false, error: "Invalid webhook signature" };
+	}
 }
 
 // Type definitions for Clerk Billing webhook events
 interface ClerkWebhookEvent {
-  type: string;
-  data: unknown;
+	type: string;
+	data: unknown;
 }
 
 interface ClerkSubscriptionItemData {
-  id: string;
-  subscription_id: string;
-  plan_id: string;
-  payer?: {
-    user_id?: string;
-    email?: string;
-  };
-  plan?: {
-    slug?: string;
-    name?: string;
-  };
-  status: string;
-  current_period_start?: string;
-  current_period_end?: string;
-  is_free_trial?: boolean;
+	id: string;
+	subscription_id: string;
+	plan_id: string;
+	payer?: {
+		user_id?: string;
+		email?: string;
+	};
+	plan?: {
+		slug?: string;
+		name?: string;
+	};
+	status: string;
+	current_period_start?: string;
+	current_period_end?: string;
+	is_free_trial?: boolean;
 }
 
 /**
@@ -326,37 +399,37 @@ interface ClerkSubscriptionItemData {
  * These have a different structure than subscriptionItem.* events
  */
 interface ClerkSubscriptionData {
-  id: string; // subscription ID (csub_xxx)
-  status: string;
-  items: Array<{
-    id: string;
-    plan_id: string;
-    plan?: {
-      slug?: string;
-      name?: string;
-      amount?: number;
-    };
-    status: string;
-    period_start?: number;
-    period_end?: number;
-    is_free_trial?: boolean;
-  }>;
-  payer?: {
-    user_id?: string;
-    email?: string;
-  };
+	id: string; // subscription ID (csub_xxx)
+	status: string;
+	items: Array<{
+		id: string;
+		plan_id: string;
+		plan?: {
+			slug?: string;
+			name?: string;
+			amount?: number;
+		};
+		status: string;
+		period_start?: number;
+		period_end?: number;
+		is_free_trial?: boolean;
+	}>;
+	payer?: {
+		user_id?: string;
+		email?: string;
+	};
 }
 
 /**
  * Type definition for Clerk user.created webhook event
  */
 interface ClerkUserData {
-  id: string;
-  email_addresses: Array<{ email_address: string; id: string }>;
-  primary_email_address_id: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  image_url: string | null;
+	id: string;
+	email_addresses: Array<{ email_address: string; id: string }>;
+	primary_email_address_id: string | null;
+	first_name: string | null;
+	last_name: string | null;
+	image_url: string | null;
 }
 
 export default http;

@@ -30,28 +30,28 @@ function ManagePage() {
 	const removeParkMutation = useMutation(api.userParks.removePark);
 
 	// Filter parks not in user's list
-	const userParkIds = new Set(
-		userParks?.map((up: { parkId: string }) => up.parkId) || [],
-	);
+	const userParkIds = new Set(userParks?.map((up: { parkId: string }) => up.parkId) || []);
 	const availableParks = allParks?.filter((p) => !userParkIds.has(p._id)) || [];
 
 	// Search filter
 	const filteredAvailable = searchQuery
-		? availableParks.filter((p) =>
-				p.name.toLowerCase().includes(searchQuery.toLowerCase()),
-			)
+		? availableParks.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
 		: availableParks;
 
 	const handleAddPark = async (parkId: Id<"parks">) => {
+		setAddingParkId(parkId);
 		try {
 			await addParkMutation({ parkId });
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to add park";
 			alert(message);
+		} finally {
+			setAddingParkId(null);
 		}
 	};
 
 	const [removeError, setRemoveError] = useState<string | null>(null);
+	const [addingParkId, setAddingParkId] = useState<Id<"parks"> | null>(null);
 
 	const handleRemovePark = async (userParkId: Id<"userParks">) => {
 		setRemoveError(null);
@@ -78,21 +78,21 @@ function ManagePage() {
 				</p>
 				{isAtLimit && (
 					<p className="text-[var(--color-gold)] text-sm mt-1">
-						You've reached the free tier limit. <a href="/pricing" className="underline">Upgrade</a> for unlimited parks.
+						You've reached the free tier limit.{" "}
+						<a href="/pricing" className="underline">
+							Upgrade
+						</a>{" "}
+						for unlimited parks.
 					</p>
 				)}
 				{removeError && (
-					<p className="text-[var(--color-sunset)] text-sm mt-1">
-						{removeError}
-					</p>
+					<p className="text-[var(--color-sunset)] text-sm mt-1">{removeError}</p>
 				)}
 			</div>
 
 			{/* User's Parks - Full width vertical stack */}
 			<section className="mb-8 w-full">
-				<h2 className="text-lg font-medium text-[var(--color-cream)] mb-4">
-					Your Parks
-				</h2>
+				<h2 className="text-lg font-medium text-[var(--color-cream)] mb-4">Your Parks</h2>
 
 				{userParks === undefined ? (
 					<div className="flex justify-center py-8">
@@ -131,6 +131,7 @@ function ManagePage() {
 								</div>
 								<div className="park-actions">
 									<button
+										type="button"
 										onClick={() => handleRemovePark(userPark._id)}
 										className="btn btn-secondary touch-target"
 										title="Remove park"
@@ -147,9 +148,7 @@ function ManagePage() {
 
 			{/* Add Parks - Full width vertical stack */}
 			<section className="w-full">
-				<h2 className="text-lg font-medium text-[var(--color-cream)] mb-4">
-					Add Parks
-				</h2>
+				<h2 className="text-lg font-medium text-[var(--color-cream)] mb-4">Add Parks</h2>
 
 				{/* Search */}
 				<div className="relative mb-4">
@@ -193,12 +192,23 @@ function ManagePage() {
 								</div>
 								<div className="park-actions">
 									<button
+										type="button"
 										onClick={() => handleAddPark(park._id)}
+										disabled={addingParkId === park._id}
 										className="btn btn-primary touch-target"
 										title="Add park"
 									>
-										<Plus className="w-5 h-5" />
-										<span>Add</span>
+										{addingParkId === park._id ? (
+											<>
+												<Loader2 className="w-5 h-5 animate-spin" />
+												<span>Adding...</span>
+											</>
+										) : (
+											<>
+												<Plus className="w-5 h-5" />
+												<span>Add</span>
+											</>
+										)}
 									</button>
 								</div>
 							</div>
