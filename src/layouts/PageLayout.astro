@@ -1,0 +1,242 @@
+---
+import "../styles/starwind.css";
+import "../styles/global.css";
+import { UserButton } from "@clerk/astro/components";
+import { SITE_NAME } from "../lib/config";
+
+interface Props {
+  title: string;
+  subtitle?: string;
+  pageTitle?: string;
+  backLink?: { href: string; text?: string };
+  showUserButton?: boolean;
+  showProfileHint?: boolean;
+  mainLayout?: "centered" | "stacked";
+  class?: string;
+}
+
+const {
+  title,
+  subtitle,
+  pageTitle,
+  backLink,
+  showUserButton = false,
+  showProfileHint = false,
+  mainLayout = "stacked",
+  class: className,
+} = Astro.props;
+
+const browserTitle = pageTitle ?? `${title} - ${SITE_NAME}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{browserTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <slot name="head" />
+  </head>
+  <body>
+    <div class:list={["container", className]}>
+      <header class="page-header">
+        {
+          backLink && (
+            <a
+              href={backLink.href}
+              class="back-link text-gold hover:text-cream text-sm font-medium transition-colors"
+            >
+              &larr; {backLink.text ?? "Back"}
+            </a>
+          )
+        }
+        <div class="header-content">
+          <h1 class="title">{title}</h1>
+          {subtitle && <p class="subtitle">{subtitle}</p>}
+        </div>
+        {
+          showUserButton && (
+            <div class="profile-area">
+              {showProfileHint && (
+                <div class="profile-hint" id="profile-hint">
+                  <p class="hint-text">Manage your account</p>
+                  <div class="hint-arrow">↓</div>
+                </div>
+              )}
+              <UserButton>
+                <UserButton.MenuItems>
+                  <slot name="user-menu" />
+                </UserButton.MenuItems>
+              </UserButton>
+            </div>
+          )
+        }
+      </header>
+
+      <main
+        class:list={[
+          mainLayout === "stacked" && "space-y-6",
+          mainLayout === "centered" && "flex items-center justify-center",
+        ]}
+        style={mainLayout === "stacked"
+          ? "display: block; align-items: initial; justify-content: initial;"
+          : undefined}
+      >
+        <slot />
+      </main>
+
+      <slot name="footer">
+        <footer class="mt-8 border-t border-white/10 pt-4">
+          <nav class="text-mist flex justify-center gap-6 text-sm">
+            <a href="/app" class="hover:text-cream transition-colors">Pick a Park</a>
+            <a href="/manage" class="hover:text-cream transition-colors">Manage Parks</a>
+            <a href="/pricing" class="hover:text-cream transition-colors">Pricing</a>
+            <a href="/help" class="hover:text-cream transition-colors">Help</a>
+          </nav>
+        </footer>
+      </slot>
+    </div>
+
+    <style>
+      /* Page header layout */
+      .page-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 1.5rem 0;
+        gap: 0.5rem;
+      }
+
+      .back-link {
+        order: 1;
+        flex: 0 0 auto;
+      }
+
+      .header-content {
+        order: 3;
+        flex: 1 1 100%;
+        text-align: center;
+        margin-top: 0.5rem;
+      }
+
+      .profile-area {
+        order: 2;
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+        margin-left: auto;
+      }
+
+      /* Desktop: Title between nav elements on same row */
+      @media (min-width: 481px) {
+        .header-content {
+          order: 2;
+          flex: 1 1 auto;
+          margin-top: 0;
+        }
+
+        .profile-area {
+          order: 3;
+          margin-left: 0;
+        }
+      }
+
+      /* Animated hint pointing to profile button */
+      .profile-hint {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+        animation: fade-in 0.3s ease-out;
+      }
+
+      .hint-arrow {
+        font-size: 1.25rem;
+        color: var(--color-gold, #c5a572);
+        animation: bounce-arrow 1s ease-in-out infinite;
+        transform-origin: center;
+      }
+
+      .hint-text {
+        background: rgba(197, 165, 114, 0.15);
+        border: 1px solid rgba(197, 165, 114, 0.3);
+        color: var(--color-cream, #f5f2e8);
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        white-space: nowrap;
+        backdrop-filter: blur(8px);
+      }
+
+      @keyframes bounce-arrow {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(4px);
+        }
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fade-out {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+      }
+
+      .profile-hint.hiding {
+        animation: fade-out 0.3s ease-out forwards;
+      }
+    </style>
+
+    <script is:inline>
+      // Profile hint auto-dismiss
+      (function () {
+        const profileHint = document.getElementById("profile-hint");
+        if (profileHint) {
+          const dismissHint = () => {
+            profileHint.classList.add("hiding");
+            setTimeout(() => {
+              profileHint.remove();
+            }, 300);
+          };
+
+          // Auto-dismiss after 5 seconds
+          setTimeout(dismissHint, 5000);
+
+          // Dismiss on click
+          profileHint.addEventListener("click", dismissHint);
+        }
+      })();
+    </script>
+
+    <slot name="scripts" />
+  </body>
+</html>

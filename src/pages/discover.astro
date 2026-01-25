@@ -1,0 +1,881 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import SEO from "../components/SEO.astro";
+import { getAvailableParks, getPhotoUrlFromRef, type AvailablePark } from "../lib/convexClient";
+import { UserButton } from "@clerk/astro/components";
+import { SITE_NAME } from "../lib/config";
+
+interface AvailableParkWithPhoto extends AvailablePark {
+  photoUrl: string | null;
+}
+
+// Auth check
+const { userId, getToken } = Astro.locals.auth();
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const token = await getToken({ template: "convex" });
+if (!token) {
+  return Astro.redirect("/sign-in");
+}
+
+// Pre-fetch available parks for fallback (Sarasota recommended)
+const availableParks = await getAvailableParks(token);
+
+// Generate photo URLs for fallback parks (SSR)
+const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+const availableParksWithPhotos: AvailableParkWithPhoto[] = availableParks
+  .slice(0, 10)
+  .map((park) => ({
+    ...park,
+    photoUrl:
+      park.photoRefs?.[0] && googleMapsApiKey
+        ? getPhotoUrlFromRef(park.photoRefs[0], googleMapsApiKey, 128)
+        : null,
+  }));
+---
+
+<PageLayout
+  title="Discover Parks"
+  subtitle="Find parks near your location"
+  pageTitle={`Discover Parks - ${SITE_NAME}`}
+  backLink={{ href: "/manage", text: "Back to Manage" }}
+  showUserButton
+>
+  <SEO
+    slot="head"
+    title={`Discover Parks - ${SITE_NAME}`}
+    description={`Discover parks near your location with ${SITE_NAME}.`}
+  />
+
+  <UserButton.Link slot="user-menu" label="Manage Parks" href="/manage">
+    <svg
+      slot="label-icon"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width="16"
+      height="16"
+    >
+      <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z"></path>
+    </svg>
+  </UserButton.Link>
+  <!-- Location Status Banner -->
+  <div
+    id="location-banner"
+    class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl"
+  >
+    <div id="location-requesting" class="flex items-center gap-3">
+      <span class="border-gold h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+      ></span>
+      <span class="text-cream">Requesting your location...</span>
+    </div>
+    <div id="location-granted" class="text-gold flex hidden items-center gap-2">
+      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+        <path
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+        ></path>
+      </svg>
+      <span>Using your location</span>
+    </div>
+    <div id="location-denied" class="hidden">
+      <div class="text-sunset mb-2 flex items-center gap-2">
+        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+          <path
+            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm1 13h-2v-2h2v2zm0-4h-2V6h2v5z"
+          ></path>
+        </svg>
+        <span>Location access denied</span>
+      </div>
+      <p class="text-mist text-sm">Showing recommended Sarasota parks instead.</p>
+    </div>
+    <div id="location-error" class="hidden">
+      <div class="text-sunset mb-2 flex items-center gap-2">
+        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+          ></path>
+        </svg>
+        <span id="error-message">Unable to get location</span>
+      </div>
+      <p class="text-mist text-sm">Showing recommended Sarasota parks instead.</p>
+    </div>
+  </div>
+
+  <!-- Radius Selector (hidden until location granted) -->
+  <div id="radius-selector" class="flex hidden items-center gap-3">
+    <span class="text-mist text-sm">Search radius:</span>
+    <div class="flex gap-2">
+      <button
+        id="radius-5"
+        class="radius-btn bg-gold text-forest rounded-full px-4 py-2 text-sm font-medium transition-colors"
+        data-radius="5"
+      >
+        5 mi
+      </button>
+      <button
+        id="radius-10"
+        class="radius-btn text-cream rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/20"
+        data-radius="10"
+      >
+        10 mi
+      </button>
+    </div>
+    <button
+      id="refresh-btn"
+      class="text-cream ml-auto rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+      title="Refresh"
+    >
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+        ></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div id="parks-loading" class="hidden py-8 text-center">
+    <span
+      class="border-gold inline-block h-8 w-8 animate-spin rounded-full border-3 border-t-transparent"
+    ></span>
+    <p class="text-mist mt-3">Searching for nearby parks...</p>
+  </div>
+
+  <!-- Parks List (Nearby) -->
+  <section id="nearby-parks-section" class="hidden">
+    <h2 class="text-cream mb-4 font-[Fraunces] text-xl">
+      Nearby Parks (<span id="nearby-count">0</span>)
+    </h2>
+    <div id="nearby-parks-list" class="grid gap-3">
+      <!-- Populated by JavaScript -->
+    </div>
+    <div
+      id="nearby-empty"
+      class="hidden rounded-2xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-xl"
+    >
+      <p class="text-mist">No parks found nearby. Try increasing the search radius.</p>
+    </div>
+  </section>
+
+  <!-- Fallback Section (Sarasota Recommended) -->
+  <section id="fallback-section" class="hidden">
+    <div class="mb-4 flex items-center gap-3">
+      <div class="h-px flex-1 bg-white/20"></div>
+      <span class="text-mist text-sm">Sarasota Recommended</span>
+      <div class="h-px flex-1 bg-white/20"></div>
+    </div>
+    <div id="fallback-parks-list" class="grid gap-3">
+      {
+        availableParksWithPhotos.map((park) => (
+          <article
+            class="park-card rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-xl transition-opacity duration-200"
+            data-available-id={park._id}
+            data-place-id={park.placeId}
+            data-photo-refs={JSON.stringify(park.photoRefs || [])}
+            data-expanded="false"
+          >
+            <div class="park-card-collapsed">
+              {/* Photo thumbnail */}
+              {park.photoUrl ? (
+                <img
+                  src={park.photoUrl}
+                  alt=""
+                  class="fallback-thumbnail h-16 w-16 shrink-0 rounded-lg object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                  <span class="text-2xl">🌲</span>
+                </div>
+              )}
+              <div class="flex min-w-0 flex-1 items-center justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-cream truncate font-[Fraunces] font-semibold">{park.name}</h3>
+                  {park.customName && <p class="text-gold truncate text-sm">{park.customName}</p>}
+                  {park.address && <p class="text-mist truncate text-sm">{park.address}</p>}
+                </div>
+                <button
+                  class="add-btn bg-gold/20 hover:bg-gold/30 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+                  data-add={park._id}
+                  aria-label={`Add ${park.name}`}
+                >
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="park-card-expanded" />
+          </article>
+        ))
+      }
+    </div>
+  </section>
+  <footer slot="footer" class="mt-8 text-center">
+    <p class="text-mist mb-4 text-sm opacity-80">
+      <a href="/manage" class="text-gold hover:text-cream font-semibold transition-colors"
+        >Manage your parks &rarr;</a
+      >
+    </p>
+    <nav class="text-mist flex justify-center gap-6 border-t border-white/10 pt-4 text-sm">
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/help" class="hover:text-cream transition-colors">Help</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
+</PageLayout>
+
+<script>
+  import { actions } from "astro:actions";
+
+  // State
+  let currentRadius = 5;
+  let userLat = null;
+  let userLng = null;
+
+  // DOM elements
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _locationBanner = document.getElementById("location-banner");
+  const locationRequesting = document.getElementById("location-requesting");
+  const locationGranted = document.getElementById("location-granted");
+  const locationDenied = document.getElementById("location-denied");
+  const locationError = document.getElementById("location-error");
+  const errorMessage = document.getElementById("error-message");
+  const radiusSelector = document.getElementById("radius-selector");
+  const parksLoading = document.getElementById("parks-loading");
+  const nearbyParksSection = document.getElementById("nearby-parks-section");
+  const nearbyParksList = document.getElementById("nearby-parks-list");
+  const nearbyCount = document.getElementById("nearby-count");
+  const nearbyEmpty = document.getElementById("nearby-empty");
+  const fallbackSection = document.getElementById("fallback-section");
+
+  // HTML escape utility to prevent XSS when inserting user/API data into innerHTML
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Request geolocation on load
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userLat = position.coords.latitude;
+        userLng = position.coords.longitude;
+        showLocationGranted();
+        fetchNearbyParks();
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          showLocationDenied();
+        } else {
+          showLocationError(error.message || "Unable to get location");
+        }
+        showFallbackParks();
+      },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  } else {
+    showLocationError("Geolocation not supported");
+    showFallbackParks();
+  }
+
+  function showLocationGranted() {
+    locationRequesting.classList.add("hidden");
+    locationGranted.classList.remove("hidden");
+    radiusSelector.classList.remove("hidden");
+  }
+
+  function showLocationDenied() {
+    locationRequesting.classList.add("hidden");
+    locationDenied.classList.remove("hidden");
+  }
+
+  function showLocationError(msg) {
+    locationRequesting.classList.add("hidden");
+    errorMessage.textContent = msg;
+    locationError.classList.remove("hidden");
+  }
+
+  function showFallbackParks() {
+    fallbackSection.classList.remove("hidden");
+    setupFallbackAddButtons();
+  }
+
+  async function fetchNearbyParks() {
+    parksLoading.classList.remove("hidden");
+    nearbyParksSection.classList.add("hidden");
+
+    try {
+      const { data: parks, error } = await actions.searchNearbyParks({
+        lat: userLat,
+        lng: userLng,
+        radiusMiles: currentRadius,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      renderNearbyParks(parks || []);
+    } catch (err) {
+      console.error("Failed to fetch nearby parks:", err);
+      nearbyEmpty.textContent = "Failed to load nearby parks. Please try again.";
+      nearbyEmpty.classList.remove("hidden");
+      nearbyParksSection.classList.remove("hidden");
+    } finally {
+      parksLoading.classList.add("hidden");
+    }
+  }
+
+  function renderNearbyParks(parks) {
+    nearbyParksList.innerHTML = "";
+    nearbyCount.textContent = parks.length;
+
+    if (parks.length === 0) {
+      nearbyEmpty.classList.remove("hidden");
+      nearbyParksSection.classList.remove("hidden");
+      return;
+    }
+
+    nearbyEmpty.classList.add("hidden");
+
+    parks.forEach((park) => {
+      const article = document.createElement("article");
+      article.className =
+        "park-card bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/15 transition-opacity duration-200";
+      article.dataset.parkId = park._id;
+      article.dataset.placeId = park.placeId;
+      article.dataset.photoUrls = JSON.stringify(park.photoUrls || []);
+      article.dataset.expanded = "false";
+
+      // Photo thumbnail (if available)
+      const photoFallbackHtml =
+        '<div class="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0"><span class="text-2xl">🌲</span></div>';
+      const photoHtml = park.photoUrl
+        ? `<img src="${escapeHtml(park.photoUrl)}" alt="" class="w-16 h-16 rounded-lg object-cover shrink-0 park-thumbnail" loading="lazy" />`
+        : photoFallbackHtml;
+
+      // Type badge
+      const typeLabel = formatParkType(park.primaryType);
+      const typeBadge = typeLabel
+        ? `<span class="inline-block text-xs bg-white/10 text-mist px-2 py-0.5 rounded-full">${escapeHtml(typeLabel)}</span>`
+        : "";
+
+      // Already added indicator
+      const isAdded = park.isInUserList;
+      const actionButton = isAdded
+        ? `<div class="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/10 text-gold/60">
+                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                 </svg>
+               </div>`
+        : `<button
+                 class="add-nearby-btn shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/20 hover:bg-gold/30 text-gold transition-colors"
+                 data-add-nearby="${escapeHtml(park._id)}"
+                 aria-label="Add ${escapeHtml(park.name)}"
+               >
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                 </svg>
+               </button>`;
+
+      article.innerHTML = `
+            <div class="park-card-collapsed">
+              ${photoHtml}
+              <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex items-start justify-between gap-2">
+                  <h3 class="min-w-0 font-[Fraunces] text-cream font-semibold truncate">${escapeHtml(park.name)}</h3>
+                  <span class="shrink-0 text-sm text-gold font-medium">${escapeHtml(park.distanceMiles)} mi</span>
+                </div>
+                ${park.address ? `<p class="text-sm text-mist truncate mt-0.5">${escapeHtml(park.address)}</p>` : ""}
+                <div class="flex items-center gap-2 mt-2">
+                  ${typeBadge}
+                  ${isAdded ? '<span class="text-xs text-gold/70">In your list</span>' : ""}
+                </div>
+              </div>
+              ${actionButton}
+            </div>
+            <div class="park-card-expanded"></div>
+          `;
+
+      nearbyParksList.appendChild(article);
+    });
+
+    nearbyParksSection.classList.remove("hidden");
+    setupNearbyAddButtons();
+    setupImageErrorHandlers();
+    setupCardExpansion();
+  }
+
+  function setupImageErrorHandlers() {
+    document.querySelectorAll(".park-thumbnail").forEach((img) => {
+      img.addEventListener(
+        "error",
+        function () {
+          const fallback = document.createElement("div");
+          fallback.className =
+            "w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0";
+          fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+          this.replaceWith(fallback);
+        },
+        { once: true }
+      );
+    });
+  }
+
+  function formatParkType(type) {
+    if (!type) return "";
+    const labels = {
+      park: "Park",
+      playground: "Playground",
+      dog_park: "Dog Park",
+    };
+    return labels[type] || type.replace(/_/g, " ");
+  }
+
+  function setupNearbyAddButtons() {
+    document.querySelectorAll(".add-nearby-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const button = e.currentTarget;
+        const parkId = button.dataset.addNearby;
+
+        button.disabled = true;
+        button.innerHTML =
+          '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
+
+        try {
+          const { error } = await actions.addPark({ parkId });
+
+          if (error) {
+            throw error;
+          }
+
+          // Update UI to show added state
+          button.outerHTML = `
+                <div class="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gold/10 text-gold/60">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  </svg>
+                </div>
+              `;
+
+          // Add "In your list" text
+          const card = document.querySelector(`[data-park-id="${parkId}"]`);
+          if (card) {
+            const badgeContainer = card.querySelector(".flex.items-center.gap-2.mt-2");
+            if (badgeContainer && !badgeContainer.querySelector(".text-gold\\/70")) {
+              const addedSpan = document.createElement("span");
+              addedSpan.className = "text-xs text-gold/70";
+              addedSpan.textContent = "In your list";
+              badgeContainer.appendChild(addedSpan);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to add park:", err);
+          button.disabled = false;
+          button.innerHTML =
+            '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+        }
+      });
+    });
+  }
+
+  function setupFallbackAddButtons() {
+    document.querySelectorAll("#fallback-section .add-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const button = e.currentTarget;
+        const parkId = button.dataset.add;
+
+        button.disabled = true;
+        button.innerHTML =
+          '<span class="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>';
+
+        try {
+          const { error } = await actions.addPark({ parkId });
+
+          if (error) {
+            throw error;
+          }
+
+          // Fade out and remove the card
+          const card = button.closest(".park-card");
+          card.style.opacity = "0.5";
+          button.innerHTML =
+            '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        } catch (err) {
+          console.error("Failed to add park:", err);
+          button.disabled = false;
+          button.innerHTML =
+            '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+        }
+      });
+    });
+  }
+
+  // Radius selector handlers
+  document.querySelectorAll(".radius-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const radius = parseInt(e.currentTarget.dataset.radius);
+      if (radius === currentRadius) return;
+
+      currentRadius = radius;
+
+      // Update button styles
+      document.querySelectorAll(".radius-btn").forEach((b) => {
+        if (parseInt(b.dataset.radius) === currentRadius) {
+          b.className =
+            "radius-btn px-4 py-2 rounded-full text-sm font-medium transition-colors bg-gold text-forest";
+        } else {
+          b.className =
+            "radius-btn px-4 py-2 rounded-full text-sm font-medium transition-colors bg-white/10 text-cream border border-white/20 hover:bg-white/20";
+        }
+      });
+
+      // Re-fetch parks
+      if (userLat && userLng) {
+        fetchNearbyParks();
+      }
+    });
+  });
+
+  // Refresh button handler
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    if (userLat && userLng) {
+      fetchNearbyParks();
+    }
+  });
+
+  // Setup error handlers for server-rendered fallback thumbnails
+  document.querySelectorAll(".fallback-thumbnail").forEach((img) => {
+    img.addEventListener(
+      "error",
+      function () {
+        const fallback = document.createElement("div");
+        fallback.className =
+          "flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5";
+        fallback.innerHTML = '<span class="text-2xl">🌲</span>';
+        this.replaceWith(fallback);
+      },
+      { once: true }
+    );
+  });
+
+  // ============================================
+  // Expandable Park Cards with Photo Carousel
+  // ============================================
+
+  let expandedCard = null;
+  const photoUrlCache = new Map(); // Cache fetched photo URLs by placeId
+
+  /**
+   * Generate carousel HTML from photo URLs.
+   */
+  function createCarouselHtml(photoUrls, parkName) {
+    if (!photoUrls || photoUrls.length === 0) {
+      return `
+        <div class="carousel-container single-photo">
+          <div class="carousel-slide">
+            <div class="photo-fallback">🌲</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const isSinglePhoto = photoUrls.length === 1;
+    const slides = photoUrls
+      .map(
+        (url, i) => `
+        <div class="carousel-slide">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(parkName)} photo ${i + 1}" loading="lazy" />
+        </div>
+      `
+      )
+      .join("");
+
+    const dots = photoUrls
+      .map(
+        (_, i) => `
+        <button class="carousel-dot${i === 0 ? " active" : ""}" data-index="${i}" aria-label="Go to photo ${i + 1}"></button>
+      `
+      )
+      .join("");
+
+    return `
+      <div class="carousel-container${isSinglePhoto ? " single-photo" : ""}">
+        <div class="carousel-slides">
+          ${slides}
+        </div>
+        <button class="carousel-nav prev" aria-label="Previous photo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button class="carousel-nav next" aria-label="Next photo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <button class="carousel-close" aria-label="Close">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div class="carousel-dots">
+          ${dots}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Initialize carousel interactions (scroll sync, navigation).
+   */
+  function initCarousel(container) {
+    const slidesContainer = container.querySelector(".carousel-slides");
+    const dots = container.querySelectorAll(".carousel-dot");
+    const prevBtn = container.querySelector(".carousel-nav.prev");
+    const nextBtn = container.querySelector(".carousel-nav.next");
+    const closeBtn = container.querySelector(".carousel-close");
+
+    if (!slidesContainer) return;
+
+    let currentIndex = 0;
+    const slideCount = slidesContainer.children.length;
+
+    // Update active dot based on scroll position
+    function updateDots() {
+      const scrollLeft = slidesContainer.scrollLeft;
+      const slideWidth = slidesContainer.offsetWidth;
+      const newIndex = Math.round(scrollLeft / slideWidth);
+      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < slideCount) {
+        currentIndex = newIndex;
+        dots.forEach((dot, i) => {
+          dot.classList.toggle("active", i === currentIndex);
+        });
+      }
+    }
+
+    // Scroll to specific slide
+    function scrollToSlide(index) {
+      const slideWidth = slidesContainer.offsetWidth;
+      slidesContainer.scrollTo({ left: index * slideWidth, behavior: "smooth" });
+    }
+
+    // Scroll event for dot sync
+    slidesContainer.addEventListener("scroll", updateDots);
+
+    // Dot click navigation
+    dots.forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const index = parseInt(dot.dataset.index);
+        scrollToSlide(index);
+      });
+    });
+
+    // Arrow navigation
+    if (prevBtn) {
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) scrollToSlide(currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex < slideCount - 1) scrollToSlide(currentIndex + 1);
+      });
+    }
+
+    // Close button
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const card = container.closest(".park-card");
+        if (card) collapseCard(card);
+      });
+    }
+
+    // Image error fallback
+    container.querySelectorAll(".carousel-slide img").forEach((img) => {
+      img.addEventListener(
+        "error",
+        function () {
+          this.outerHTML = '<div class="photo-fallback">🌲</div>';
+        },
+        { once: true }
+      );
+    });
+  }
+
+  /**
+   * Expand a card to show the photo carousel.
+   */
+  async function expandCard(card) {
+    // Collapse any previously expanded card
+    if (expandedCard && expandedCard !== card) {
+      collapseCard(expandedCard);
+    }
+
+    const expandedDiv = card.querySelector(".park-card-expanded");
+    if (!expandedDiv) return;
+
+    // Check if we have photo URLs or need to fetch them
+    let photoUrls = [];
+    const photoUrlsData = card.dataset.photoUrls;
+    const photoRefsData = card.dataset.photoRefs;
+    const placeId = card.dataset.placeId;
+
+    if (photoUrlsData) {
+      // JS-rendered cards have photoUrls directly
+      try {
+        photoUrls = JSON.parse(photoUrlsData);
+      } catch {
+        photoUrls = [];
+      }
+    } else if (photoRefsData && placeId) {
+      // SSR cards have photoRefs - need to fetch fresh URLs
+      if (photoUrlCache.has(placeId)) {
+        photoUrls = photoUrlCache.get(placeId);
+      } else {
+        // Show loading state
+        expandedDiv.innerHTML = `
+          <div class="carousel-loading">
+            <span class="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin"></span>
+          </div>
+        `;
+        card.dataset.expanded = "true";
+        expandedCard = card;
+
+        try {
+          const { data, error } = await actions.getFreshPhotoUrls({
+            placeId,
+            maxPhotos: 5,
+          });
+
+          if (error) throw error;
+          photoUrls = data || [];
+          photoUrlCache.set(placeId, photoUrls);
+        } catch (err) {
+          console.error("Failed to fetch photo URLs:", err);
+          photoUrls = [];
+        }
+
+        // Guard against stale updates: user may have collapsed/switched cards during fetch
+        if (card.dataset.expanded !== "true") {
+          return;
+        }
+      }
+    }
+
+    // Get park name from the card
+    const nameEl = card.querySelector("h3");
+    const parkName = nameEl ? nameEl.textContent : "Park";
+
+    // Render carousel
+    expandedDiv.innerHTML = createCarouselHtml(photoUrls, parkName);
+    card.dataset.expanded = "true";
+    expandedCard = card;
+
+    // Initialize carousel interactions
+    const container = expandedDiv.querySelector(".carousel-container");
+    if (container) {
+      initCarousel(container);
+    }
+  }
+
+  /**
+   * Collapse an expanded card.
+   */
+  function collapseCard(card) {
+    card.dataset.expanded = "false";
+    const expandedDiv = card.querySelector(".park-card-expanded");
+    if (expandedDiv) {
+      expandedDiv.innerHTML = "";
+    }
+    if (expandedCard === card) {
+      expandedCard = null;
+    }
+  }
+
+  /**
+   * Toggle card expansion.
+   */
+  function toggleCardExpansion(card) {
+    if (card.dataset.expanded === "true") {
+      collapseCard(card);
+    } else {
+      expandCard(card);
+    }
+  }
+
+  /**
+   * Setup click handlers for card expansion.
+   * Uses a guard to prevent duplicate event listeners when called multiple times.
+   */
+  let cardExpansionInitialized = false;
+  function setupCardExpansion() {
+    if (cardExpansionInitialized) return;
+    cardExpansionInitialized = true;
+
+    // Delegate clicks on park cards
+    [nearbyParksList, document.getElementById("fallback-parks-list")].forEach((list) => {
+      if (!list) return;
+
+      list.addEventListener("click", (e) => {
+        const target = e.target;
+
+        // Ignore clicks on add buttons
+        if (target.closest(".add-btn") || target.closest(".add-nearby-btn")) {
+          return;
+        }
+
+        // Ignore clicks on carousel controls
+        if (
+          target.closest(".carousel-nav") ||
+          target.closest(".carousel-dot") ||
+          target.closest(".carousel-close")
+        ) {
+          return;
+        }
+
+        // Find the park card
+        const card = target.closest(".park-card");
+        if (card) {
+          toggleCardExpansion(card);
+        }
+      });
+    });
+  }
+
+  // Setup card expansion for SSR fallback cards
+  setupCardExpansion();
+
+  // Outside click to collapse
+  document.addEventListener("click", (e) => {
+    if (!expandedCard) return;
+
+    // If click is outside the expanded card, collapse it
+    if (!expandedCard.contains(e.target)) {
+      collapseCard(expandedCard);
+    }
+  });
+</script>

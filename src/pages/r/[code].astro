@@ -1,0 +1,168 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import SEO from "../../components/SEO.astro";
+import Card from "../../components/starwind/card/Card.astro";
+import CardContent from "../../components/starwind/card/CardContent.astro";
+import Button from "../../components/starwind/button/Button.astro";
+import { validateReferralCode } from "../../lib/convexClient";
+import { SITE_NAME } from "../../lib/config";
+
+const { code } = Astro.params;
+
+// Validate the referral code
+let isValid = false;
+let referrerName = "A friend";
+let errorMessage = "";
+
+if (code) {
+  try {
+    const result = await validateReferralCode(code);
+    isValid = result.valid;
+    if (result.valid && result.referrerName) {
+      referrerName = result.referrerName;
+    } else if (!result.valid) {
+      errorMessage =
+        result.reason === "invalid_code"
+          ? "This referral link is invalid or has expired."
+          : "Something went wrong. Please try again.";
+    }
+  } catch (error) {
+    console.error("Error validating referral code:", error);
+    errorMessage = "Could not validate referral link. Please try again.";
+  }
+}
+
+// Set referral cookie if valid (30 days expiry)
+if (isValid && code) {
+  Astro.cookies.set("referral_code", code.toUpperCase(), {
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    httpOnly: true,
+    sameSite: "lax",
+    secure: import.meta.env.PROD,
+  });
+}
+
+const pageTitle = isValid
+  ? `${referrerName} invited you to ${SITE_NAME}`
+  : `Invalid Referral - ${SITE_NAME}`;
+---
+
+<PageLayout
+  title={SITE_NAME}
+  subtitle={isValid ? "You've been invited!" : "Oops!"}
+  pageTitle={pageTitle}
+>
+  <SEO
+    slot="head"
+    title={isValid
+      ? `${referrerName} invited you to ${SITE_NAME}`
+      : `Invalid Referral - ${SITE_NAME}`}
+    description={isValid
+      ? `Join ${SITE_NAME} and discover your next adventure. ${referrerName} thinks you'll love it!`
+      : "This referral link is invalid or has expired."}
+    noindex={true}
+  />
+  {
+    isValid ? (
+      <Card class="bg-gold/10 border-gold/20 backdrop-blur-xl">
+        <CardContent class="p-6 text-center">
+          <div class="mb-4">
+            <span class="text-4xl" aria-hidden="true">
+              🌳
+            </span>
+          </div>
+          <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
+            {referrerName} wants you to explore more parks!
+          </h2>
+          <p class="text-mist mx-auto mb-6 max-w-md">
+            {SITE_NAME} helps you discover and visit local parks. Build your list, let us pick a
+            random one, and go on an adventure!
+          </p>
+          <Button href="/sign-up" variant="primary" size="lg">
+            Sign Up Free
+          </Button>
+          <p class="text-mist/70 mt-4 text-sm">
+            Already have an account?{" "}
+            <a href="/sign-in" class="text-gold hover:underline">
+              Sign in
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    ) : (
+      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-6 text-center">
+          <div class="mb-4">
+            <span class="text-4xl" aria-hidden="true">
+              😕
+            </span>
+          </div>
+          <h2 class="text-cream mb-2 font-[Fraunces] text-xl font-semibold">
+            Invalid Referral Link
+          </h2>
+          <p class="text-mist mb-6">
+            {errorMessage || "This referral link is invalid or has expired."}
+          </p>
+          <Button href="/" variant="secondary" size="lg">
+            Go to Homepage
+          </Button>
+          <p class="text-mist/70 mt-4 text-sm">
+            Want to sign up anyway?{" "}
+            <a href="/sign-up" class="text-gold hover:underline">
+              Create an account
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  {
+    isValid && (
+      <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+        <CardContent class="p-6">
+          <h3 class="text-cream mb-4 font-[Fraunces] text-lg font-semibold">How It Works</h3>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                1
+              </span>
+              <div>
+                <p class="text-cream font-medium">Add your favorite parks</p>
+                <p class="text-mist text-sm">Build a list of parks you want to explore</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                2
+              </span>
+              <div>
+                <p class="text-cream font-medium">Pick a park</p>
+                <p class="text-mist text-sm">We'll randomly choose one for you</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="bg-gold/20 text-gold flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-[Fraunces] text-sm font-bold">
+                3
+              </span>
+              <div>
+                <p class="text-cream font-medium">Go explore!</p>
+                <p class="text-mist text-sm">Get directions and track your visits</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  <footer slot="footer" class="mt-8 border-t border-white/10 pt-4">
+    <nav class="text-mist flex justify-center gap-6 text-sm">
+      <a href="/" class="hover:text-cream transition-colors">Home</a>
+      <a href="/about" class="hover:text-cream transition-colors">About</a>
+      <a href="/legal/terms" class="hover:text-cream transition-colors">Terms</a>
+      <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy</a>
+    </nav>
+  </footer>
+</PageLayout>

@@ -1,0 +1,236 @@
+---
+import Analytics from "@vercel/analytics/astro";
+import SEO from "../components/SEO.astro";
+import JsonLd from "../components/JsonLd.astro";
+import { homepageSchema } from "../lib/schemas";
+import { SITE_NAME, APP_SUBTITLE } from "../lib/config";
+import "../styles/starwind.css";
+import "../styles/global.css";
+import Button from "../components/starwind/button/Button.astro";
+import Card from "../components/starwind/card/Card.astro";
+import CardContent from "../components/starwind/card/CardContent.astro";
+
+// Redirect authenticated users to the app
+const { userId } = Astro.locals.auth();
+if (userId) {
+  return Astro.redirect("/app");
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#c9a227" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <SEO
+      title={`${SITE_NAME} - ${APP_SUBTITLE}`}
+      description={`End the 'which park?' debate! ${SITE_NAME} randomly picks your next family adventure from your curated list of local parks. Free to try.`}
+    >
+      <JsonLd schema={homepageSchema} />
+    </SEO>
+    <!-- Font preconnects -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Async font loading for faster initial render -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <Analytics />
+  </head>
+  <body>
+    <div class="container max-w-2xl">
+      <!-- Header -->
+      <header class="flex items-center justify-between py-6">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🌲</span>
+          <span class="text-cream font-[Fraunces] text-xl font-semibold">{SITE_NAME}</span>
+        </div>
+        <nav class="flex items-center gap-3">
+          <a
+            href="/sign-in"
+            class="text-cream hover:text-gold px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Sign In
+          </a>
+          <a
+            href="/sign-up"
+            class="bg-gold text-forest hover:bg-cream rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            Try Free
+          </a>
+        </nav>
+      </header>
+
+      <!-- Hero Section -->
+      <section class="py-12 text-center md:py-16">
+        <h1 class="text-cream mb-4 font-[Fraunces] text-4xl leading-tight font-bold md:text-5xl">
+          Which park?<br />We'll decide.
+        </h1>
+        <p class="text-mist mx-auto mb-8 max-w-md text-lg leading-relaxed">
+          End the endless debate about where to take the kids. One tap picks your next adventure.
+        </p>
+        <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <a href="/sign-up">
+            <Button variant="primary" size="lg" class="rounded-full">Get Started Free</Button>
+          </a>
+          <a
+            href="/sign-in"
+            class="text-cream rounded-full border border-white/30 px-6 py-3 font-semibold transition-colors hover:bg-white/10"
+          >
+            Sign In
+          </a>
+        </div>
+      </section>
+
+      <!-- Value Props -->
+      <section class="py-8">
+        <div class="grid gap-4 md:grid-cols-3">
+          <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+            <CardContent class="p-6 text-center">
+              <div class="mb-3 text-3xl">⚡</div>
+              <h3 class="text-cream mb-2 font-[Fraunces] text-lg font-semibold">
+                Instant Decision
+              </h3>
+              <p class="text-mist text-sm">
+                Decides in under 1 second. No more standing around debating options.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+            <CardContent class="p-6 text-center">
+              <div class="mb-3 text-3xl">🔄</div>
+              <h3 class="text-cream mb-2 font-[Fraunces] text-lg font-semibold">
+                Built-in Variety
+              </h3>
+              <p class="text-mist text-sm">
+                Won't repeat the same parks. Explore more of your local area.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+            <CardContent class="p-6 text-center">
+              <div class="mb-3 text-3xl">🌳</div>
+              <h3 class="text-cream mb-2 font-[Fraunces] text-lg font-semibold">
+                More Time Outside
+              </h3>
+              <p class="text-mist text-sm">
+                Less time debating, more time playing. Get out the door faster.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="py-8">
+        <h2 class="text-cream mb-6 text-center font-[Fraunces] text-2xl font-semibold">
+          How It Works
+        </h2>
+        <div class="space-y-4">
+          <div
+            class="flex items-start gap-4 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"
+          >
+            <div
+              class="bg-gold text-forest flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >
+              1
+            </div>
+            <div>
+              <h3 class="text-cream mb-1 font-semibold">Build Your List</h3>
+              <p class="text-mist text-sm">
+                Add your favorite local parks or discover new ones nearby.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="flex items-start gap-4 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"
+          >
+            <div
+              class="bg-gold text-forest flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >
+              2
+            </div>
+            <div>
+              <h3 class="text-cream mb-1 font-semibold">Pick a Park</h3>
+              <p class="text-mist text-sm">
+                Tap the button and let us randomly select your destination.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="flex items-start gap-4 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"
+          >
+            <div
+              class="bg-gold text-forest flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-[Fraunces] font-bold"
+            >
+              3
+            </div>
+            <div>
+              <h3 class="text-cream mb-1 font-semibold">Go Explore</h3>
+              <p class="text-mist text-sm">
+                Open directions in Google Maps and head out on your adventure.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust + Final CTA -->
+      <section class="py-8 text-center">
+        <Card class="border-white/15 bg-white/10 backdrop-blur-xl">
+          <CardContent class="px-8 py-10">
+            <h2 class="text-cream mb-4 font-[Fraunces] text-2xl font-semibold">
+              Ready to discover your next park?
+            </h2>
+            <p class="text-mist mb-6 text-sm">Free to start &middot; No credit card required</p>
+            <a href="/sign-up">
+              <Button variant="primary" size="lg" class="rounded-full"
+                >Start Your Free Account</Button
+              >
+            </a>
+          </CardContent>
+        </Card>
+      </section>
+
+      <!-- Footer -->
+      <footer class="mt-8 border-t border-white/10 pt-6 pb-8">
+        <!-- Primary links -->
+        <nav class="text-mist mb-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+          <a href="/about" class="hover:text-cream transition-colors">About</a>
+          <a href="/pricing" class="hover:text-cream transition-colors">Pricing</a>
+          <a href="/help" class="hover:text-cream transition-colors">Help</a>
+          <a href="/help/contact" class="hover:text-cream transition-colors">Contact</a>
+        </nav>
+
+        <!-- Legal links -->
+        <nav class="text-mist/70 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs">
+          <a href="/legal/terms" class="hover:text-cream transition-colors">Terms of Service</a>
+          <a href="/legal/privacy" class="hover:text-cream transition-colors">Privacy Policy</a>
+        </nav>
+
+        <!-- Copyright -->
+        <p class="text-mist/50 mt-4 text-center text-xs">
+          &copy; {new Date().getFullYear()} Pick a Park. All rights reserved.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
