@@ -4,7 +4,7 @@
 export const SITE_NAME = "Pick a Park";
 export const SITE_URL = import.meta.env.SITE_URL || "https://pickapark.app";
 export const SITE_DESCRIPTION =
-  "Random park picker for families exploring local parks. Discover your next adventure.";
+	"Random park picker for families exploring local parks. Discover your next adventure.";
 export const APP_SUBTITLE = "Random Park Picker for Families";
 
 // Theme colors

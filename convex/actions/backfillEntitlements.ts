@@ -1,30 +1,30 @@
 "use node";
 
-import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
+import { internalAction } from "../_generated/server";
 
 interface BackfillResult {
-  success: boolean;
-  message: string;
-  created: number;
-  total?: number;
-  errors?: string[];
+	success: boolean;
+	message: string;
+	created: number;
+	total?: number;
+	errors?: string[];
 }
 
 interface EntitlementStatusResult {
-  usersNeedingBackfill: number;
-  sampleUsers: Array<{
-    id: Doc<"users">["_id"];
-    email: string | undefined;
-    name: string | undefined;
-  }>;
+	usersNeedingBackfill: number;
+	sampleUsers: Array<{
+		id: Doc<"users">["_id"];
+		email: string | undefined;
+		name: string | undefined;
+	}>;
 }
 
 interface PaginatedUsersResult {
-  users: Doc<"users">[];
-  nextCursor: string | null;
-  isDone: boolean;
+	users: Doc<"users">[];
+	nextCursor: string | null;
+	isDone: boolean;
 }
 
 /**
@@ -35,67 +35,67 @@ interface PaginatedUsersResult {
  * npx convex run actions/backfillEntitlements:backfillEntitlements
  */
 export const backfillEntitlements = internalAction({
-  args: {},
-  handler: async (ctx): Promise<BackfillResult> => {
-    let created = 0;
-    let totalFound = 0;
-    const errors: string[] = [];
-    let cursor: string | null = null;
+	args: {},
+	handler: async (ctx): Promise<BackfillResult> => {
+		let created = 0;
+		let totalFound = 0;
+		const errors: string[] = [];
+		let cursor: string | null = null;
 
-    // Process users in paginated batches for memory safety
-    do {
-      const result: PaginatedUsersResult = await ctx.runQuery(
-        internal.backfillHelpers.getUsersWithoutEntitlements,
-        { cursor: cursor ?? undefined, limit: 100 }
-      );
+		// Process users in paginated batches for memory safety
+		do {
+			const result: PaginatedUsersResult = await ctx.runQuery(
+				internal.backfillHelpers.getUsersWithoutEntitlements,
+				{ cursor: cursor ?? undefined, limit: 100 }
+			);
 
-      const usersWithoutEntitlements = result.users;
-      totalFound += usersWithoutEntitlements.length;
+			const usersWithoutEntitlements = result.users;
+			totalFound += usersWithoutEntitlements.length;
 
-      console.log(
-        `Processing batch: ${usersWithoutEntitlements.length} users without entitlements`
-      );
+			console.log(
+				`Processing batch: ${usersWithoutEntitlements.length} users without entitlements`
+			);
 
-      // Create entitlements for each user in this batch
-      for (const user of usersWithoutEntitlements) {
-        try {
-          const createResult = await ctx.runMutation(
-            internal.entitlements.createDefaultEntitlement,
-            { userId: user._id }
-          );
+			// Create entitlements for each user in this batch
+			for (const user of usersWithoutEntitlements) {
+				try {
+					const createResult = await ctx.runMutation(
+						internal.entitlements.createDefaultEntitlement,
+						{ userId: user._id }
+					);
 
-          if (createResult.created) {
-            created++;
-            console.log(`Created entitlement for user: ${user._id}`);
-          } else {
-            console.log(`Entitlement already exists for user: ${user._id}`);
-          }
-        } catch (error) {
-          const message = `Failed to create entitlement for user ${user._id}: ${error}`;
-          console.error(message);
-          errors.push(message);
-        }
-      }
+					if (createResult.created) {
+						created++;
+						console.log(`Created entitlement for user: ${user._id}`);
+					} else {
+						console.log(`Entitlement already exists for user: ${user._id}`);
+					}
+				} catch (error) {
+					const message = `Failed to create entitlement for user ${user._id}: ${error}`;
+					console.error(message);
+					errors.push(message);
+				}
+			}
 
-      cursor = result.isDone ? null : result.nextCursor;
-    } while (cursor);
+			cursor = result.isDone ? null : result.nextCursor;
+		} while (cursor);
 
-    if (totalFound === 0) {
-      return {
-        success: true,
-        message: "No users need entitlement backfill",
-        created: 0,
-      };
-    }
+		if (totalFound === 0) {
+			return {
+				success: true,
+				message: "No users need entitlement backfill",
+				created: 0,
+			};
+		}
 
-    return {
-      success: errors.length === 0,
-      message: `Created ${created} entitlements out of ${totalFound} users`,
-      created,
-      total: totalFound,
-      errors: errors.length > 0 ? errors : undefined,
-    };
-  },
+		return {
+			success: errors.length === 0,
+			message: `Created ${created} entitlements out of ${totalFound} users`,
+			created,
+			total: totalFound,
+			errors: errors.length > 0 ? errors : undefined,
+		};
+	},
 });
 
 /**
@@ -106,42 +106,42 @@ export const backfillEntitlements = internalAction({
  * npx convex run actions/backfillEntitlements:checkEntitlementStatus
  */
 export const checkEntitlementStatus = internalAction({
-  args: {},
-  handler: async (ctx): Promise<EntitlementStatusResult> => {
-    const sampleUsers: Array<{
-      id: Doc<"users">["_id"];
-      email: string | undefined;
-      name: string | undefined;
-    }> = [];
-    let totalCount = 0;
-    let cursor: string | null = null;
+	args: {},
+	handler: async (ctx): Promise<EntitlementStatusResult> => {
+		const sampleUsers: Array<{
+			id: Doc<"users">["_id"];
+			email: string | undefined;
+			name: string | undefined;
+		}> = [];
+		let totalCount = 0;
+		let cursor: string | null = null;
 
-    // Count users without entitlements and collect a sample (max 10)
-    do {
-      const result: PaginatedUsersResult = await ctx.runQuery(
-        internal.backfillHelpers.getUsersWithoutEntitlements,
-        { cursor: cursor ?? undefined, limit: 100 }
-      );
+		// Count users without entitlements and collect a sample (max 10)
+		do {
+			const result: PaginatedUsersResult = await ctx.runQuery(
+				internal.backfillHelpers.getUsersWithoutEntitlements,
+				{ cursor: cursor ?? undefined, limit: 100 }
+			);
 
-      totalCount += result.users.length;
+			totalCount += result.users.length;
 
-      // Collect sample (first 10 users only)
-      for (const user of result.users) {
-        if (sampleUsers.length < 10) {
-          sampleUsers.push({
-            id: user._id,
-            email: user.email,
-            name: user.name,
-          });
-        }
-      }
+			// Collect sample (first 10 users only)
+			for (const user of result.users) {
+				if (sampleUsers.length < 10) {
+					sampleUsers.push({
+						id: user._id,
+						email: user.email,
+						name: user.name,
+					});
+				}
+			}
 
-      cursor = result.isDone ? null : result.nextCursor;
-    } while (cursor);
+			cursor = result.isDone ? null : result.nextCursor;
+		} while (cursor);
 
-    return {
-      usersNeedingBackfill: totalCount,
-      sampleUsers,
-    };
-  },
+		return {
+			usersNeedingBackfill: totalCount,
+			sampleUsers,
+		};
+	},
 });

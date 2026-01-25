@@ -1,7 +1,7 @@
-export { SEO, canonical, ogImage } from './config'
+export { canonical, ogImage, SEO } from "./config";
 export {
-  websiteSchema,
-  softwareApplicationSchema,
-  createBreadcrumbSchema,
-  createFaqSchema,
-} from './schemas'
+	createBreadcrumbSchema,
+	createFaqSchema,
+	softwareApplicationSchema,
+	websiteSchema,
+} from "./schemas";

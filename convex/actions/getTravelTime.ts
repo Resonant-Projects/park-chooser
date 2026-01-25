@@ -1,12 +1,12 @@
 "use node";
 
-import { action } from "../_generated/server";
 import { v } from "convex/values";
+import { action } from "../_generated/server";
 import { getTravelTime, getTravelTimeBatch } from "../lib/googleMaps";
 
 export interface TravelTimeResponse {
-  durationText: string;
-  distanceText: string;
+	durationText: string;
+	distanceText: string;
 }
 
 /**
@@ -14,34 +14,34 @@ export interface TravelTimeResponse {
  * Called from client-side after geolocation is obtained.
  */
 export const calculateTravelTime = action({
-  args: {
-    originLat: v.number(),
-    originLng: v.number(),
-    placeId: v.string(),
-  },
-  handler: async (_ctx, args): Promise<TravelTimeResponse | null> => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+	args: {
+		originLat: v.number(),
+		originLng: v.number(),
+		placeId: v.string(),
+	},
+	handler: async (_ctx, args): Promise<TravelTimeResponse | null> => {
+		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    if (!apiKey) {
-      console.error("GOOGLE_MAPS_API_KEY not configured");
-      return null;
-    }
+		if (!apiKey) {
+			console.error("GOOGLE_MAPS_API_KEY not configured");
+			return null;
+		}
 
-    const result = await getTravelTime(args.originLat, args.originLng, args.placeId, apiKey);
+		const result = await getTravelTime(args.originLat, args.originLng, args.placeId, apiKey);
 
-    if (!result) {
-      return null;
-    }
+		if (!result) {
+			return null;
+		}
 
-    return {
-      durationText: result.durationText,
-      distanceText: result.distanceText,
-    };
-  },
+		return {
+			durationText: result.durationText,
+			distanceText: result.distanceText,
+		};
+	},
 });
 
 export interface BatchTravelTimeResponse {
-  [placeId: string]: TravelTimeResponse | null;
+	[placeId: string]: TravelTimeResponse | null;
 }
 
 /**
@@ -50,36 +50,36 @@ export interface BatchTravelTimeResponse {
  * Max 25 destinations per call (API limit).
  */
 export const calculateBatchTravelTime = action({
-  args: {
-    originLat: v.number(),
-    originLng: v.number(),
-    placeIds: v.array(v.string()),
-  },
-  handler: async (_ctx, args): Promise<BatchTravelTimeResponse> => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+	args: {
+		originLat: v.number(),
+		originLng: v.number(),
+		placeIds: v.array(v.string()),
+	},
+	handler: async (_ctx, args): Promise<BatchTravelTimeResponse> => {
+		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    if (!apiKey) {
-      console.error("GOOGLE_MAPS_API_KEY not configured");
-      return {};
-    }
+		if (!apiKey) {
+			console.error("GOOGLE_MAPS_API_KEY not configured");
+			return {};
+		}
 
-    if (args.placeIds.length === 0) {
-      return {};
-    }
+		if (args.placeIds.length === 0) {
+			return {};
+		}
 
-    const resultsMap = await getTravelTimeBatch(
-      args.originLat,
-      args.originLng,
-      args.placeIds,
-      apiKey
-    );
+		const resultsMap = await getTravelTimeBatch(
+			args.originLat,
+			args.originLng,
+			args.placeIds,
+			apiKey
+		);
 
-    // Convert Map to plain object for JSON serialization
-    const response: BatchTravelTimeResponse = {};
-    for (const [placeId, result] of resultsMap) {
-      response[placeId] = result;
-    }
+		// Convert Map to plain object for JSON serialization
+		const response: BatchTravelTimeResponse = {};
+		for (const [placeId, result] of resultsMap) {
+			response[placeId] = result;
+		}
 
-    return response;
-  },
+		return response;
+	},
 });

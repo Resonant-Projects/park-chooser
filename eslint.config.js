@@ -1,92 +1,63 @@
-import eslint from "@eslint/js";
-import tseslint from "@typescript-eslint/eslint-plugin";
-import tsparser from "@typescript-eslint/parser";
 import convexPlugin from "@convex-dev/eslint-plugin";
-import astro from "eslint-plugin-astro";
-import globals from "globals";
+import pluginQuery from "@tanstack/eslint-plugin-query";
+import pluginRouter from "@tanstack/eslint-plugin-router";
+import tsParser from "@typescript-eslint/parser";
 
 export default [
-  // Global ignores
-  {
-    ignores: ["dist/**", ".astro/**", "node_modules/**", "convex/_generated/**", ".vercel/**"],
-  },
+	// Global ignores
+	{
+		ignores: [
+			"dist/**",
+			".output/**",
+			"node_modules/**",
+			"convex/_generated/**",
+			".vercel/**",
+			"src/routeTree.gen.ts",
+			"**/*.d.ts",
+		],
+	},
 
-  // Base JavaScript rules
-  eslint.configs.recommended,
+	// Convex-specific rules
+	{
+		files: ["convex/**/*.ts"],
+		ignores: ["convex/_generated/**"],
+		languageOptions: {
+			parser: tsParser,
+			parserOptions: {
+				project: "./convex/tsconfig.json",
+			},
+		},
+		plugins: { "@convex-dev": convexPlugin },
+		rules: { ...convexPlugin.configs.recommended.rules },
+	},
 
-  // Config files (mjs) - Node.js environment
-  {
-    files: ["*.config.mjs", "*.config.js"],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
-  },
+	// TanStack Router rules
+	{
+		files: ["src/routes/**/*.tsx"],
+		languageOptions: {
+			parser: tsParser,
+			parserOptions: {
+				project: "./tsconfig.json",
+			},
+		},
+		plugins: { "@tanstack/router": pluginRouter },
+		rules: { "@tanstack/router/create-route-property-order": "error" },
+	},
 
-  // TypeScript files in src/
-  {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        project: "./tsconfig.json",
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      "@typescript-eslint": tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-      "no-undef": "off", // TypeScript handles this
-    },
-  },
-
-  // Convex TypeScript files (separate tsconfig)
-  {
-    files: ["convex/**/*.ts"],
-    ignores: ["convex/_generated/**"],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        project: "./convex/tsconfig.json",
-      },
-      globals: {
-        ...globals.node,
-      },
-    },
-    plugins: {
-      "@typescript-eslint": tseslint,
-      "@convex-dev": convexPlugin,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      ...convexPlugin.configs.recommended.rules,
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-      "no-undef": "off", // TypeScript handles this
-    },
-  },
-
-  // Astro files
-  ...astro.configs.recommended,
-  {
-    files: ["**/*.astro"],
-    plugins: {
-      "@typescript-eslint": tseslint,
-    },
-    rules: {
-      // set:html is sometimes needed for JSON-LD structured data
-      "astro/no-set-html-directive": "warn",
-      // Allow unused vars prefixed with underscore
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
-      ],
-    },
-  },
+	// TanStack Query rules
+	{
+		files: ["src/**/*.ts", "src/**/*.tsx"],
+		languageOptions: {
+			parser: tsParser,
+			parserOptions: {
+				project: "./tsconfig.json",
+			},
+		},
+		plugins: { "@tanstack/query": pluginQuery },
+		rules: {
+			"@tanstack/query/exhaustive-deps": "error",
+			"@tanstack/query/stable-query-client": "error",
+			"@tanstack/query/no-rest-destructuring": "warn",
+		},
+	},
 ];

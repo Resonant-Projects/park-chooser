@@ -1,6 +1,5 @@
 export default {
-  "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-  "*.astro": ["eslint --fix", "prettier --write"],
-  "*.css": ["prettier --write"],
-  "*.{json,md}": ["prettier --write"],
+	"*.{ts,tsx}": ["biome check --write", "eslint --fix"],
+	"*.{js,mjs}": ["biome check --write"],
+	"*.{json,css}": ["biome format --write"],
 };

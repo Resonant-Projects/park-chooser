@@ -6,21 +6,21 @@ import CardHeader, { cardHeader } from "./CardHeader.astro";
 import CardTitle, { cardTitle } from "./CardTitle.astro";
 
 const CardVariants = {
-  card,
-  cardContent,
-  cardDescription,
-  cardFooter,
-  cardHeader,
-  cardTitle,
+	card,
+	cardContent,
+	cardDescription,
+	cardFooter,
+	cardHeader,
+	cardTitle,
 };
 
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, CardVariants };
 
 export default {
-  Root: Card,
-  Header: CardHeader,
-  Footer: CardFooter,
-  Title: CardTitle,
-  Description: CardDescription,
-  Content: CardContent,
+	Root: Card,
+	Header: CardHeader,
+	Footer: CardFooter,
+	Title: CardTitle,
+	Description: CardDescription,
+	Content: CardContent,
 };
