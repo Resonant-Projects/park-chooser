@@ -2,7 +2,8 @@ import { query, mutation, internalQuery, internalMutation } from "./_generated/s
 import { v } from "convex/values";
 
 /**
- * Store or update user from Clerk webhook
+ * Store or update user from authentication.
+ * Handles both new users and webhook-created users (sets tokenIdentifier).
  */
 export const store = mutation({
   args: {},
@@ -29,9 +30,30 @@ export const store = mutation({
       return user._id;
     }
 
+    // Check if user was created via webhook (has clerkUserId but no tokenIdentifier yet)
+    // The JWT subject claim contains the Clerk user ID
+    const clerkUserId = identity.subject;
+    if (clerkUserId) {
+      const webhookUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", clerkUserId))
+        .unique();
+
+      if (webhookUser) {
+        // Update with the correct tokenIdentifier from JWT
+        await ctx.db.patch(webhookUser._id, {
+          tokenIdentifier: identity.tokenIdentifier,
+          name: identity.name ?? webhookUser.name,
+          imageUrl: identity.pictureUrl ?? webhookUser.imageUrl,
+        });
+        return webhookUser._id;
+      }
+    }
+
     // Create new user
     const userId = await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
+      clerkUserId: clerkUserId,
       name: identity.name ?? undefined,
       email: identity.email ?? undefined,
       imageUrl: identity.pictureUrl ?? undefined,
@@ -136,11 +158,10 @@ export const upsertFromClerkWebhook = internalMutation({
     }
 
     // Create new user
-    // Generate tokenIdentifier from Clerk user ID (matches Clerk's JWT format)
-    const tokenIdentifier = `https://clerk.${args.clerkUserId}`;
-
+    // Don't set tokenIdentifier here - it will be set correctly when the user
+    // first authenticates via the store() mutation, which has access to the
+    // actual JWT tokenIdentifier. We use clerkUserId for webhook-based lookups.
     const userId = await ctx.db.insert("users", {
-      tokenIdentifier,
       clerkUserId: args.clerkUserId,
       email: args.email,
       name,

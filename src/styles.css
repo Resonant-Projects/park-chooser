@@ -309,10 +309,6 @@ main {
   transform: scale(1.2);
 }
 
-.carousel-dot:focus {
-  outline: none;
-}
-
 .carousel-dot:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
@@ -448,9 +444,16 @@ input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="search"]:focus,
 textarea:focus {
-  outline: none;
   border-color: var(--color-gold);
   background: rgba(255, 255, 255, 0.15);
+}
+
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="search"]:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 input::placeholder,

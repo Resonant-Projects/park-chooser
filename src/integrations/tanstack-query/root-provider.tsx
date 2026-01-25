@@ -1,9 +1,21 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+
+// Singleton QueryClient to avoid cache isolation across calls
+let cachedQueryClient: QueryClient | null = null
 
 export function getContext() {
-  const queryClient = new QueryClient()
+  if (!cachedQueryClient) {
+    cachedQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 1000 * 60, // 1 minute
+          retry: 1,
+        },
+      },
+    })
+  }
   return {
-    queryClient,
+    queryClient: cachedQueryClient,
   }
 }
 

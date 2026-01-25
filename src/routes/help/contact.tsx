@@ -36,6 +36,11 @@ const subjects = [
 ] as const
 
 async function getBrowserFingerprintHash(): Promise<string> {
+  // SSR safety: return fallback when browser APIs unavailable
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return 'server-side'
+  }
+
   const data = [
     navigator.userAgent,
     navigator.language,
@@ -43,6 +48,19 @@ async function getBrowserFingerprintHash(): Promise<string> {
     screen.width,
     screen.height,
   ].join('|')
+
+  // crypto.subtle may not be available in insecure contexts
+  if (!window.crypto?.subtle) {
+    // Simple hash fallback
+    let hash = 0
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return Math.abs(hash).toString(16).slice(0, 16)
+  }
+
   const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data))
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -98,6 +116,9 @@ function ContactPage() {
       if (result.success) {
         setReferenceId(result.referenceId)
         setFormState('success')
+      } else {
+        setErrorMessage(result.error || 'Something went wrong. Please try again.')
+        setFormState('error')
       }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.')

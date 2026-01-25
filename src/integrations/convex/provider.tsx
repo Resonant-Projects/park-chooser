@@ -5,9 +5,10 @@ import { useAuth } from '@clerk/clerk-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
-const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL
+const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL as string | undefined
+
 if (!CONVEX_URL) {
-  console.error('missing envar VITE_CONVEX_URL')
+  throw new Error('Missing required environment variable VITE_CONVEX_URL')
 }
 
 const convexClient = new ConvexReactClient(CONVEX_URL)

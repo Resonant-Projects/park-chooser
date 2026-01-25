@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Shuffle, MapPin, ExternalLink, Loader2, Car, MapPinOff, Sparkles } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
@@ -52,20 +53,29 @@ function AppPage() {
   } | null>(null)
 
   const [hasLoadedPick, setHasLoadedPick] = useState(false)
+  const [loadPickError, setLoadPickError] = useState<string | null>(null)
 
   // Load today's pick on mount
+  const loadTodaysPick = useCallback(() => {
+    setLoadPickError(null)
+    getTodaysPick()
+      .then((pick) => {
+        if (pick) {
+          setTodaysPick(pick)
+        }
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'Failed to load today\'s pick'
+        setLoadPickError(message)
+      })
+  }, [getTodaysPick])
+
   useEffect(() => {
     if (!hasLoadedPick) {
       setHasLoadedPick(true)
-      getTodaysPick()
-        .then((pick) => {
-          if (pick) {
-            setTodaysPick(pick)
-          }
-        })
-        .catch(console.error)
+      loadTodaysPick()
     }
-  }, [hasLoadedPick, getTodaysPick])
+  }, [hasLoadedPick, loadTodaysPick])
 
   // Request location on mount
   useEffect(() => {
@@ -150,7 +160,7 @@ function AppPage() {
 
     // Track the visit
     try {
-      await trackVisit({ parkId: todaysPick._id as any })
+      await trackVisit({ parkId: todaysPick._id as Id<"parks"> })
     } catch (err) {
       console.error('Failed to track visit:', err)
     }
@@ -171,9 +181,18 @@ function AppPage() {
         </div>
       )}
 
-      {error && (
+      {(error || loadPickError) && (
         <div className="limit-banner max-w-md w-full">
-          <p className="text-[var(--color-cream)]">{error}</p>
+          <p className="text-[var(--color-cream)]">{error || loadPickError}</p>
+          {loadPickError && (
+            <button
+              onClick={loadTodaysPick}
+              className="btn btn-secondary mt-2"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            >
+              Try Again
+            </button>
+          )}
         </div>
       )}
 

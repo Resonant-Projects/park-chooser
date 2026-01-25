@@ -51,11 +51,15 @@ function ManagePage() {
 		}
 	};
 
+	const [removeError, setRemoveError] = useState<string | null>(null);
+
 	const handleRemovePark = async (userParkId: Id<"userParks">) => {
+		setRemoveError(null);
 		try {
 			await removeParkMutation({ userParkId });
 		} catch (err) {
-			console.error("Failed to remove park:", err);
+			const message = err instanceof Error ? err.message : "Failed to remove park";
+			setRemoveError(message);
 		}
 	};
 
@@ -75,6 +79,11 @@ function ManagePage() {
 				{isAtLimit && (
 					<p className="text-[var(--color-gold)] text-sm mt-1">
 						You've reached the free tier limit. <a href="/pricing" className="underline">Upgrade</a> for unlimited parks.
+					</p>
+				)}
+				{removeError && (
+					<p className="text-[var(--color-sunset)] text-sm mt-1">
+						{removeError}
 					</p>
 				)}
 			</div>

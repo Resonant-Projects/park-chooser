@@ -67,6 +67,7 @@ export function useLocation(): UseLocationReturn {
   const [error, setError] = useState<LocationError | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const requestInProgress = useRef(false)
+  const isMounted = useRef(true)
 
   const requestLocation = useCallback((forceRefresh = false) => {
     // Check if a request is already in progress
@@ -97,6 +98,9 @@ export function useLocation(): UseLocationReturn {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        // Prevent state updates after unmount
+        if (!isMounted.current) return
+
         const newLocation: LocationResult = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
@@ -113,6 +117,9 @@ export function useLocation(): UseLocationReturn {
         requestInProgress.current = false
       },
       (geoError) => {
+        // Prevent state updates after unmount
+        if (!isMounted.current) return
+
         const errorType = mapGeolocationError(geoError)
         setError({
           type: errorType,
@@ -131,7 +138,9 @@ export function useLocation(): UseLocationReturn {
 
   // Clean up on unmount
   useEffect(() => {
+    isMounted.current = true
     return () => {
+      isMounted.current = false
       requestInProgress.current = false
     }
   }, [])

@@ -8,7 +8,7 @@ import {
 	Navigation,
 	Plus,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -88,7 +88,7 @@ function DiscoverPage() {
 		);
 	};
 
-	const handleSearch = async () => {
+	const handleSearch = useCallback(async () => {
 		if (!location) return;
 
 		setIsSearching(true);
@@ -109,14 +109,14 @@ function DiscoverPage() {
 		} finally {
 			setIsSearching(false);
 		}
-	};
+	}, [location, radiusMiles, searchNearbyParks]);
 
 	// Search automatically when location is obtained
 	useEffect(() => {
 		if (location) {
 			handleSearch();
 		}
-	}, [location, radiusMiles]);
+	}, [location, radiusMiles, handleSearch]);
 
 	const handleAddPark = async (parkId: string) => {
 		try {

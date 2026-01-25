@@ -1,6 +1,6 @@
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { TIER_LIMITS, ENTITLEMENT_ERRORS, createLimitError } from "./lib/entitlements";
+import { TIER_LIMITS, ENTITLEMENT_ERRORS, createLimitError, getEffectiveTier } from "./lib/entitlements";
 
 /**
  * Get user's park list with park details
@@ -111,7 +111,9 @@ export const addPark = mutation({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
 
-    const tier = entitlement?.tier ?? "free";
+    const tier = entitlement
+      ? getEffectiveTier(entitlement)
+      : "free";
     const limit = TIER_LIMITS[tier].maxParks;
 
     const currentCount = (
@@ -202,7 +204,7 @@ export const getUserParksWithDetails = internalQuery({
       })
     );
 
-    return parksWithDetails;
+    return parksWithDetails.filter((p) => p !== null);
   },
 });
 

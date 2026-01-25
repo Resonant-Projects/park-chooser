@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export default defineSchema({
   // Users from Clerk
   users: defineTable({
-    tokenIdentifier: v.string(),
+    tokenIdentifier: v.optional(v.string()), // Set when user authenticates via JWT (may be undefined for webhook-created users)
     clerkUserId: v.optional(v.string()), // Clerk user ID (e.g., user_2g7np...) for webhook lookups
     name: v.optional(v.string()),
     email: v.optional(v.string()),

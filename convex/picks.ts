@@ -71,14 +71,17 @@ export const getTodaysPickForUser = internalQuery({
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
 
+    // Query picks from today only by using a filter
+    // We order desc and take more to ensure we don't miss today's picks
     const picks = await ctx.db
       .query("picks")
       .withIndex("by_user_chosenAt", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .take(10);
+      .filter((q) => q.gte(q.field("chosenAt"), todayStart.getTime()))
+      .first();
 
-    // Find today's pick
-    const todaysPick = picks.find((p) => p.chosenAt >= todayStart.getTime());
+    // Get the most recent pick from today
+    const todaysPick = picks;
 
     if (!todaysPick) {
       return null;
