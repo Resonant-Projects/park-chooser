@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Trees, TreePine, TreeDeciduous } from 'lucide-react'
 
 export function HeroSection() {
@@ -39,18 +40,18 @@ export function HeroSection() {
           gap: '1rem',
         }}
       >
-        <a href="/sign-up" className="btn btn-primary btn-lg">
+        <Link to="/sign-up" className="btn btn-primary btn-lg">
           Get Started Free
-        </a>
-        <a
-          href="/sign-in"
+        </Link>
+        <Link
+          to="/sign-in"
           style={{
             color: 'var(--color-mist)',
             fontSize: '0.9375rem',
           }}
         >
           Already have an account? Sign In
-        </a>
+        </Link>
       </div>
     </section>
   )

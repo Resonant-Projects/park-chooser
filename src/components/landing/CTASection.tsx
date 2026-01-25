@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 
 export function CTASection() {
@@ -16,8 +17,8 @@ export function CTASection() {
           Ready for a little spontaneity?
         </h2>
 
-        <a
-          href="/sign-up"
+        <Link
+          to="/sign-up"
           className="btn btn-primary btn-lg"
           style={{
             display: 'inline-flex',
@@ -28,7 +29,7 @@ export function CTASection() {
         >
           Start Exploring Free
           <ArrowRight size={20} />
-        </a>
+        </Link>
 
         <div
           className="glass-card"
@@ -67,11 +68,11 @@ export function CTASection() {
 
       <footer className="landing-footer">
         <div className="landing-footer-links">
-          <a href="/about">About</a>
-          <a href="/pricing">Pricing</a>
-          <a href="/help">Help</a>
-          <a href="/terms">Terms</a>
-          <a href="/privacy">Privacy</a>
+          <Link to="/about">About</Link>
+          <Link to="/pricing">Pricing</Link>
+          <Link to="/help">Help</Link>
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
         </div>
       </footer>
     </>

@@ -45,8 +45,8 @@ async function getBrowserFingerprintHash(): Promise<string> {
     navigator.userAgent,
     navigator.language,
     new Date().toDateString(),
-    screen.width,
-    screen.height,
+    typeof screen !== 'undefined' ? screen.width : 0,
+    typeof screen !== 'undefined' ? screen.height : 0,
   ].join('|')
 
   // crypto.subtle may not be available in insecure contexts
@@ -174,11 +174,11 @@ function ContactPage() {
 
         <footer className="landing-footer">
           <div className="landing-footer-links">
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/terms">Terms</a>
-            <a href="/privacy">Privacy</a>
+            <Link to="/">Home</Link>
+            <Link to="/about">About</Link>
+            <Link to="/pricing">Pricing</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/privacy">Privacy</Link>
           </div>
         </footer>
       </div>
@@ -341,11 +341,11 @@ function ContactPage() {
       {/* Footer */}
       <footer className="landing-footer">
         <div className="landing-footer-links">
-          <a href="/">Home</a>
-          <a href="/about">About</a>
-          <a href="/pricing">Pricing</a>
-          <a href="/terms">Terms</a>
-          <a href="/privacy">Privacy</a>
+          <Link to="/">Home</Link>
+          <Link to="/about">About</Link>
+          <Link to="/pricing">Pricing</Link>
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
         </div>
         <p
           style={{

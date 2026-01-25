@@ -464,6 +464,12 @@ export async function searchNearbyParksWithPagination(
 
     try {
       const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.error(`Legacy Nearby Search API HTTP error: ${response.status} ${response.statusText}`);
+        break;
+      }
+
       const data = await response.json();
 
       if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {

@@ -26,7 +26,7 @@
     "@tanstack/router-plugin": "^1.132.0",
     "convex": "^1.27.3",
     "lucide-react": "^0.561.0",
-    "nitro": "npm:nitro-nightly@latest",
+    "nitro": "npm:nitro-nightly@3.0.0-beta-28978107.a068e14c",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "svix": "^1.84.1",

@@ -48,7 +48,7 @@ function LandingPage() {
   // Redirect authenticated users to /app (client-side only)
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      navigate({ to: '/app' })
+      navigate({ to: '/app', replace: true })
     }
   }, [isLoaded, isSignedIn, navigate])
 
