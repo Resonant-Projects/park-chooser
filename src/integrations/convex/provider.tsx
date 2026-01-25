@@ -7,19 +7,38 @@ import { useState } from "react";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 
-if (!CONVEX_URL) {
-	throw new Error("Missing required environment variable VITE_CONVEX_URL");
+// Lazy-initialize client only when URL is available (not during SSR/prerender)
+let convexClient: ConvexReactClient | null = null;
+function getConvexClient(): ConvexReactClient | null {
+	if (!CONVEX_URL) return null;
+	if (!convexClient) {
+		convexClient = new ConvexReactClient(CONVEX_URL);
+	}
+	return convexClient;
 }
-
-const convexClient = new ConvexReactClient(CONVEX_URL);
 
 /**
  * Convex provider with Clerk authentication and TanStack Query integration.
  * Must be nested inside ClerkProvider for token exchange to work.
  */
 export default function AppConvexProvider({ children }: { children: React.ReactNode }) {
+	const client = getConvexClient();
+
+	// During SSR/prerendering, env vars aren't available.
+	// Render children without Convex wrapper - hydration will provide full functionality.
+	if (!client) {
+		return <>{children}</>;
+	}
+
+	return <ConvexProviderInner client={client}>{children}</ConvexProviderInner>;
+}
+
+function ConvexProviderInner({
+	children,
+	client,
+}: { children: React.ReactNode; client: ConvexReactClient }) {
 	// Create query clients once to avoid recreating on re-renders
-	const [convexQueryClient] = useState(() => new ConvexQueryClient(convexClient));
+	const [convexQueryClient] = useState(() => new ConvexQueryClient(client));
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({
@@ -34,11 +53,11 @@ export default function AppConvexProvider({ children }: { children: React.ReactN
 	);
 
 	return (
-		<ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
+		<ConvexProviderWithClerk client={client} useAuth={useAuth}>
 			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 		</ConvexProviderWithClerk>
 	);
 }
 
-// Export for use in other parts of the app
-export { convexClient };
+// Export for use in other parts of the app - returns null during SSR
+export { getConvexClient };
