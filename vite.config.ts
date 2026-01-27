@@ -23,7 +23,7 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart({
       prerender: {
-        enabled: true,
+        enabled: !process.env.VERCEL,
         crawlLinks: false,
         routes: ["/", "/about", "/terms", "/privacy", "/help", "/help/contact"],
       },
