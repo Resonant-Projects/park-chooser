@@ -1,11 +1,15 @@
 node_modules
 .DS_Store
 dist
+.astro/
+.vercel/
 dist-ssr
 *.local
 count.txt
 .env
+.env.prod
 .nitro
+.playwright-mcp/
 .tanstack
 .output
 .vinxi
