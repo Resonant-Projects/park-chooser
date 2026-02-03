@@ -1,8 +1,4 @@
-import {
-	ClerkProvider,
-	useAuth as useClerkAuth,
-	type UseAuthReturn,
-} from "@clerk/clerk-react";
+import { ClerkProvider, type UseAuthReturn, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { createContext, type ReactNode, useContext } from "react";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -32,23 +28,20 @@ const SSR_AUTH_STATE: UseAuthReturn = {
  */
 export function useAuth(): UseAuthReturn {
 	const ssrContext = useContext(SSRAuthContext);
+	const clerkAuth = useClerkAuth();
 	// If we're in SSR mode (context is set), return SSR defaults
 	if (ssrContext !== null) {
 		return ssrContext;
 	}
 	// Otherwise use real Clerk auth
-	return useClerkAuth();
+	return clerkAuth;
 }
 
 export default function AppClerkProvider({ children }: { children: ReactNode }) {
 	// During SSR/prerendering, VITE_ env vars aren't available.
 	// Provide mock auth context that returns "not loaded" state.
 	if (!PUBLISHABLE_KEY) {
-		return (
-			<SSRAuthContext.Provider value={SSR_AUTH_STATE}>
-				{children}
-			</SSRAuthContext.Provider>
-		);
+		return <SSRAuthContext.Provider value={SSR_AUTH_STATE}>{children}</SSRAuthContext.Provider>;
 	}
 
 	return (
