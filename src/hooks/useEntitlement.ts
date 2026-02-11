@@ -1,6 +1,6 @@
-import { useAuth } from "../integrations/clerk/provider";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useAuth } from "../integrations/clerk/provider";
 
 /**
  * Hook combining Clerk's has() helper with Convex entitlement data.

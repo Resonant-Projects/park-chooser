@@ -86,6 +86,9 @@ http.route({
 		}
 		const event = result.event;
 
+		// Parse Svix timestamp for event ordering (seconds since epoch → ms)
+		const eventTimestamp = Number(request.headers.get("svix-timestamp")) * 1000 || undefined;
+
 		console.log("Received Clerk Billing webhook:", event.type);
 
 		try {
@@ -129,7 +132,7 @@ http.route({
 
 					if (!user) {
 						console.warn("User not found for Clerk ID:", clerkUserId);
-						return new Response("User not found", { status: 404 });
+						return new Response("User not found — retry later", { status: 503 });
 					}
 
 					const entitlementResult = await ctx.runMutation(
@@ -148,6 +151,7 @@ http.route({
 								? new Date(data.current_period_end).getTime()
 								: undefined,
 							isFreeTrial: data.is_free_trial,
+							eventTimestamp,
 						}
 					);
 
@@ -195,6 +199,7 @@ http.route({
 									? new Date(data.current_period_end).getTime()
 									: undefined,
 								isFreeTrial: data.is_free_trial,
+								eventTimestamp,
 							});
 							console.log("Subscription canceled for user:", clerkUserId);
 						} else {
@@ -224,7 +229,7 @@ http.route({
 
 					if (!user) {
 						console.warn("User not found for Clerk ID:", clerkUserId);
-						return new Response("User not found", { status: 404 });
+						return new Response("User not found — retry later", { status: 503 });
 					}
 
 					// Find the active subscription item, or fall back to most relevant one
@@ -264,6 +269,7 @@ http.route({
 							periodStart: activeItem.period_start,
 							periodEnd: activeItem.period_end,
 							isFreeTrial: activeItem.is_free_trial,
+							eventTimestamp,
 						}
 					);
 
@@ -309,6 +315,7 @@ http.route({
 								periodStart: item?.period_start,
 								periodEnd: item?.period_end,
 								isFreeTrial: item?.is_free_trial,
+								eventTimestamp,
 							});
 							console.log("Subscription canceled/ended for user:", clerkUserId);
 						} else {

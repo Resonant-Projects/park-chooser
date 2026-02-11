@@ -3,6 +3,20 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getEffectiveTier, getTodayDateString, TIER_LIMITS } from "./lib/entitlements";
 import { getUserFromIdentity } from "./lib/userHelpers";
 
+const KNOWN_PREMIUM_SLUGS = ["premium", "monthly"];
+
+function resolveTier(slug: string | undefined): "premium" | "free" {
+	if (slug === undefined) {
+		console.warn("[resolveTier] Plan slug is undefined — defaulting to free");
+		return "free";
+	}
+	if (KNOWN_PREMIUM_SLUGS.some((s) => slug.includes(s))) {
+		return "premium";
+	}
+	console.warn(`[resolveTier] Unrecognized plan slug "${slug}" — defaulting to free`);
+	return "free";
+}
+
 /**
  * Get current user's entitlement
  */
@@ -163,12 +177,13 @@ export const upsertFromClerkWebhook = internalMutation({
 		periodStart: v.optional(v.number()),
 		periodEnd: v.optional(v.number()),
 		isFreeTrial: v.optional(v.boolean()),
+		eventTimestamp: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
 		const now = Date.now();
 
 		// Determine tier from plan slug
-		const tier = args.clerkPlanSlug?.includes("premium") ? "premium" : "free";
+		const tier = resolveTier(args.clerkPlanSlug);
 
 		// Map Clerk status to our status
 		let status: "active" | "past_due" | "canceled" | "incomplete" = "active";
@@ -187,6 +202,14 @@ export const upsertFromClerkWebhook = internalMutation({
 			.unique();
 
 		if (existing) {
+			// Skip stale events — don't overwrite newer state with older webhook data
+			if (args.eventTimestamp && existing.updatedAt > args.eventTimestamp) {
+				console.warn(
+					`[upsertFromClerkWebhook] Skipping stale event (event: ${args.eventTimestamp}, existing: ${existing.updatedAt})`
+				);
+				return { updated: false, entitlementId: existing._id, skipped: true };
+			}
+
 			await ctx.db.patch(existing._id, {
 				// Set tier from plan slug; getEffectiveTier() handles access based on periodEnd
 				tier,
@@ -197,7 +220,7 @@ export const upsertFromClerkWebhook = internalMutation({
 				periodStart: args.periodStart,
 				periodEnd: args.periodEnd,
 				isFreeTrial: args.isFreeTrial,
-				updatedAt: now,
+				updatedAt: args.eventTimestamp ?? now,
 			});
 			return { updated: true, entitlementId: existing._id };
 		}
@@ -215,7 +238,7 @@ export const upsertFromClerkWebhook = internalMutation({
 			periodEnd: args.periodEnd,
 			isFreeTrial: args.isFreeTrial,
 			createdAt: now,
-			updatedAt: now,
+			updatedAt: args.eventTimestamp ?? now,
 		});
 
 		return { updated: false, entitlementId };

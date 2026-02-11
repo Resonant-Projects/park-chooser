@@ -1,4 +1,3 @@
-import { useAuth } from "../integrations/clerk/provider";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
@@ -9,6 +8,7 @@ import {
 	ProblemSection,
 	ValuePropsSection,
 } from "../components/landing";
+import { useAuth } from "../integrations/clerk/provider";
 import { canonical, ogImage, SEO } from "../lib/seo/config";
 import { softwareApplicationSchema } from "../lib/seo/schemas";
 
