@@ -3,6 +3,8 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getEffectiveTier, getTodayDateString, TIER_LIMITS } from "./lib/entitlements";
 import { getUserFromIdentity } from "./lib/userHelpers";
 
+// Exact-match list — add new Clerk plan slugs here as they're created.
+// Unrecognized slugs fall through to "free" with a warning log.
 const KNOWN_PREMIUM_SLUGS = ["premium", "monthly"];
 
 function resolveTier(slug: string | undefined): "premium" | "free" {
@@ -10,7 +12,7 @@ function resolveTier(slug: string | undefined): "premium" | "free" {
 		console.warn("[resolveTier] Plan slug is undefined — defaulting to free");
 		return "free";
 	}
-	if (KNOWN_PREMIUM_SLUGS.some((s) => slug.includes(s))) {
+	if (KNOWN_PREMIUM_SLUGS.includes(slug)) {
 		return "premium";
 	}
 	console.warn(`[resolveTier] Unrecognized plan slug "${slug}" — defaulting to free`);
