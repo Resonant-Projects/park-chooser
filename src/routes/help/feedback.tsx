@@ -1,10 +1,10 @@
-import { useAuth } from "../../integrations/clerk/provider";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAction } from "convex/react";
 import { ArrowLeft, Heart, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { FloatingParticles } from "../../components/landing";
+import { useAuth } from "../../integrations/clerk/provider";
 import { SEO } from "../../lib/seo/config";
 
 export const Route = createFileRoute("/help/feedback")({

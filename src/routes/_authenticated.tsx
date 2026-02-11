@@ -1,8 +1,8 @@
 import { UserButton } from "@clerk/clerk-react";
-import { useAuth } from "../integrations/clerk/provider";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { Trees } from "lucide-react";
 import { useEffect } from "react";
+import { useAuth } from "../integrations/clerk/provider";
 
 export const Route = createFileRoute("/_authenticated")({
 	head: () => ({

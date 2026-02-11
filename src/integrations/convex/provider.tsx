@@ -36,7 +36,10 @@ export default function AppConvexProvider({ children }: { children: React.ReactN
 function ConvexProviderInner({
 	children,
 	client,
-}: { children: React.ReactNode; client: ConvexReactClient }) {
+}: {
+	children: React.ReactNode;
+	client: ConvexReactClient;
+}) {
 	// Create query clients once to avoid recreating on re-renders
 	const [convexQueryClient] = useState(() => new ConvexQueryClient(client));
 	const [queryClient] = useState(
