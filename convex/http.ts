@@ -2,6 +2,13 @@ import { httpRouter } from "convex/server";
 import { Webhook } from "svix";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
+import {
+	type ClerkSubscriptionData,
+	type ClerkSubscriptionItemData,
+	type ClerkUserData,
+	normalizeSubscriptionEntitlement,
+	normalizeSubscriptionItemEntitlement,
+} from "./lib/clerkWebhooks";
 
 const http = httpRouter();
 
@@ -88,8 +95,12 @@ http.route({
 
 		// Parse Svix timestamp for event ordering (seconds since epoch → ms)
 		const eventTimestamp = Number(request.headers.get("svix-timestamp")) * 1000 || undefined;
+		const logContext = {
+			eventType: event.type,
+			eventTimestamp,
+		};
 
-		console.log("Received Clerk Billing webhook:", event.type);
+		console.log("Received Clerk Billing webhook:", logContext);
 
 		try {
 			switch (event.type) {
@@ -121,7 +132,10 @@ http.route({
 					const clerkUserId = data.payer?.user_id;
 
 					if (!clerkUserId) {
-						console.warn("No user_id in subscription item:", data.id);
+						console.warn("No user_id in subscription item:", {
+							...logContext,
+							subscriptionItemId: data.id,
+						});
 						return new Response("Missing user_id", { status: 400 });
 					}
 
@@ -131,31 +145,32 @@ http.route({
 					});
 
 					if (!user) {
-						console.warn("User not found for Clerk ID:", clerkUserId);
+						console.warn("User not found for Clerk ID:", {
+							...logContext,
+							clerkUserId,
+							subscriptionItemId: data.id,
+							subscriptionId: data.subscription_id,
+						});
 						return new Response("User not found — retry later", { status: 503 });
 					}
 
+					const entitlementData = normalizeSubscriptionItemEntitlement(data);
 					const entitlementResult = await ctx.runMutation(
 						internal.entitlements.upsertFromClerkWebhook,
 						{
 							userId: user._id,
-							clerkSubscriptionId: data.subscription_id,
-							clerkSubscriptionItemId: data.id,
-							clerkPlanId: data.plan_id,
-							clerkPlanSlug: data.plan?.slug,
-							status: data.status,
-							periodStart: data.current_period_start
-								? new Date(data.current_period_start).getTime()
-								: undefined,
-							periodEnd: data.current_period_end
-								? new Date(data.current_period_end).getTime()
-								: undefined,
-							isFreeTrial: data.is_free_trial,
+							...entitlementData,
 							eventTimestamp,
 						}
 					);
 
-					console.log("Entitlement sync result:", entitlementResult);
+					console.log("Entitlement sync result:", {
+						...logContext,
+						clerkUserId,
+						subscriptionItemId: data.id,
+						subscriptionId: data.subscription_id,
+						entitlementResult,
+					});
 
 					// Process referral conversion for new active subscriptions
 					if (data.status === "active") {
@@ -184,26 +199,29 @@ http.route({
 						});
 
 						if (user) {
+							const entitlementData = normalizeSubscriptionItemEntitlement(
+								data,
+								"canceled"
+							);
 							// Set status to canceled but preserve periodEnd for access until paid period ends
 							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
 								userId: user._id,
-								clerkSubscriptionId: data.subscription_id,
-								clerkSubscriptionItemId: data.id,
-								clerkPlanId: data.plan_id,
-								clerkPlanSlug: data.plan?.slug,
-								status: "canceled",
-								periodStart: data.current_period_start
-									? new Date(data.current_period_start).getTime()
-									: undefined,
-								periodEnd: data.current_period_end
-									? new Date(data.current_period_end).getTime()
-									: undefined,
-								isFreeTrial: data.is_free_trial,
+								...entitlementData,
 								eventTimestamp,
 							});
-							console.log("Subscription canceled for user:", clerkUserId);
+							console.log("Subscription canceled for user:", {
+								...logContext,
+								clerkUserId,
+								subscriptionItemId: data.id,
+								subscriptionId: data.subscription_id,
+							});
 						} else {
-							console.warn("User not found for canceled subscription:", clerkUserId);
+							console.warn("User not found for canceled subscription:", {
+								...logContext,
+								clerkUserId,
+								subscriptionItemId: data.id,
+								subscriptionId: data.subscription_id,
+							});
 						}
 					}
 					break;
@@ -218,7 +236,10 @@ http.route({
 					const clerkUserId = data.payer?.user_id;
 
 					if (!clerkUserId) {
-						console.warn("No user_id in subscription:", data.id);
+						console.warn("No user_id in subscription:", {
+							...logContext,
+							subscriptionId: data.id,
+						});
 						return new Response("Missing user_id", { status: 400 });
 					}
 
@@ -228,7 +249,11 @@ http.route({
 					});
 
 					if (!user) {
-						console.warn("User not found for Clerk ID:", clerkUserId);
+						console.warn("User not found for Clerk ID:", {
+							...logContext,
+							clerkUserId,
+							subscriptionId: data.id,
+						});
 						return new Response("User not found — retry later", { status: 503 });
 					}
 
@@ -241,11 +266,17 @@ http.route({
 						data.items[data.items.length - 1]; // fallback to last item
 
 					if (!activeItem) {
-						console.warn("No subscription items found in subscription:", data.id);
+						console.warn("No subscription items found in subscription:", {
+							...logContext,
+							clerkUserId,
+							subscriptionId: data.id,
+						});
 						return new Response("No subscription items", { status: 400 });
 					}
 
 					console.log("Processing subscription event:", {
+						...logContext,
+						clerkUserId,
 						subscriptionId: data.id,
 						subscriptionStatus: data.status,
 						activeItemId: activeItem.id,
@@ -257,23 +288,27 @@ http.route({
 					const status =
 						event.type === "subscription.past_due" ? "past_due" : activeItem.status;
 
+					const entitlementData = normalizeSubscriptionEntitlement(
+						data.id,
+						activeItem,
+						status
+					);
 					const entitlementResult = await ctx.runMutation(
 						internal.entitlements.upsertFromClerkWebhook,
 						{
 							userId: user._id,
-							clerkSubscriptionId: data.id,
-							clerkSubscriptionItemId: activeItem.id,
-							clerkPlanId: activeItem.plan_id,
-							clerkPlanSlug: activeItem.plan?.slug,
-							status,
-							periodStart: activeItem.period_start,
-							periodEnd: activeItem.period_end,
-							isFreeTrial: activeItem.is_free_trial,
+							...entitlementData,
 							eventTimestamp,
 						}
 					);
 
-					console.log("Entitlement sync result:", entitlementResult);
+					console.log("Entitlement sync result:", {
+						...logContext,
+						clerkUserId,
+						subscriptionId: data.id,
+						subscriptionItemId: activeItem.id,
+						entitlementResult,
+					});
 
 					// Process referral conversion for active subscriptions
 					if (data.status === "active") {
@@ -303,23 +338,32 @@ http.route({
 						if (user) {
 							// Find any item to get plan info (use first item as reference)
 							const item = data.items[0];
+							const entitlementData = item
+								? normalizeSubscriptionEntitlement(data.id, item, "canceled")
+								: {
+										clerkSubscriptionId: data.id,
+										clerkSubscriptionItemId: data.id,
+										status: "canceled",
+									};
 
 							// Preserve periodEnd for access until paid period ends
 							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
 								userId: user._id,
-								clerkSubscriptionId: data.id,
-								clerkSubscriptionItemId: item?.id ?? data.id,
-								clerkPlanId: item?.plan_id,
-								clerkPlanSlug: item?.plan?.slug,
-								status: "canceled",
-								periodStart: item?.period_start,
-								periodEnd: item?.period_end,
-								isFreeTrial: item?.is_free_trial,
+								...entitlementData,
 								eventTimestamp,
 							});
-							console.log("Subscription canceled/ended for user:", clerkUserId);
+							console.log("Subscription canceled/ended for user:", {
+								...logContext,
+								clerkUserId,
+								subscriptionId: data.id,
+								subscriptionItemId: item?.id,
+							});
 						} else {
-							console.warn("User not found for canceled subscription:", clerkUserId);
+							console.warn("User not found for canceled subscription:", {
+								...logContext,
+								clerkUserId,
+								subscriptionId: data.id,
+							});
 						}
 					}
 					break;
@@ -331,7 +375,10 @@ http.route({
 
 			return new Response(null, { status: 200 });
 		} catch (error) {
-			console.error("Error processing Clerk Billing webhook:", error);
+			console.error("Error processing Clerk Billing webhook:", {
+				...logContext,
+				error,
+			});
 			return new Response("Internal error", { status: 500 });
 		}
 	}),
@@ -356,9 +403,9 @@ async function validateRequest(req: Request): Promise<ValidationResult> {
 		return { success: false, error: "Missing Svix headers" };
 	}
 
-	const webhookSecret = process.env.CLERK_BILLING_WEBHOOK_SECRET;
+	const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 	if (!webhookSecret) {
-		console.error("CLERK_BILLING_WEBHOOK_SECRET not configured");
+		console.error("CLERK_WEBHOOK_SECRET not configured");
 		return { success: false, error: "Webhook secret not configured" };
 	}
 
@@ -381,62 +428,6 @@ async function validateRequest(req: Request): Promise<ValidationResult> {
 interface ClerkWebhookEvent {
 	type: string;
 	data: unknown;
-}
-
-interface ClerkSubscriptionItemData {
-	id: string;
-	subscription_id: string;
-	plan_id: string;
-	payer?: {
-		user_id?: string;
-		email?: string;
-	};
-	plan?: {
-		slug?: string;
-		name?: string;
-	};
-	status: string;
-	current_period_start?: string;
-	current_period_end?: string;
-	is_free_trial?: boolean;
-}
-
-/**
- * Type definition for subscription-level events (subscription.created, subscription.updated, etc.)
- * These have a different structure than subscriptionItem.* events
- */
-interface ClerkSubscriptionData {
-	id: string; // subscription ID (csub_xxx)
-	status: string;
-	items: Array<{
-		id: string;
-		plan_id: string;
-		plan?: {
-			slug?: string;
-			name?: string;
-			amount?: number;
-		};
-		status: string;
-		period_start?: number;
-		period_end?: number;
-		is_free_trial?: boolean;
-	}>;
-	payer?: {
-		user_id?: string;
-		email?: string;
-	};
-}
-
-/**
- * Type definition for Clerk user.created webhook event
- */
-interface ClerkUserData {
-	id: string;
-	email_addresses: Array<{ email_address: string; id: string }>;
-	primary_email_address_id: string | null;
-	first_name: string | null;
-	last_name: string | null;
-	image_url: string | null;
 }
 
 export default http;

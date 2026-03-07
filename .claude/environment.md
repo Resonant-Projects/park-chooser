@@ -14,5 +14,5 @@ Defined in: `src/env.ts` via T3 Env
 Set via: `bunx convex env set KEY=value`
 
 **Required:**
-- `CLERK_WEBHOOK_SECRET`
+- `CLERK_WEBHOOK_SECRET` - Svix signing secret for Clerk user and billing webhooks
 - `GOOGLE_MAPS_API_KEY`
