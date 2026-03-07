@@ -213,8 +213,8 @@ export const upsertFromClerkWebhook = internalMutation({
 			}
 
 			await ctx.db.patch(existing._id, {
-				// Set tier from plan slug; getEffectiveTier() handles access based on periodEnd
-				tier,
+				// Only update tier if plan slug was provided, to avoid overwriting with "free"
+				...(args.clerkPlanSlug !== undefined ? { tier } : {}),
 				clerkSubscriptionId: args.clerkSubscriptionId,
 				clerkSubscriptionItemId: args.clerkSubscriptionItemId,
 				clerkPlanId: args.clerkPlanId,
