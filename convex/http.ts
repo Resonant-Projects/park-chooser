@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import {
+	type ClerkPayerData,
 	type ClerkSubscriptionData,
 	type ClerkSubscriptionItemData,
 	type ClerkUserData,
@@ -89,7 +90,7 @@ http.route({
 	handler: httpAction(async (ctx, request) => {
 		const result = await validateRequest(request);
 		if (!result.success) {
-			return new Response(result.error, { status: 400 });
+			return new Response(result.error, { status: result.statusCode ?? 400 });
 		}
 		const event = result.event;
 
@@ -139,20 +140,11 @@ http.route({
 						return new Response("Missing user_id", { status: 400 });
 					}
 
-					// Look up user by Clerk ID
-					const user = await ctx.runQuery(internal.users.getUserByClerkId, {
-						clerkUserId,
-					});
-
-					if (!user) {
-						console.warn("User not found for Clerk ID:", {
-							...logContext,
+					// Look up user by Clerk ID, or create from payer data if not yet synced
+					const user =
+						(await ctx.runQuery(internal.users.getUserByClerkId, {
 							clerkUserId,
-							subscriptionItemId: data.id,
-							subscriptionId: data.subscription_id,
-						});
-						return new Response("User not found — retry later", { status: 503 });
-					}
+						})) ?? (await upsertUserFromPayer(ctx, clerkUserId, data.payer));
 
 					const entitlementData = normalizeSubscriptionItemEntitlement(data);
 					const entitlementResult = await ctx.runMutation(
@@ -194,35 +186,27 @@ http.route({
 					const clerkUserId = data.payer?.user_id;
 
 					if (clerkUserId) {
-						const user = await ctx.runQuery(internal.users.getUserByClerkId, {
-							clerkUserId,
-						});
+						const user =
+							(await ctx.runQuery(internal.users.getUserByClerkId, {
+								clerkUserId,
+							})) ?? (await upsertUserFromPayer(ctx, clerkUserId, data.payer));
 
-						if (user) {
-							const entitlementData = normalizeSubscriptionItemEntitlement(
-								data,
-								"canceled"
-							);
-							// Set status to canceled but preserve periodEnd for access until paid period ends
-							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-								userId: user._id,
-								...entitlementData,
-								eventTimestamp,
-							});
-							console.log("Subscription canceled for user:", {
-								...logContext,
-								clerkUserId,
-								subscriptionItemId: data.id,
-								subscriptionId: data.subscription_id,
-							});
-						} else {
-							console.warn("User not found for canceled subscription:", {
-								...logContext,
-								clerkUserId,
-								subscriptionItemId: data.id,
-								subscriptionId: data.subscription_id,
-							});
-						}
+						const entitlementData = normalizeSubscriptionItemEntitlement(
+							data,
+							"canceled"
+						);
+						// Set status to canceled but preserve periodEnd for access until paid period ends
+						await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+							userId: user._id,
+							...entitlementData,
+							eventTimestamp,
+						});
+						console.log("Subscription canceled for user:", {
+							...logContext,
+							clerkUserId,
+							subscriptionItemId: data.id,
+							subscriptionId: data.subscription_id,
+						});
 					}
 					break;
 				}
@@ -243,19 +227,11 @@ http.route({
 						return new Response("Missing user_id", { status: 400 });
 					}
 
-					// Look up user by Clerk ID
-					const user = await ctx.runQuery(internal.users.getUserByClerkId, {
-						clerkUserId,
-					});
-
-					if (!user) {
-						console.warn("User not found for Clerk ID:", {
-							...logContext,
+					// Look up user by Clerk ID, or create from payer data if not yet synced
+					const user =
+						(await ctx.runQuery(internal.users.getUserByClerkId, {
 							clerkUserId,
-							subscriptionId: data.id,
-						});
-						return new Response("User not found — retry later", { status: 503 });
-					}
+						})) ?? (await upsertUserFromPayer(ctx, clerkUserId, data.payer));
 
 					// Find the active subscription item, or fall back to most relevant one
 					const activeItem =
@@ -331,40 +307,40 @@ http.route({
 					const clerkUserId = data.payer?.user_id;
 
 					if (clerkUserId) {
-						const user = await ctx.runQuery(internal.users.getUserByClerkId, {
-							clerkUserId,
-						});
-
-						if (user) {
-							// Find any item to get plan info (use first item as reference)
-							const item = data.items[0];
-							const entitlementData = item
-								? normalizeSubscriptionEntitlement(data.id, item, "canceled")
-								: {
-										clerkSubscriptionId: data.id,
-										clerkSubscriptionItemId: data.id,
-										status: "canceled",
-									};
-
-							// Preserve periodEnd for access until paid period ends
-							await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
-								userId: user._id,
-								...entitlementData,
-								eventTimestamp,
-							});
-							console.log("Subscription canceled/ended for user:", {
-								...logContext,
+						const user =
+							(await ctx.runQuery(internal.users.getUserByClerkId, {
 								clerkUserId,
-								subscriptionId: data.id,
-								subscriptionItemId: item?.id,
-							});
-						} else {
-							console.warn("User not found for canceled subscription:", {
-								...logContext,
-								clerkUserId,
-								subscriptionId: data.id,
-							});
+							})) ?? (await upsertUserFromPayer(ctx, clerkUserId, data.payer));
+
+						// Find any item to get plan info (use first item as reference)
+						const item = data.items[0];
+
+						if (!item) {
+							console.warn(
+								"subscription.canceled/ended with empty items[], skipping to avoid data loss:",
+								{ ...logContext, clerkUserId, subscriptionId: data.id }
+							);
+							return new Response(null, { status: 200 });
 						}
+
+						const entitlementData = normalizeSubscriptionEntitlement(
+							data.id,
+							item,
+							"canceled"
+						);
+
+						// Preserve periodEnd for access until paid period ends
+						await ctx.runMutation(internal.entitlements.upsertFromClerkWebhook, {
+							userId: user._id,
+							...entitlementData,
+							eventTimestamp,
+						});
+						console.log("Subscription canceled/ended for user:", {
+							...logContext,
+							clerkUserId,
+							subscriptionId: data.id,
+							subscriptionItemId: item.id,
+						});
 					}
 					break;
 				}
@@ -384,9 +360,29 @@ http.route({
 	}),
 });
 
+/**
+ * Upsert a user from payer data when the user.created webhook hasn't been processed yet.
+ * This handles the race condition where subscription events arrive before user.created.
+ */
+async function upsertUserFromPayer(
+	ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
+	clerkUserId: string,
+	payer?: ClerkPayerData | null
+) {
+	console.log("User not found, upserting from payer data:", { clerkUserId });
+	const userId = await ctx.runMutation(internal.users.upsertFromClerkWebhook, {
+		clerkUserId,
+		email: payer?.email ?? undefined,
+		firstName: payer?.first_name ?? undefined,
+		lastName: payer?.last_name ?? undefined,
+		imageUrl: payer?.image_url ?? undefined,
+	});
+	return { _id: userId };
+}
+
 type ValidationResult =
 	| { success: true; event: ClerkWebhookEvent }
-	| { success: false; error: string };
+	| { success: false; error: string; statusCode?: number };
 
 /**
  * Validate Svix webhook signature.
@@ -406,7 +402,7 @@ async function validateRequest(req: Request): Promise<ValidationResult> {
 	const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 	if (!webhookSecret) {
 		console.error("CLERK_WEBHOOK_SECRET not configured");
-		return { success: false, error: "Webhook secret not configured" };
+		return { success: false, error: "Webhook secret not configured", statusCode: 500 };
 	}
 
 	const wh = new Webhook(webhookSecret);
