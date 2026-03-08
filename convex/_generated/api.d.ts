@@ -26,6 +26,7 @@ import type * as entitlements from "../entitlements.js";
 import type * as failedReferralRewards from "../failedReferralRewards.js";
 import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
+import type * as lib_clerkWebhooks from "../lib/clerkWebhooks.js";
 import type * as lib_entitlements from "../lib/entitlements.js";
 import type * as lib_fraudDetection from "../lib/fraudDetection.js";
 import type * as lib_googleMaps from "../lib/googleMaps.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   failedReferralRewards: typeof failedReferralRewards;
   feedback: typeof feedback;
   http: typeof http;
+  "lib/clerkWebhooks": typeof lib_clerkWebhooks;
   "lib/entitlements": typeof lib_entitlements;
   "lib/fraudDetection": typeof lib_fraudDetection;
   "lib/googleMaps": typeof lib_googleMaps;

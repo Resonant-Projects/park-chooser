@@ -1,7 +1,9 @@
 import { UserButton } from "@clerk/clerk-react";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { useMutation } from "convex/react";
 import { Trees } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../../convex/_generated/api";
 import { useAuth } from "../integrations/clerk/provider";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -14,6 +16,9 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
 	const { isSignedIn, isLoaded } = useAuth();
 	const navigate = useNavigate();
+	const storeUser = useMutation(api.users.store);
+	const [isBootstrappingUser, setIsBootstrappingUser] = useState(false);
+	const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
 	// Redirect unauthenticated users to sign-in
 	useEffect(() => {
@@ -22,8 +27,41 @@ function AuthenticatedLayout() {
 		}
 	}, [isLoaded, isSignedIn, navigate]);
 
+	// Ensure the authenticated Clerk user exists in Convex before app routes load.
+	useEffect(() => {
+		if (!isLoaded || !isSignedIn) {
+			setIsBootstrappingUser(false);
+			setBootstrapError(null);
+			return;
+		}
+
+		let cancelled = false;
+		setIsBootstrappingUser(true);
+		setBootstrapError(null);
+
+		storeUser({})
+			.catch((error) => {
+				if (!cancelled) {
+					setBootstrapError(
+						error instanceof Error
+							? error.message
+							: "Failed to initialize your account."
+					);
+				}
+			})
+			.finally(() => {
+				if (!cancelled) {
+					setIsBootstrappingUser(false);
+				}
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isLoaded, isSignedIn, storeUser]);
+
 	// Show loading while checking auth
-	if (!isLoaded) {
+	if (!isLoaded || isBootstrappingUser) {
 		return (
 			<div className="container">
 				<main>
@@ -36,6 +74,18 @@ function AuthenticatedLayout() {
 	// Don't render content if not signed in (will redirect)
 	if (!isSignedIn) {
 		return null;
+	}
+
+	if (bootstrapError) {
+		return (
+			<div className="container">
+				<main className="flex flex-1 items-center justify-center">
+					<div className="glass-card max-w-md w-full text-center py-6 px-4">
+						<p className="text-[var(--color-cream)]">{bootstrapError}</p>
+					</div>
+				</main>
+			</div>
+		);
 	}
 
 	return (

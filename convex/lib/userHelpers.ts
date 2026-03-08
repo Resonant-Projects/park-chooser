@@ -13,10 +13,24 @@ export async function getUserFromIdentity(
 		return null;
 	}
 
-	return await ctx.db
+	// Primary lookup by tokenIdentifier (set after store() runs)
+	const user = await ctx.db
 		.query("users")
 		.withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
 		.unique();
+
+	if (user) return user;
+
+	// Fallback: user may have been created by a webhook before store() ran.
+	// identity.subject contains the Clerk user ID.
+	if (identity.subject) {
+		return await ctx.db
+			.query("users")
+			.withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
+			.unique();
+	}
+
+	return null;
 }
 
 /**
