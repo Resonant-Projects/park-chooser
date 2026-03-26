@@ -26,7 +26,7 @@ const config = defineConfig({
 				enabled: !process.env.VERCEL,
 				crawlLinks: false,
 				// Supported by the runtime plugin, but not yet reflected in the package types.
-				routes: ["/", "/about", "/terms", "/privacy", "/help", "/help/contact"],
+				routes: ["/", "/about", "/support", "/terms", "/privacy", "/help", "/help/contact"],
 			} as never,
 		}),
 		viteReact(),
