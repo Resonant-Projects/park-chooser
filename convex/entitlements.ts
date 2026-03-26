@@ -3,8 +3,8 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getEffectiveTier, getTodayDateString, TIER_LIMITS } from "./lib/entitlements";
 import { getUserFromIdentity } from "./lib/userHelpers";
 
-// Exact-match list — add new Clerk plan slugs here as they're created.
-// Unrecognized slugs fall through to "free" with a warning log.
+// Exact-match list for optional supporter plans. Unrecognized slugs fall through to
+// "free" with a warning log.
 const KNOWN_PREMIUM_SLUGS = ["premium", "monthly"];
 
 function resolveTier(slug: string | undefined): "premium" | "free" {
@@ -20,7 +20,7 @@ function resolveTier(slug: string | undefined): "premium" | "free" {
 }
 
 /**
- * Get current user's entitlement
+ * Get current user's billing/supporter state.
  */
 export const getMyEntitlement = query({
 	args: {},
@@ -35,7 +35,7 @@ export const getMyEntitlement = query({
 			.withIndex("by_user", (q) => q.eq("userId", user._id))
 			.unique();
 
-		// Return default free tier if no entitlement exists
+		// Default to the free label when the user has no supporter subscription.
 		if (!entitlement) {
 			return {
 				tier: "free" as const,
@@ -82,11 +82,12 @@ export const checkCanPickToday = internalQuery({
 			.withIndex("by_user", (q) => q.eq("userId", args.userId))
 			.unique();
 
-		// Use effective tier to honor paid period after cancellation
+		// Limits are no longer gated by billing state, but we still compute the effective
+		// tier so the caller can show accurate supporter messaging when needed.
 		const tier = entitlement ? getEffectiveTier(entitlement) : "free";
 		const limit = TIER_LIMITS[tier].picksPerDay;
 
-		// Premium users can always pick
+		// Unlimited tiers can always pick.
 		if (limit === Number.MAX_SAFE_INTEGER) {
 			return { canPick: true, tier, limit, currentCount: 0 };
 		}
@@ -166,7 +167,7 @@ export const createDefaultEntitlement = internalMutation({
 });
 
 /**
- * Internal: Upsert entitlement from Clerk webhook
+ * Internal: Upsert supporter billing state from Clerk webhook
  */
 export const upsertFromClerkWebhook = internalMutation({
 	args: {
@@ -184,10 +185,10 @@ export const upsertFromClerkWebhook = internalMutation({
 	handler: async (ctx, args) => {
 		const now = Date.now();
 
-		// Determine tier from plan slug
+		// Determine the descriptive tier from the plan slug
 		const tier = resolveTier(args.clerkPlanSlug);
 
-		// Map Clerk status to our status
+		// Map Clerk status to our local supporter status
 		let status: "active" | "past_due" | "canceled" | "incomplete" = "active";
 		if (args.status === "canceled" || args.status === "ended") {
 			status = "canceled";
@@ -230,7 +231,7 @@ export const upsertFromClerkWebhook = internalMutation({
 		// Create new entitlement
 		const entitlementId = await ctx.db.insert("userEntitlements", {
 			userId: args.userId,
-			// Set tier from plan slug; getEffectiveTier() handles access based on periodEnd
+			// Store the tier label from the plan slug for supporter/account messaging.
 			tier,
 			clerkSubscriptionId: args.clerkSubscriptionId,
 			clerkSubscriptionItemId: args.clerkSubscriptionItemId,

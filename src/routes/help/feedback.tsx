@@ -126,7 +126,7 @@ function FeedbackPage() {
 					<div className="landing-footer-links">
 						<Link to="/">Home</Link>
 						<Link to="/about">About</Link>
-						<Link to="/pricing">Pricing</Link>
+						<Link to="/support">Support</Link>
 						<Link to="/terms">Terms</Link>
 						<Link to="/privacy">Privacy</Link>
 					</div>
@@ -306,7 +306,7 @@ function FeedbackPage() {
 				<div className="landing-footer-links">
 					<Link to="/">Home</Link>
 					<Link to="/about">About</Link>
-					<Link to="/pricing">Pricing</Link>
+					<Link to="/support">Support</Link>
 					<Link to="/terms">Terms</Link>
 					<Link to="/privacy">Privacy</Link>
 				</div>

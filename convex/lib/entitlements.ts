@@ -1,9 +1,8 @@
 /**
- * Entitlement tier limits and error codes for feature gating.
+ * Entitlement tier labels and legacy limit/error helpers.
  *
- * Tiers:
- * - free: 5 parks max, 1 pick per day
- * - premium: Unlimited parks and picks
+ * Billing state is still stored for optional supporter subscriptions, but access is no
+ * longer gated by payment. Both tiers therefore resolve to the same unlimited limits.
  */
 
 // Use Number.MAX_SAFE_INTEGER instead of Infinity for JSON serialization compatibility
@@ -11,8 +10,8 @@ export const UNLIMITED = Number.MAX_SAFE_INTEGER;
 
 export const TIER_LIMITS = {
 	free: {
-		maxParks: 5,
-		picksPerDay: 1,
+		maxParks: UNLIMITED,
+		picksPerDay: UNLIMITED,
 	},
 	premium: {
 		maxParks: UNLIMITED,
@@ -75,13 +74,13 @@ export function getTodayDateString(): string {
 }
 
 /**
- * Calculate effective tier based on subscription status and period end date.
+ * Calculate effective tier based on supporter subscription status and period end date.
  *
- * This function handles the case where a user cancels their subscription but
- * should maintain premium access until the end of their paid period.
+ * This is descriptive billing state for UI/account messaging only. Access is not gated
+ * by the returned tier.
  *
  * @param entitlement - The user's entitlement record
- * @returns The effective tier ("free" or "premium")
+ * @returns The effective tier label ("free" or "premium")
  */
 export function getEffectiveTier(entitlement: {
 	tier: "free" | "premium";
@@ -91,13 +90,12 @@ export function getEffectiveTier(entitlement: {
 }): Tier {
 	const now = Date.now();
 
-	// Active premium subscription (paid or trial)
+	// Active supporter subscription (paid or trial)
 	if (entitlement.tier === "premium" && entitlement.status === "active") {
 		return "premium";
 	}
 
-	// Canceled but within paid period - honor what they paid for
-	// This applies to both canceled trials and canceled paid subscriptions
+	// Canceled but within the current billing period
 	if (
 		entitlement.tier === "premium" &&
 		entitlement.status === "canceled" &&

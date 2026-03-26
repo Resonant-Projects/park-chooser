@@ -106,7 +106,7 @@ export default defineSchema({
 		windowStart: v.number(), // Timestamp of window start
 	}).index("by_identifier_action", ["identifier", "action"]),
 
-	// User subscription/entitlement data synced from Clerk Billing
+	// Optional supporter subscription/entitlement data synced from Clerk Billing
 	userEntitlements: defineTable({
 		userId: v.id("users"),
 		tier: v.union(v.literal("free"), v.literal("premium")),
@@ -114,7 +114,7 @@ export default defineSchema({
 		clerkSubscriptionId: v.optional(v.string()),
 		clerkSubscriptionItemId: v.optional(v.string()),
 		clerkPlanId: v.optional(v.string()),
-		// Billing period tracking (for premium users)
+		// Billing period tracking for supporter subscriptions
 		periodStart: v.optional(v.number()),
 		periodEnd: v.optional(v.number()),
 		// Trial tracking (Clerk uses same period_start/period_end for trials)
@@ -132,7 +132,7 @@ export default defineSchema({
 		.index("by_user", ["userId"])
 		.index("by_clerk_subscription_item", ["clerkSubscriptionItemId"]),
 
-	// Daily pick tracking for rate limiting free tier
+	// Daily pick tracking retained for analytics and compatibility with legacy limit checks
 	dailyPickCounts: defineTable({
 		userId: v.id("users"),
 		date: v.string(), // ISO date format: "2026-01-14"
@@ -169,9 +169,9 @@ export default defineSchema({
 		refereeId: v.id("users"), // User who signed up with the code
 		referralCodeId: v.id("referralCodes"),
 		status: v.union(
-			v.literal("pending"), // Signed up, not subscribed
-			v.literal("converted"), // First payment made
-			v.literal("rewarded"), // Referrer got free month
+			v.literal("pending"), // Signed up and awaiting a legacy conversion event
+			v.literal("converted"), // Legacy payment conversion recorded
+			v.literal("rewarded"), // Legacy reward granted
 			v.literal("expired"), // Never converted (90 days)
 			v.literal("fraudulent") // Blocked for suspicious activity
 		),
@@ -191,16 +191,16 @@ export default defineSchema({
 		.index("by_status_signupAt", ["status", "signupAt"])
 		.index("by_referral_code", ["referralCodeId"]),
 
-	// Track referral rewards (bonus days or discount codes)
+	// Track legacy referral rewards (bonus days or discount codes)
 	referralRewards: defineTable({
 		userId: v.id("users"),
 		referralId: v.id("referrals"),
 		rewardType: v.literal("free_month"),
 		grantedAt: v.number(),
-		// Bonus days approach (for existing subscribers)
+		// Bonus days approach (legacy subscriber reward)
 		bonusDaysStart: v.optional(v.number()),
 		bonusDaysEnd: v.optional(v.number()), // 30 days after start
-		// Discount code approach (for free-tier referrers)
+		// Discount code approach (legacy free-tier reward)
 		discountCode: v.optional(v.string()),
 		discountUsedAt: v.optional(v.number()),
 	})

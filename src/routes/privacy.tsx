@@ -96,7 +96,7 @@ function PrivacyPage() {
 									Personalize your experience (your park list, stats, preferences)
 								</li>
 								<li>Calculate travel times and show nearby parks</li>
-								<li>Process payments and manage subscriptions</li>
+								<li>Process optional supporter payments</li>
 								<li>Respond to support requests</li>
 								<li>Send important service updates (not marketing)</li>
 								<li>Improve the Service based on usage patterns</li>
@@ -109,8 +109,8 @@ function PrivacyPage() {
 
 							<h3>Clerk</h3>
 							<p>
-								Authentication and billing. Clerk processes your login credentials
-								and payment information. See{" "}
+								Authentication and optional supporter billing. Clerk processes your
+								login credentials and payment information. See{" "}
 								<a
 									href="https://clerk.com/privacy"
 									target="_blank"
@@ -251,7 +251,7 @@ function PrivacyPage() {
 				<div className="landing-footer-links">
 					<a href="/">Home</a>
 					<a href="/about">About</a>
-					<a href="/pricing">Pricing</a>
+					<a href="/support">Support</a>
 					<a href="/help">Help</a>
 					<a href="/terms">Terms</a>
 				</div>

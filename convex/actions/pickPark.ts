@@ -49,7 +49,7 @@ export const pickPark = action({
 		if (!pickCheck.canPick) {
 			throw createLimitError(
 				ENTITLEMENT_ERRORS.DAILY_PICK_LIMIT_EXCEEDED,
-				`Daily pick limit reached (${pickCheck.currentCount}/${pickCheck.limit}). Upgrade to Premium for unlimited picks.`,
+				`Daily pick limit reached (${pickCheck.currentCount}/${pickCheck.limit}).`,
 				{
 					tier: pickCheck.tier,
 					limit: pickCheck.limit,

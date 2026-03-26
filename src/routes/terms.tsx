@@ -9,7 +9,7 @@ export const Route = createFileRoute("/terms")({
 			{ title: `Terms of Service - ${SEO.siteName}` },
 			{
 				name: "description",
-				content: `Terms of Service for ${SEO.siteName}. Read our terms covering accounts, subscriptions, billing, and acceptable use.`,
+				content: `Terms of Service for ${SEO.siteName}. Read our terms covering accounts, optional supporter billing, and acceptable use.`,
 			},
 			{ property: "og:title", content: `Terms of Service - ${SEO.siteName}` },
 			{ property: "og:url", content: canonical("/terms") },
@@ -83,10 +83,10 @@ function TermsPage() {
 						</section>
 
 						<section>
-							<h2>4. Subscription & Billing</h2>
+							<h2>4. Optional Supporter Billing</h2>
 							<p>
-								Some features require a paid subscription. Subscriptions are billed
-								through{" "}
+								You may choose to support Pick a Park with an optional recurring
+								subscription. Supporter billing is processed through{" "}
 								<a
 									href="https://stripe.com"
 									target="_blank"
@@ -94,17 +94,18 @@ function TermsPage() {
 								>
 									Stripe
 								</a>{" "}
-								via Clerk Billing. By subscribing, you authorize us to charge your
+								via Clerk Billing. App features are not conditioned on payment. By
+								choosing a supporter subscription, you authorize us to charge your
 								payment method on a recurring basis until you cancel.
 							</p>
 							<ul>
 								<li>
-									Subscription fees are charged at the beginning of each billing
+									Supporter fees are charged at the beginning of each billing
 									period
 								</li>
 								<li>
-									You may cancel your subscription at any time through your
-									account settings
+									You may cancel your supporter subscription at any time through
+									your account settings
 								</li>
 								<li>
 									Cancellations take effect at the end of the current billing
@@ -161,7 +162,7 @@ function TermsPage() {
 								>
 									Clerk
 								</a>{" "}
-								(for authentication and billing), and{" "}
+								(for authentication and optional supporter billing), and{" "}
 								<a
 									href="https://stripe.com"
 									target="_blank"
@@ -230,7 +231,7 @@ function TermsPage() {
 				<div className="landing-footer-links">
 					<Link to="/">Home</Link>
 					<Link to="/about">About</Link>
-					<Link to="/pricing">Pricing</Link>
+					<Link to="/support">Support</Link>
 					<Link to="/help">Help</Link>
 					<Link to="/privacy">Privacy</Link>
 				</div>

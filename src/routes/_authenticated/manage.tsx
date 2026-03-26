@@ -17,10 +17,8 @@ function ManagePage() {
 	const userParks = useQuery(api.userParks.getMyParks);
 	const parkCount = useQuery(api.userParks.getUserParkCount);
 
-	// Entitlement for showing limits
-	const { isPremium, limits } = useEntitlement();
-	const maxParks = limits?.maxParks ?? 5;
-	const isAtLimit = !isPremium && parkCount !== undefined && parkCount >= maxParks;
+	// Billing/supporter state for descriptive UI only
+	const { isSupporter } = useEntitlement();
 
 	// Get recommended parks for adding
 	const allParks = useQuery(api.parks.list);
@@ -70,19 +68,11 @@ function ManagePage() {
 					Manage Parks
 				</h1>
 				<p className="text-[var(--color-mist)]">
-					{parkCount !== undefined
-						? isPremium
-							? `${parkCount} parks in your list`
-							: `${parkCount}/${maxParks} parks in your list`
-						: "Loading..."}
+					{parkCount !== undefined ? `${parkCount} parks in your list` : "Loading..."}
 				</p>
-				{isAtLimit && (
-					<p className="text-[var(--color-gold)] text-sm mt-1">
-						You've reached the free tier limit.{" "}
-						<a href="/pricing" className="underline">
-							Upgrade
-						</a>{" "}
-						for unlimited parks.
+				{isSupporter && (
+					<p className="text-[var(--color-sage)] text-sm mt-1">
+						Supporter status active. Thanks for helping keep the app running.
 					</p>
 				)}
 				{removeError && (

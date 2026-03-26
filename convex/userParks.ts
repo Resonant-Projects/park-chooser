@@ -84,7 +84,8 @@ export const addPark = mutation({
 			throw new Error("Park already in your list");
 		}
 
-		// Check entitlement limits
+		// Limits are kept in the entitlement layer for consistency, but billing no longer
+		// gates access.
 		const entitlement = await ctx.db
 			.query("userEntitlements")
 			.withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -103,7 +104,7 @@ export const addPark = mutation({
 		if (currentCount >= limit) {
 			throw createLimitError(
 				ENTITLEMENT_ERRORS.PARK_LIMIT_EXCEEDED,
-				`Park limit reached (${currentCount}/${limit}). Upgrade to Premium for unlimited parks.`,
+				`Park limit reached (${currentCount}/${limit}).`,
 				{
 					tier,
 					limit,

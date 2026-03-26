@@ -45,7 +45,7 @@ export const createPendingReferral = internalMutation({
 
 /**
  * Internal: Get pending referral for a user (if any).
- * Used when processing subscription webhooks to check if user was referred.
+ * Retained for the legacy payment-linked referral flow.
  */
 export const getPendingReferralByReferee = internalQuery({
 	args: { refereeId: v.id("users") },

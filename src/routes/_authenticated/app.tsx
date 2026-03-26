@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAction } from "convex/react";
-import { Car, ExternalLink, Loader2, MapPin, MapPinOff, Shuffle, Sparkles } from "lucide-react";
+import { Car, ExternalLink, Heart, Loader2, MapPin, MapPinOff, Shuffle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -12,10 +12,8 @@ export const Route = createFileRoute("/_authenticated/app")({
 });
 
 function AppPage() {
-	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [isLimitExceeded, setIsLimitExceeded] = useState(false);
 	const [currentSlide, setCurrentSlide] = useState(0);
 	const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -29,14 +27,17 @@ function AppPage() {
 	// Location hook
 	const { location, requestLocation } = useLocation();
 
-	// Entitlement hook for premium status and limits
-	const { isPremium, status, periodEnd, isFreeTrial } = useEntitlement();
+	// Billing/supporter status for messaging only
+	const { isSupporter, status, periodEnd, isFreeTrial } = useEntitlement();
 
-	// Format expiry date for canceled-but-still-active users
-	const expiryMessage =
-		status === "canceled" && periodEnd && isPremium
-			? `${isFreeTrial ? "Trial" : "Premium"} ends ${new Date(periodEnd).toLocaleDateString()}`
-			: null;
+	const supporterMessage =
+		status === "canceled" && periodEnd && isSupporter
+			? `${isFreeTrial ? "Trial support" : "Supporter billing"} ends ${new Date(
+					periodEnd
+				).toLocaleDateString()}. Thanks for supporting Park Chooser.`
+			: isSupporter
+				? "Thanks for supporting Park Chooser."
+				: null;
 
 	// Get today's pick
 	const getTodaysPick = useAction(api.actions.getTodaysPick.getTodaysPick);
@@ -128,7 +129,6 @@ function AppPage() {
 	const handlePickPark = async () => {
 		setIsLoading(true);
 		setError(null);
-		setIsLimitExceeded(false);
 		setCurrentSlide(0);
 
 		try {
@@ -142,8 +142,7 @@ function AppPage() {
 
 			// Check for entitlement errors
 			if (message.includes("DAILY_PICK_LIMIT_EXCEEDED")) {
-				setError("You've used your daily pick! Upgrade to Premium for unlimited picks.");
-				setIsLimitExceeded(true);
+				setError("Pick limit reached. Please try again tomorrow.");
 			} else if (message.includes("NO_PARKS")) {
 				setError(
 					"Add some parks to your list first! Visit the Manage page to get started."
@@ -154,10 +153,6 @@ function AppPage() {
 		} finally {
 			setIsLoading(false);
 		}
-	};
-
-	const handleUpgrade = () => {
-		navigate({ to: "/pricing" });
 	};
 
 	const handleVisitPark = async () => {
@@ -180,9 +175,9 @@ function AppPage() {
 
 	return (
 		<main className="flex-1 flex flex-col items-center justify-center gap-6">
-			{expiryMessage && (
+			{supporterMessage && (
 				<div className="glass-card max-w-md w-full text-center py-2 px-4">
-					<p className="text-sm text-[var(--color-mist)]">{expiryMessage}</p>
+					<p className="text-sm text-[var(--color-mist)]">{supporterMessage}</p>
 				</div>
 			)}
 
@@ -300,30 +295,33 @@ function AppPage() {
 				</div>
 			)}
 
-			{isLimitExceeded ? (
-				<button type="button" onClick={handleUpgrade} className="btn btn-primary btn-lg">
-					<Sparkles className="w-6 h-6" />
-					Upgrade Now
-				</button>
-			) : (
-				<button
-					type="button"
-					onClick={handlePickPark}
-					disabled={isLoading}
-					className={`btn btn-primary btn-lg ${isLoading ? "button-loading" : ""}`}
+			<button
+				type="button"
+				onClick={handlePickPark}
+				disabled={isLoading}
+				className={`btn btn-primary btn-lg ${isLoading ? "button-loading" : ""}`}
+			>
+				{isLoading ? (
+					<>
+						<Loader2 className="w-6 h-6 animate-spin" />
+						Picking...
+					</>
+				) : (
+					<>
+						<Shuffle className="w-6 h-6" />
+						{todaysPick ? "Pick Again" : "Pick a Park"}
+					</>
+				)}
+			</button>
+
+			{!isSupporter && (
+				<Link
+					to="/support"
+					className="text-sm text-[var(--color-mist)] inline-flex items-center gap-2"
 				>
-					{isLoading ? (
-						<>
-							<Loader2 className="w-6 h-6 animate-spin" />
-							Picking...
-						</>
-					) : (
-						<>
-							<Shuffle className="w-6 h-6" />
-							{todaysPick ? "Pick Again" : "Pick a Park"}
-						</>
-					)}
-				</button>
+					<Heart className="w-4 h-4" />
+					Support Park Chooser
+				</Link>
 			)}
 		</main>
 	);

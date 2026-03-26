@@ -289,7 +289,7 @@ function AboutPage() {
 						gap: "0.5rem",
 					}}
 				>
-					Get Started Free
+					Get Started
 					<ArrowRight size={20} />
 				</a>
 			</section>
@@ -298,7 +298,7 @@ function AboutPage() {
 			<footer className="landing-footer">
 				<div className="landing-footer-links">
 					<a href="/">Home</a>
-					<a href="/pricing">Pricing</a>
+					<a href="/support">Support</a>
 					<a href="/help">Help</a>
 					<a href="/terms">Terms</a>
 					<a href="/privacy">Privacy</a>

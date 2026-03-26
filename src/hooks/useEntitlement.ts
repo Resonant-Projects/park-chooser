@@ -3,23 +3,22 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "../integrations/clerk/provider";
 
 /**
- * Hook combining Clerk's has() helper with Convex entitlement data.
+ * Hook combining Clerk's plan helper with Convex billing state.
  *
- * Clerk is the primary source for access checks (handles period end correctly),
- * while Convex provides additional details for UI display like "Premium ends on X date".
+ * Billing state is descriptive only. Do not use this hook to gate features.
  */
 export function useEntitlement() {
 	const { has, isLoaded: isAuthLoaded } = useAuth();
 	const convexEntitlement = useQuery(api.entitlements.getMyEntitlement);
 
-	// Clerk is primary source for access checks - handles canceled-but-still-active correctly
-	const isPremium = has?.({ plan: "monthly" }) ?? false;
+	// Clerk is the primary source for current supporter status.
+	const isSupporter = has?.({ plan: "monthly" }) ?? false;
 
 	return {
-		// Access control (use this for feature gating)
-		isPremium,
+		// Billing/supporter state
+		isSupporter,
 
-		// UI display details from Convex
+		// Supporting details from Convex for account messaging
 		periodEnd: convexEntitlement?.periodEnd,
 		periodStart: convexEntitlement?.periodStart,
 		isFreeTrial: convexEntitlement?.isFreeTrial,

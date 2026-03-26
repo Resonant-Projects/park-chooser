@@ -72,7 +72,8 @@ http.route({
 /**
  * Clerk Billing Webhook Endpoint
  *
- * Handles subscription events from Clerk Billing to sync user entitlements.
+ * Handles optional supporter subscription events from Clerk Billing to sync user
+ * entitlements for account messaging.
  *
  * Subscription Item Events (subscriptionItem.*):
  *   - subscriptionItem.created, subscriptionItem.updated, subscriptionItem.active
@@ -163,18 +164,6 @@ http.route({
 						subscriptionId: data.subscription_id,
 						entitlementResult,
 					});
-
-					// Process referral conversion for new active subscriptions
-					if (data.status === "active") {
-						const referralResult = await ctx.runAction(
-							internal.actions.processReferralConversion.processReferralConversion,
-							{
-								refereeId: user._id,
-								subscriptionStatus: data.status,
-							}
-						);
-						console.log("Referral conversion result:", referralResult);
-					}
 
 					break;
 				}
@@ -285,18 +274,6 @@ http.route({
 						subscriptionItemId: activeItem.id,
 						entitlementResult,
 					});
-
-					// Process referral conversion for active subscriptions
-					if (data.status === "active") {
-						const referralResult = await ctx.runAction(
-							internal.actions.processReferralConversion.processReferralConversion,
-							{
-								refereeId: user._id,
-								subscriptionStatus: data.status,
-							}
-						);
-						console.log("Referral conversion result:", referralResult);
-					}
 
 					break;
 				}
