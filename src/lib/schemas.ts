@@ -14,7 +14,7 @@ export const softwareApplicationSchema = {
 		"@type": "Offer",
 		price: "0",
 		priceCurrency: "USD",
-		description: "Free tier available with daily limit. Premium plans available.",
+		description: "Free for all signed-in users. Optional supporter billing is available.",
 	},
 };
 

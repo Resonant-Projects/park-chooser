@@ -128,6 +128,13 @@ function AuthenticatedLayout() {
 					>
 						Stats
 					</Link>
+					<Link
+						to="/support"
+						className="text-[var(--color-mist)] hover:text-[var(--color-cream)] transition-colors text-sm"
+						activeProps={{ className: "text-[var(--color-gold)]" }}
+					>
+						Support
+					</Link>
 					<UserButton
 						afterSignOutUrl="/"
 						appearance={{

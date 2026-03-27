@@ -114,13 +114,8 @@ function ContactPage() {
 				ipHash,
 			});
 
-			if (result.success) {
-				setReferenceId(result.referenceId);
-				setFormState("success");
-			} else {
-				setErrorMessage(result.error || "Something went wrong. Please try again.");
-				setFormState("error");
-			}
+			setReferenceId(result.referenceId);
+			setFormState("success");
 		} catch (err) {
 			setErrorMessage(
 				err instanceof Error ? err.message : "Something went wrong. Please try again."
@@ -176,7 +171,7 @@ function ContactPage() {
 					<div className="landing-footer-links">
 						<Link to="/">Home</Link>
 						<Link to="/about">About</Link>
-						<Link to="/pricing">Pricing</Link>
+						<Link to="/support">Support</Link>
 						<Link to="/terms">Terms</Link>
 						<Link to="/privacy">Privacy</Link>
 					</div>
@@ -342,7 +337,7 @@ function ContactPage() {
 				<div className="landing-footer-links">
 					<Link to="/">Home</Link>
 					<Link to="/about">About</Link>
-					<Link to="/pricing">Pricing</Link>
+					<Link to="/support">Support</Link>
 					<Link to="/terms">Terms</Link>
 					<Link to="/privacy">Privacy</Link>
 				</div>

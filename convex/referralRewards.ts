@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 
 /**
- * Internal: Grant bonus days to a referrer (for existing premium subscribers).
- * Adds 30 days of premium access that stacks with existing subscription.
+ * Legacy reward path for the retired payment-gated referral system.
+ * Retained to avoid a schema refactor while supporter billing remains optional.
  */
 export const grantBonusDays = internalMutation({
 	args: {
@@ -47,8 +47,7 @@ export const grantBonusDays = internalMutation({
 });
 
 /**
- * Internal: Generate a discount code for free-tier referrers.
- * They can use this when upgrading to get their first month free.
+ * Legacy discount code reward for the retired payment-gated referral system.
  */
 export const grantDiscountCode = internalMutation({
 	args: {
@@ -111,7 +110,7 @@ export const markDiscountUsed = internalMutation({
 
 /**
  * Internal: Check if user has active bonus days.
- * Used in entitlement checks to grant premium access during bonus period.
+ * Retained for compatibility with legacy referral reward records.
  */
 export const hasActiveBonusDays = internalQuery({
 	args: { userId: v.id("users") },

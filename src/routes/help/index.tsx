@@ -19,12 +19,12 @@ export const Route = createFileRoute("/help/")({
 			{ title: `Help Center - ${SEO.siteName}` },
 			{
 				name: "description",
-				content: `Get help with ${SEO.siteName}. Find answers to FAQs about adding parks, tracking visits, subscriptions, and more.`,
+				content: `Get help with ${SEO.siteName}. Find answers to FAQs about adding parks, tracking visits, and optional support.`,
 			},
 			{ property: "og:title", content: `Help Center - ${SEO.siteName}` },
 			{
 				property: "og:description",
-				content: `Get help with ${SEO.siteName}. Find answers to FAQs about adding parks, tracking visits, subscriptions, and more.`,
+				content: `Get help with ${SEO.siteName}. Find answers to FAQs about adding parks, tracking visits, and optional support.`,
 			},
 			{ property: "og:url", content: canonical("/help") },
 		],
@@ -54,9 +54,9 @@ const quickLinks = [
 	},
 	{
 		icon: Wallet,
-		title: "Account & Billing",
-		description: "Subscription settings",
-		href: "/pricing",
+		title: "Account & Support",
+		description: "Supporter billing",
+		href: "/support",
 	},
 ];
 
@@ -78,12 +78,12 @@ const faqs = [
 		answer: 'When you visit a park, tap the "Mark as Visited" button to log your visit. You can view your visit history and statistics on the Stats page, including total visits, streak information, and your most-visited parks.',
 	},
 	{
-		question: "Can I change or cancel my subscription?",
-		answer: 'Yes! You can manage your subscription at any time from your account settings. Click on your profile icon and select "Manage Subscription" to upgrade, downgrade, or cancel. Changes take effect at the end of your current billing period.',
+		question: "Do I need a subscription to use the app?",
+		answer: "No. Every signed-in user gets full access to Park Chooser, including unlimited parks, unlimited picks, discovery, and visit tracking.",
 	},
 	{
-		question: "What happens to my parks if I cancel?",
-		answer: "Your parks and visit history are never deleted. If you cancel a paid subscription, you'll retain access to the free tier features and your first 5 parks. You can always resubscribe to regain access to your full park list.",
+		question: "Can I cancel supporter billing?",
+		answer: "Yes. You can manage or cancel your supporter subscription from your account settings. Canceling support never removes access to your parks, history, or any app features.",
 	},
 ];
 
@@ -176,7 +176,7 @@ function HelpPage() {
 				<div className="landing-footer-links">
 					<Link to="/">Home</Link>
 					<Link to="/about">About</Link>
-					<Link to="/pricing">Pricing</Link>
+					<Link to="/support">Support</Link>
 					<Link to="/terms">Terms</Link>
 					<Link to="/privacy">Privacy</Link>
 				</div>

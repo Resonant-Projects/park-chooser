@@ -31,12 +31,11 @@ export const submitSupportTicket = action({
 	handler: async (
 		ctx,
 		{ email, subject, message, honeypot, ipHash }
-	): Promise<{ success: boolean; referenceId: string }> => {
+	): Promise<{ referenceId: string }> => {
 		// 1. Honeypot check - reject if filled (bot detection)
 		if (honeypot && honeypot.length > 0) {
 			// Silently accept but don't process (don't reveal to bots)
 			return {
-				success: true,
 				referenceId: "TP-XXXXXX",
 			};
 		}
@@ -93,7 +92,6 @@ export const submitSupportTicket = action({
 		// - User confirmation with reference ID
 
 		return {
-			success: true,
 			referenceId: result.referenceId,
 		};
 	},

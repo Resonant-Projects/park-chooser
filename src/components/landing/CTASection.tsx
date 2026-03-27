@@ -27,7 +27,7 @@ export function CTASection() {
 						marginBottom: "2rem",
 					}}
 				>
-					Start Exploring Free
+					Start Exploring
 					<ArrowRight size={20} />
 				</Link>
 
@@ -47,7 +47,7 @@ export function CTASection() {
 							fontWeight: 500,
 						}}
 					>
-						Free tier includes:
+						Every account includes:
 					</p>
 					<ul
 						style={{
@@ -59,8 +59,8 @@ export function CTASection() {
 							listStyle: "disc",
 						}}
 					>
-						<li>5 parks in your list</li>
-						<li>1 random pick per day</li>
+						<li>Unlimited parks in your list</li>
+						<li>Unlimited random picks</li>
 						<li>Track your visits</li>
 					</ul>
 				</div>
@@ -69,7 +69,7 @@ export function CTASection() {
 			<footer className="landing-footer">
 				<div className="landing-footer-links">
 					<Link to="/about">About</Link>
-					<Link to="/pricing">Pricing</Link>
+					<Link to="/support">Support</Link>
 					<Link to="/help">Help</Link>
 					<Link to="/terms">Terms</Link>
 					<Link to="/privacy">Privacy</Link>

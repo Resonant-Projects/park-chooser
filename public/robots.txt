@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /about
-Allow: /pricing
+Allow: /support
 Allow: /help
 
 Disallow: /sign-in

@@ -11,14 +11,14 @@ type ProcessResult =
 	| { processed: true; rewarded: true; referrerId: Id<"users">; rewardType: string };
 
 /**
- * Process referral conversion when a subscription becomes active.
- * Called from Clerk Billing webhook after subscription.created/updated.
+ * Legacy referral conversion flow for payment-triggered rewards.
+ * Supporter billing no longer invokes this action, but the code is retained for now.
  *
  * Flow:
  * 1. Look up pending referral for the subscriber
  * 2. Validate conversion (48hr delay, not fraudulent)
  * 3. Check referrer's reward limits
- * 4. Grant appropriate reward (bonus days or discount code)
+ * 4. Grant the legacy reward (bonus days or discount code)
  * 5. Update referral status
  */
 export const processReferralConversion = internalAction({
@@ -88,7 +88,7 @@ export const processReferralConversion = internalAction({
 		// The referral is already marked as "converted" - only mark "rewarded" on success
 		try {
 			if (referrerTier === "premium") {
-				// Premium subscriber gets bonus days
+				// Legacy premium-tier reward: grant bonus days
 				const rewardResult = await ctx.runMutation(
 					internal.referralRewards.grantBonusDays,
 					{
@@ -98,7 +98,7 @@ export const processReferralConversion = internalAction({
 				);
 				console.log("Granted bonus days to referrer:", rewardResult);
 			} else {
-				// Free tier user gets discount code for future upgrade
+				// Legacy free-tier reward: grant discount code
 				const rewardResult = await ctx.runMutation(
 					internal.referralRewards.grantDiscountCode,
 					{

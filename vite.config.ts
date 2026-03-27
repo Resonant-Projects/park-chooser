@@ -25,6 +25,8 @@ const config = defineConfig({
 			prerender: {
 				enabled: !process.env.VERCEL,
 				crawlLinks: false,
+				// `routes` is supported by the runtime plugin but not yet in the package types.
+				// @ts-expect-error -- remove when @tanstack/react-start types add `routes`
 				routes: ["/", "/about", "/terms", "/privacy", "/help", "/help/contact"],
 			},
 		}),
