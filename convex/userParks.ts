@@ -1,11 +1,5 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import {
-	createLimitError,
-	ENTITLEMENT_ERRORS,
-	getEffectiveTier,
-	TIER_LIMITS,
-} from "./lib/entitlements";
 import { getUserFromIdentity } from "./lib/userHelpers";
 
 /**
@@ -82,35 +76,6 @@ export const addPark = mutation({
 
 		if (existing) {
 			throw new Error("Park already in your list");
-		}
-
-		// Limits are kept in the entitlement layer for consistency, but billing no longer
-		// gates access.
-		const entitlement = await ctx.db
-			.query("userEntitlements")
-			.withIndex("by_user", (q) => q.eq("userId", user._id))
-			.unique();
-
-		const tier = entitlement ? getEffectiveTier(entitlement) : "free";
-		const limit = TIER_LIMITS[tier].maxParks;
-
-		const currentCount = (
-			await ctx.db
-				.query("userParks")
-				.withIndex("by_user", (q) => q.eq("userId", user._id))
-				.collect()
-		).length;
-
-		if (currentCount >= limit) {
-			throw createLimitError(
-				ENTITLEMENT_ERRORS.PARK_LIMIT_EXCEEDED,
-				`Park limit reached (${currentCount}/${limit}).`,
-				{
-					tier,
-					limit,
-					current: currentCount,
-				}
-			);
 		}
 
 		// Add park to user's list

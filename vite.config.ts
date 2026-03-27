@@ -25,9 +25,10 @@ const config = defineConfig({
 			prerender: {
 				enabled: !process.env.VERCEL,
 				crawlLinks: false,
-				// Supported by the runtime plugin, but not yet reflected in the package types.
-				routes: ["/", "/about", "/support", "/terms", "/privacy", "/help", "/help/contact"],
-			} as never,
+				// `routes` is supported by the runtime plugin but not yet in the package types.
+				// @ts-expect-error -- remove when @tanstack/react-start types add `routes`
+				routes: ["/", "/about", "/terms", "/privacy", "/help", "/help/contact"],
+			},
 		}),
 		viteReact(),
 	],
