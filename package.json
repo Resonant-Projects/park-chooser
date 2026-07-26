@@ -16,7 +16,7 @@
 		"lint:fix": "biome lint --write . && eslint --fix .",
 		"check": "biome check --write .",
 		"check:ci": "biome check . && eslint .",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "node node_modules/@typescript/native/lib/tsc.js --noEmit"
 	},
 	"dependencies": {
 		"@clerk/clerk-react": "^5.61.3",
@@ -52,12 +52,12 @@
 		"@types/node": "^25.5.0",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
-		"@typescript-eslint/parser": "^8.57.2",
+		"@typescript-eslint/parser": "^8.65.0",
 		"@typescript/native": "npm:typescript@^7.0.2",
 		"@vitejs/plugin-react": "^6.0.1",
 		"eslint": "^9.39.4",
 		"jsdom": "^29.0.1",
-		"typescript": "^5.9.3",
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
 		"vite": "^8.0.3",
 		"vitest": "^4.1.2",
 		"web-vitals": "^5.2.0"

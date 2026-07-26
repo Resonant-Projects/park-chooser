@@ -1,2 +1,0 @@
-tsconfig.json(23,3): error TS5102: Option 'baseUrl' has been removed. Please remove it from your configuration.
-  Use '"paths": {"*": ["./*"]}' instead.
