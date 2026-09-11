@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAction } from "convex/react";
+import { ConvexError } from "convex/values";
 import { Car, ExternalLink, Heart, Loader2, MapPin, MapPinOff, Shuffle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
@@ -138,7 +139,13 @@ function AppPage() {
 				chosenAt: Date.now(),
 			});
 		} catch (err) {
-			const message = err instanceof Error ? err.message : "Failed to pick a park";
+			// Production error messages are redacted; Convex preserves application data separately.
+			const message =
+				err instanceof ConvexError && typeof err.data === "string"
+					? err.data
+					: err instanceof Error
+						? err.message
+						: "Failed to pick a park";
 
 			// Check for entitlement errors
 			if (message.includes("DAILY_PICK_LIMIT_EXCEEDED")) {
