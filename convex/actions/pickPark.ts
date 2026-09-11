@@ -1,5 +1,6 @@
 "use node";
 
+import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action } from "../_generated/server";
@@ -68,7 +69,7 @@ export const pickPark = action({
 		);
 
 		if (userParks.length === 0) {
-			throw new Error(
+			throw new ConvexError(
 				"NO_PARKS: Add parks to your list first. Visit the Manage page to get started."
 			);
 		}
