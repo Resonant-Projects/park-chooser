@@ -16,9 +16,6 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
 	const { isSignedIn, isLoaded } = useAuth();
 	const navigate = useNavigate();
-	const storeUser = useMutation(api.users.store);
-	const [isBootstrappingUser, setIsBootstrappingUser] = useState(false);
-	const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
 	// Redirect unauthenticated users to sign-in
 	useEffect(() => {
@@ -26,6 +23,30 @@ function AuthenticatedLayout() {
 			navigate({ to: "/sign-in" });
 		}
 	}, [isLoaded, isSignedIn, navigate]);
+
+	// Gate before any Convex hooks: during SSR (and whenever auth isn't loaded) no
+	// ConvexProvider is mounted, and convex/react throws if useMutation runs outside it.
+	if (!isLoaded) {
+		return (
+			<div className="container">
+				<main>
+					<div className="spinner" />
+				</main>
+			</div>
+		);
+	}
+	if (!isSignedIn) {
+		return null;
+	}
+
+	return <AuthenticatedShell />;
+}
+
+function AuthenticatedShell() {
+	const { isSignedIn, isLoaded } = useAuth();
+	const storeUser = useMutation(api.users.store);
+	const [isBootstrappingUser, setIsBootstrappingUser] = useState(false);
+	const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
 	// Ensure the authenticated Clerk user exists in Convex before app routes load.
 	useEffect(() => {
