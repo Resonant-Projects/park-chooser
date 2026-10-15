@@ -46,9 +46,13 @@ const REQUIREMENTS: Requirement[] = [
 			} catch {
 				return "must be a valid URL";
 			}
-			// ConvexReactClient checks the raw string, not the parsed URL: it must start
-			// with "http:"/"https:" and contain "://" (so "https:host" is rejected).
-			return /^https?:\/\//.test(value) ? null : 'must start with "https://" or "http://"';
+			// Mirrors convex's validateDeploymentUrl + ConvexReactClient, which check the
+			// raw string: it must start with "http:"/"https:" and contain "://" (so
+			// "https:host" is rejected), and must not be the .convex.site HTTP Actions URL.
+			if (!/^https?:\/\//.test(value)) return 'must start with "https://" or "http://"';
+			return value.endsWith(".convex.site")
+				? "must be the deployment URL (.convex.cloud), not the .convex.site HTTP Actions URL"
+				: null;
 		},
 	},
 ];

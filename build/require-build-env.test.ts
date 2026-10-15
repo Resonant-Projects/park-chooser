@@ -70,6 +70,15 @@ describe("require-build-env", () => {
 		);
 	});
 
+	it("rejects the .convex.site HTTP Actions URL", () => {
+		expect(
+			findBuildEnvProblems({
+				...valid,
+				VITE_CONVEX_URL: "https://example-123.convex.site",
+			})[0]
+		).toContain("VITE_CONVEX_URL is invalid: must be the deployment URL (.convex.cloud)");
+	});
+
 	it.each([
 		"https:example-123.convex.cloud",
 		"ftp://example-123.convex.cloud",
