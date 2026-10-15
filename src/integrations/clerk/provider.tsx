@@ -27,15 +27,13 @@ const SSR_AUTH_STATE: AuthState = {
  */
 export function useAuth(): AuthState {
 	const ssrContext = useContext(SSRAuthContext);
-	// If we're in SSR mode (context is set), return SSR defaults without touching
-	// Clerk: newer @clerk/clerk-react throws when useAuth runs outside <ClerkProvider />.
-	// The branch is stable for the module's lifetime (PUBLISHABLE_KEY is a build-time
-	// constant), so hook order never changes between renders.
+	const clerkAuth = useClerkAuth();
+	// If we're in SSR mode (context is set), return SSR defaults
 	if (ssrContext !== null) {
 		return ssrContext;
 	}
-	// biome-ignore lint/correctness/useHookAtTopLevel: branch is constant per build (see above)
-	return useClerkAuth();
+	// Otherwise use real Clerk auth
+	return clerkAuth;
 }
 
 export default function AppClerkProvider({ children }: { children: ReactNode }) {
@@ -50,13 +48,4 @@ export default function AppClerkProvider({ children }: { children: ReactNode }) 
 			{children}
 		</ClerkProvider>
 	);
-}
-
-/**
- * Renders Clerk UI components (SignIn, SignUp, ...) only when a real <ClerkProvider />
- * is mounted. Without a publishable key (SSR/prerender, or an environment missing
- * VITE_CLERK_PUBLISHABLE_KEY) Clerk components throw, so render nothing instead.
- */
-export function ClerkOnly({ children }: { children: ReactNode }) {
-	return useContext(SSRAuthContext) === null ? <>{children}</> : null;
 }

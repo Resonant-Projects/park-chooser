@@ -54,6 +54,10 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_...
 VITE_CONVEX_URL=https://...convex.cloud
 ```
 
+Both values are in the Vercel project's Development environment. To fetch them, run `vercel link` once, then `vercel env pull --environment=development` and copy only the two `VITE_` lines into `.env.local` (the pulled file also contains server secrets that do not belong in the frontend env).
+
+`bun run build` and `bun run dev` fail with a clear error if `VITE_CLERK_PUBLISHABLE_KEY` or `VITE_CONVEX_URL` is missing or malformed (see `build/require-build-env.ts`); the app never runs with sign-in disabled. On Vercel, `convex deploy --cmd 'vite build'` supplies `VITE_CONVEX_URL`, and the Clerk key must be set for both Preview and Production. Tests, typecheck and lint do not need these variables.
+
 Set Convex server-side variables:
 
 ```bash
