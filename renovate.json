@@ -1,6 +1,30 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ]
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["config:recommended"],
+	"timezone": "America/New_York",
+	"separateMinorPatch": true,
+	"osvVulnerabilityAlerts": true,
+	"vulnerabilityAlerts": {
+		"description": "Security PRs skip the schedule and the release-age wait (Renovate forces minimumReleaseAge: null), so never automerge them.",
+		"automerge": false,
+		"labels": ["security"]
+	},
+	"packageRules": [
+		{
+			"description": "Patches: automerge once required checks pass. Never 0.x packages (bare or as a ^/~ range).",
+			"matchUpdateTypes": ["patch"],
+			"matchCurrentVersion": "!/^\\D*0\\./",
+			"automerge": true,
+			"automergeType": "pr",
+			"platformAutomerge": true,
+			"minimumReleaseAge": "3 days",
+			"schedule": ["at any time"]
+		},
+		{
+			"description": "Minor and major: batch on the weekly schedule, manual review",
+			"matchUpdateTypes": ["minor", "major"],
+			"automerge": false,
+			"schedule": ["before 6am on monday"]
+		}
+	]
 }
