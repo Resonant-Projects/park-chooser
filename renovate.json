@@ -5,6 +5,8 @@
 	"separateMinorPatch": true,
 	"osvVulnerabilityAlerts": true,
 	"vulnerabilityAlerts": {
+		"description": "Security PRs skip the schedule and the release-age wait (Renovate forces minimumReleaseAge: null), so never automerge them.",
+		"automerge": false,
 		"labels": ["security"]
 	},
 	"packageRules": [
