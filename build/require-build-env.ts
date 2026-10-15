@@ -55,12 +55,16 @@ const REQUIREMENTS: Requirement[] = [
 export function findBuildEnvProblems(env: EnvSource): string[] {
 	const problems: string[] = [];
 	for (const { name, hint, validate } of REQUIREMENTS) {
-		const value = env[name]?.trim();
-		if (!value) {
+		const value = env[name];
+		if (!value?.trim()) {
 			problems.push(`${name} is missing or empty. ${hint}`);
 			continue;
 		}
-		const invalid = validate(value);
+		// Vite inlines the raw value, so validate exactly what the app will receive.
+		const invalid =
+			value === value.trim()
+				? validate(value)
+				: "must not have leading or trailing whitespace";
 		if (invalid) {
 			problems.push(`${name} is invalid: ${invalid}. ${hint}`);
 		}

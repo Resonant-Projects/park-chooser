@@ -39,6 +39,20 @@ describe("require-build-env", () => {
 		expect(problems[0]).toContain("VITE_CONVEX_URL is missing or empty");
 	});
 
+	it.each([
+		["VITE_CLERK_PUBLISHABLE_KEY", `${valid.VITE_CLERK_PUBLISHABLE_KEY}\n`],
+		["VITE_CONVEX_URL", ` ${valid.VITE_CONVEX_URL}`],
+	] as const)(
+		"rejects surrounding whitespace in %s (the app receives the raw value)",
+		(name, value) => {
+			const problems = findBuildEnvProblems({ ...valid, [name]: value });
+			expect(problems).toHaveLength(1);
+			expect(problems[0]).toContain(
+				`${name} is invalid: must not have leading or trailing whitespace`
+			);
+		}
+	);
+
 	it("rejects a malformed Convex URL", () => {
 		expect(findBuildEnvProblems({ ...valid, VITE_CONVEX_URL: "not a url" })[0]).toContain(
 			"must be a valid URL"
