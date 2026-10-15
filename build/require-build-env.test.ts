@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { assertBuildEnv, findBuildEnvProblems } from "./require-build-env";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { assertBuildEnv, findBuildEnvProblems, requireBuildEnv } from "./require-build-env";
 
 const valid = {
 	VITE_CLERK_PUBLISHABLE_KEY: "pk_test_ZHVtbXkuY2xlcmsuYWNjb3VudHMuZGV2JA",
@@ -56,5 +59,48 @@ describe("require-build-env", () => {
 		expect(error.message).toContain("VITE_CLERK_PUBLISHABLE_KEY is invalid");
 		expect(error.message).toContain("VITE_CONVEX_URL is missing or empty");
 		expect(error.message).not.toContain(secret);
+	});
+
+	describe("plugin", () => {
+		const names = ["VITE_CLERK_PUBLISHABLE_KEY", "VITE_CONVEX_URL"] as const;
+		const saved: Partial<Record<(typeof names)[number], string>> = {};
+		let root: string;
+
+		beforeEach(() => {
+			// loadEnv lets process.env win over .env files; isolate from the host env.
+			for (const name of names) {
+				saved[name] = process.env[name];
+				delete process.env[name];
+			}
+			root = mkdtempSync(join(tmpdir(), "require-build-env-"));
+		});
+
+		afterEach(() => {
+			for (const name of names) {
+				if (saved[name] === undefined) delete process.env[name];
+				else process.env[name] = saved[name];
+			}
+			rmSync(root, { recursive: true, force: true });
+		});
+
+		const runConfigHook = (command: "build" | "serve") => {
+			const hook = requireBuildEnv().config as (
+				config: { root: string },
+				env: { command: "build" | "serve"; mode: string }
+			) => void;
+			hook({ root }, { command, mode: command === "build" ? "production" : "development" });
+		};
+
+		it.each(["build", "serve"] as const)("fails %s when the env is missing", (command) => {
+			expect(() => runConfigHook(command)).toThrow("VITE_CLERK_PUBLISHABLE_KEY is missing");
+		});
+
+		it.each(["build", "serve"] as const)("passes %s with a complete .env.local", (command) => {
+			writeFileSync(
+				join(root, ".env.local"),
+				`VITE_CLERK_PUBLISHABLE_KEY=${valid.VITE_CLERK_PUBLISHABLE_KEY}\nVITE_CONVEX_URL=${valid.VITE_CONVEX_URL}\n`
+			);
+			expect(() => runConfigHook(command)).not.toThrow();
+		});
 	});
 });

@@ -15,7 +15,7 @@ const config = defineConfig({
 		},
 	},
 	plugins: [
-		// Fail the build (never degrade) when Clerk/Convex config is missing.
+		// Fail the build and dev server (never degrade) when Clerk/Convex config is missing.
 		requireBuildEnv(),
 		devtools(),
 		nitro(),
