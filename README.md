@@ -54,6 +54,8 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_...
 VITE_CONVEX_URL=https://...convex.cloud
 ```
 
+`bun run build` fails with a clear error if `VITE_CLERK_PUBLISHABLE_KEY` or `VITE_CONVEX_URL` is missing or malformed (see `build/require-build-env.ts`); it never builds a site with sign-in disabled. On Vercel, `convex deploy --cmd 'vite build'` supplies `VITE_CONVEX_URL`, and the Clerk key must be set for both Preview and Production. Tests, typecheck and lint do not need these variables.
+
 Set Convex server-side variables:
 
 ```bash

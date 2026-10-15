@@ -6,6 +6,7 @@ import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import viteTsConfigPaths from "vite-tsconfig-paths";
+import { requireBuildEnv } from "./build/require-build-env.ts";
 
 const config = defineConfig({
 	resolve: {
@@ -14,6 +15,8 @@ const config = defineConfig({
 		},
 	},
 	plugins: [
+		// Fail the build (never degrade) when Clerk/Convex config is missing.
+		requireBuildEnv(),
 		devtools(),
 		nitro(),
 		// this is the plugin that enables path aliases
