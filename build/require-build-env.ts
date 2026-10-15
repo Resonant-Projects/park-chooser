@@ -33,23 +33,50 @@ const REQUIREMENTS: Requirement[] = [
 		name: "VITE_CLERK_PUBLISHABLE_KEY",
 		hint: "Clerk dashboard > API keys. Set it in the Vercel project's env vars for Preview and Production (or in .env.local locally: `vercel env pull --environment=development`, keep only the VITE_ vars).",
 		validate: (value) =>
-			/^pk_(test|live)_\S+$/.test(value) ? null : 'must start with "pk_test_" or "pk_live_"',
+			isClerkPublishableKey(value)
+				? null
+				: 'must be a Clerk publishable key ("pk_test_" or "pk_live_" followed by the encoded frontend API)',
 	},
 	{
 		name: "VITE_CONVEX_URL",
 		hint: "On Vercel the build command must be `convex deploy --cmd 'vite build'` so Convex supplies it. Locally, run `bunx convex dev` (writes .env.local).",
 		validate: (value) => {
 			try {
-				const { protocol } = new URL(value);
-				return protocol === "https:" || protocol === "http:"
-					? null
-					: "must be an http(s) URL";
+				new URL(value);
 			} catch {
 				return "must be a valid URL";
 			}
+			// ConvexReactClient checks the raw string, not the parsed URL: it must start
+			// with "http:"/"https:" and contain "://" (so "https:host" is rejected).
+			return /^https?:\/\//.test(value) ? null : 'must start with "https://" or "http://"';
 		},
 	},
 ];
+
+/**
+ * Mirrors @clerk/shared's isPublishableKey: "pk_test_"/"pk_live_" plus a base64
+ * payload that decodes to "<frontend api host>$" (one trailing "$", a dot in the host).
+ */
+function isClerkPublishableKey(value: string): boolean {
+	const [prefix, instance, payload, ...rest] = value.split("_");
+	if (
+		prefix !== "pk" ||
+		(instance !== "test" && instance !== "live") ||
+		!payload ||
+		rest.length
+	) {
+		return false;
+	}
+	let decoded: string;
+	try {
+		decoded = atob(payload);
+	} catch {
+		return false;
+	}
+	if (!decoded.endsWith("$")) return false;
+	const host = decoded.slice(0, -1);
+	return !host.includes("$") && host.includes(".");
+}
 
 /** Returns one human-readable problem per missing/invalid variable. Values are never echoed. */
 export function findBuildEnvProblems(env: EnvSource): string[] {

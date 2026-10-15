@@ -17,7 +17,10 @@ describe("require-build-env", () => {
 
 	it("accepts live Clerk keys", () => {
 		expect(
-			findBuildEnvProblems({ ...valid, VITE_CLERK_PUBLISHABLE_KEY: "pk_live_abc123" })
+			findBuildEnvProblems({
+				...valid,
+				VITE_CLERK_PUBLISHABLE_KEY: "pk_live_Y2xlcmsuZXhhbXBsZS5jb20k",
+			})
 		).toEqual([]);
 	});
 
@@ -27,10 +30,18 @@ describe("require-build-env", () => {
 		expect(problems[0]).toContain("VITE_CLERK_PUBLISHABLE_KEY is missing or empty");
 	});
 
-	it("rejects a Clerk secret key or malformed key", () => {
-		expect(
-			findBuildEnvProblems({ ...valid, VITE_CLERK_PUBLISHABLE_KEY: "sk_test_abc" })[0]
-		).toContain("pk_test_");
+	it.each([
+		"sk_test_abc", // secret key prefix
+		"pk_live_abc123", // payload does not decode to a frontend API
+		"pk_test_bm9kb2xsYXIuZXhhbXBsZS5jb20=", // decodes without the trailing "$"
+		"pk_test_bm9kb3Qk", // decodes to "nodot$"
+		"pk_test_!!!", // not base64
+		"pk_test_Y2xlcmsuZXhhbXBsZS5jb20k_extra",
+	])("rejects a Clerk secret or malformed publishable key (%s)", (value) => {
+		const problems = findBuildEnvProblems({ ...valid, VITE_CLERK_PUBLISHABLE_KEY: value });
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toContain("VITE_CLERK_PUBLISHABLE_KEY is invalid");
+		expect(problems[0]).not.toContain(value);
 	});
 
 	it.each([undefined, ""])("rejects a missing Convex URL (%j)", (value) => {
@@ -56,6 +67,16 @@ describe("require-build-env", () => {
 	it("rejects a malformed Convex URL", () => {
 		expect(findBuildEnvProblems({ ...valid, VITE_CONVEX_URL: "not a url" })[0]).toContain(
 			"must be a valid URL"
+		);
+	});
+
+	it.each([
+		"https:example-123.convex.cloud",
+		"ftp://example-123.convex.cloud",
+		"HTTPS://example-123.convex.cloud",
+	])("rejects a Convex URL the client would refuse (%s)", (value) => {
+		expect(findBuildEnvProblems({ ...valid, VITE_CONVEX_URL: value })[0]).toContain(
+			'VITE_CONVEX_URL is invalid: must start with "https://" or "http://"'
 		);
 	});
 
