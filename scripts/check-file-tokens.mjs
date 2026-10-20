@@ -3,8 +3,8 @@
  * Pre-commit guard: block committing any file over MAX_TOKENS estimated tokens.
  *
  * Tokens are estimated as bytes / 4, so the limit is MAX_TOKENS * 4 bytes.
- * Only *staged* content is measured (the blob in the index, via
- * `git cat-file -s :path`), never the working tree.
+ * Only *staged* content is measured (the blob in the index, sized with
+ * `git cat-file --batch-check`), never the working tree.
  *
  * Usage:
  *   node scripts/check-file-tokens.mjs          # check staged files (pre-commit)
@@ -159,6 +159,8 @@ function isIgnored(filePath) {
 
 // --- git helpers ------------------------------------------------------------
 
+const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+
 function git(args, input) {
 	return execFileSync("git", args, {
 		encoding: "utf8",
@@ -167,20 +169,50 @@ function git(args, input) {
 	});
 }
 
-function stagedFiles() {
-	return git(["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"])
+/**
+ * Staged regular files as { path, oid }. Parses `git diff --cached --raw -z`:
+ *   ":<srcmode> <dstmode> <srcoid> <dstoid> <status>\0<path>\0"  (renames: "\0<old>\0<new>\0")
+ * Paths may contain any byte except NUL, so we never split them on newlines.
+ */
+function stagedEntries() {
+	const fields = git(["diff", "--cached", "--raw", "-z", "--diff-filter=ACMR"]).split("\0");
+	const entries = [];
+	for (let i = 0; i + 1 < fields.length; i++) {
+		const meta = fields[i];
+		if (!meta.startsWith(":")) continue;
+		const [, dstMode, , dstOid, status] = meta.slice(1).split(/\s+/);
+		// Renames/copies carry two paths; the destination is the last one.
+		const pathCount = /^[RC]/.test(status) ? 2 : 1;
+		const filePath = fields[i + pathCount];
+		i += pathCount;
+		if (isRegularFile(dstMode)) entries.push({ path: filePath, oid: dstOid });
+	}
+	return entries;
+}
+
+/** All tracked regular files at HEAD as { path, oid } from `git ls-files -s -z`. */
+function trackedEntries() {
+	return git(["ls-files", "-s", "-z"])
 		.split("\0")
-		.filter(Boolean);
+		.filter(Boolean)
+		.map((record) => {
+			const [meta, filePath] = record.split("\t");
+			const [mode, oid] = meta.split(" ");
+			return { mode, oid, path: filePath };
+		})
+		.filter((e) => isRegularFile(e.mode))
+		.map(({ oid, path: filePath }) => ({ oid, path: filePath }));
 }
 
-function trackedFiles() {
-	return git(["ls-files", "-z"]).split("\0").filter(Boolean);
+/** Only regular blobs count; skip symlinks (120000) and submodules (160000). */
+function isRegularFile(mode) {
+	return mode === "100644" || mode === "100755";
 }
 
-/** Blob sizes for a list of object names (":path" for index, "HEAD:path" for tracked). */
-function blobSizes(objectNames) {
-	if (objectNames.length === 0) return [];
-	const out = git(["cat-file", "--batch-check=%(objectsize)"], `${objectNames.join("\n")}\n`);
+/** Blob sizes by object id, one batched `git cat-file` call. Object ids never contain newlines. */
+function blobSizes(oids) {
+	if (oids.length === 0) return [];
+	const out = git(["cat-file", "--batch-check=%(objectsize)"], `${oids.join("\n")}\n`);
 	return out
 		.trimEnd()
 		.split("\n")
@@ -188,34 +220,27 @@ function blobSizes(objectNames) {
 }
 
 /**
- * Mirror git's own binary heuristic: a NUL byte in the first 8000 bytes, or a
- * `binary` / `-diff` attribute from .gitattributes.
+ * Ask git itself whether it treats the file as binary (NUL heuristic plus any
+ * `binary` / `-diff` attribute). `--numstat` prints "-\t-" for binary files and
+ * never has to load the whole blob into this process.
  */
-function isBinary(objectName, filePath) {
-	const attrs = git(["check-attr", "-z", "binary", "diff", "--", filePath]).split("\0");
-	for (let i = 0; i + 2 < attrs.length; i += 3) {
-		const [, attr, value] = [attrs[i], attrs[i + 1], attrs[i + 2]];
-		if (attr === "binary" && value === "set") return true;
-		if (attr === "diff" && value === "unset") return true;
-	}
-	const head = execFileSync("git", ["cat-file", "blob", objectName], {
-		maxBuffer: 64 * 1024 * 1024,
-	}).subarray(0, 8000);
-	return head.includes(0);
+function isBinary(filePath, all) {
+	const range = all ? [EMPTY_TREE, "HEAD"] : ["--cached"];
+	const out = git(["diff", "--numstat", "-z", ...range, "--", `:(literal)${filePath}`]);
+	return out.startsWith("-\t-\t");
 }
 
 // --- main -------------------------------------------------------------------
 
 const all = process.argv.includes("--all");
-const files = (all ? trackedFiles() : stagedFiles()).filter((f) => !isIgnored(f));
-const objectNames = files.map((f) => (all ? `HEAD:${f}` : `:${f}`));
-const sizes = blobSizes(objectNames);
+const entries = (all ? trackedEntries() : stagedEntries()).filter((e) => !isIgnored(e.path));
+const sizes = blobSizes(entries.map((e) => e.oid));
 
 const offenders = [];
-files.forEach((file, i) => {
+entries.forEach(({ path: file }, i) => {
 	const bytes = sizes[i];
 	if (bytes == null || bytes <= MAX_BYTES) return;
-	if (isBinary(objectNames[i], file)) return;
+	if (isBinary(file, all)) return;
 	offenders.push({ file, bytes, tokens: Math.ceil(bytes / BYTES_PER_TOKEN) });
 });
 
