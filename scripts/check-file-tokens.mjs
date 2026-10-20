@@ -171,12 +171,13 @@ function git(args, input) {
 }
 
 /**
- * Staged regular files as { path, oid }. Parses `git diff --cached --raw -z`:
+ * Staged regular files as { path, oid }, including type changes (T) such as a
+ * symlink replaced by a file. Parses `git diff --cached --raw -z`:
  *   ":<srcmode> <dstmode> <srcoid> <dstoid> <status>\0<path>\0"  (renames: "\0<old>\0<new>\0")
  * Paths may contain any byte except NUL, so we never split them on newlines.
  */
 function stagedEntries() {
-	const fields = git(["diff", "--cached", "--raw", "-z", "--diff-filter=ACMR"]).split("\0");
+	const fields = git(["diff", "--cached", "--raw", "-z", "--diff-filter=ACMRT"]).split("\0");
 	const entries = [];
 	for (let i = 0; i + 1 < fields.length; i++) {
 		const meta = fields[i];
@@ -227,11 +228,18 @@ function blobSizes(oids) {
  * `binary` / `-diff` attribute). `--numstat` prints "-\t-" for binary files and
  * never has to load the whole blob into this process.
  */
-function isBinary(filePath, all) {
-	// Both modes read the index, so compare the index against HEAD (staged
-	// changes) or against the empty tree (every tracked file).
-	const range = all ? ["--cached", EMPTY_TREE] : ["--cached"];
-	const out = git(["diff", "--numstat", "-z", ...range, "--", `:(literal)${filePath}`]);
+function isBinary(filePath) {
+	// Always compare the staged blob against the empty tree: diffing against
+	// HEAD would report "binary" when only the *previous* version was binary.
+	const out = git([
+		"diff",
+		"--numstat",
+		"-z",
+		"--cached",
+		EMPTY_TREE,
+		"--",
+		`:(literal)${filePath}`,
+	]);
 	return out.startsWith("-\t-\t");
 }
 
@@ -245,7 +253,7 @@ const offenders = [];
 entries.forEach(({ path: file }, i) => {
 	const bytes = sizes[i];
 	if (bytes == null || bytes <= MAX_BYTES) return;
-	if (isBinary(file, all)) return;
+	if (isBinary(file)) return;
 	offenders.push({ file, bytes, tokens: Math.ceil(bytes / BYTES_PER_TOKEN) });
 });
 
