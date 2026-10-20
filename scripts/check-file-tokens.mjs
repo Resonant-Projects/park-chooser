@@ -141,7 +141,8 @@ function globToRegExp(glob) {
 			re += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
 		}
 	}
-	return new RegExp(`^${re}$`);
+	// "s" (dotAll) so "**" also spans newline characters in unusual filenames.
+	return new RegExp(`^${re}$`, "s");
 }
 
 const COMPILED = IGNORE_PATTERNS.map((pattern) => ({
@@ -190,13 +191,15 @@ function stagedEntries() {
 	return entries;
 }
 
-/** All tracked regular files at HEAD as { path, oid } from `git ls-files -s -z`. */
+/** All tracked regular files in the index as { path, oid } from `git ls-files -s -z`. */
 function trackedEntries() {
 	return git(["ls-files", "-s", "-z"])
 		.split("\0")
 		.filter(Boolean)
 		.map((record) => {
-			const [meta, filePath] = record.split("\t");
+			const tab = record.indexOf("\t"); // filenames may themselves contain tabs
+			const meta = record.slice(0, tab);
+			const filePath = record.slice(tab + 1);
 			const [mode, oid] = meta.split(" ");
 			return { mode, oid, path: filePath };
 		})
@@ -225,7 +228,9 @@ function blobSizes(oids) {
  * never has to load the whole blob into this process.
  */
 function isBinary(filePath, all) {
-	const range = all ? [EMPTY_TREE, "HEAD"] : ["--cached"];
+	// Both modes read the index, so compare the index against HEAD (staged
+	// changes) or against the empty tree (every tracked file).
+	const range = all ? ["--cached", EMPTY_TREE] : ["--cached"];
 	const out = git(["diff", "--numstat", "-z", ...range, "--", `:(literal)${filePath}`]);
 	return out.startsWith("-\t-\t");
 }
