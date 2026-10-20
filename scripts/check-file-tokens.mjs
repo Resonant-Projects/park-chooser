@@ -224,15 +224,34 @@ function blobSizes(oids) {
 }
 
 /**
- * Ask git itself whether it treats the file as binary (NUL heuristic plus any
- * `binary` / `-diff` attribute). `--numstat` prints "-\t-" for binary files and
- * never has to load the whole blob into this process.
+ * Tree object written from the current index (`git write-tree`, no commit).
+ * Passing it as `--attr-source` makes git read .gitattributes exactly as
+ * staged, so an unstaged working-tree edit to .gitattributes cannot change
+ * what counts as binary. Computed once, lazily.
+ */
+let stagedAttrSource;
+function attrSourceArgs() {
+	if (stagedAttrSource === undefined) {
+		try {
+			stagedAttrSource = `--attr-source=${git(["write-tree"]).trim()}`;
+		} catch {
+			stagedAttrSource = null; // e.g. unmerged index; fall back to git's default
+		}
+	}
+	return stagedAttrSource ? [stagedAttrSource] : [];
+}
+
+/**
+ * Ask git itself whether it treats the staged blob as binary (NUL heuristic
+ * plus any `binary` / `-diff` attribute). `--numstat` prints "-\t-" for binary
+ * files and never has to load the whole blob into this process.
  */
 function isBinary(filePath) {
 	// Always compare the staged blob against the empty tree: diffing against
 	// HEAD would report "binary" when only the *previous* version was binary.
 	const out = git([
 		"diff",
+		...attrSourceArgs(),
 		"--numstat",
 		"-z",
 		"--cached",
