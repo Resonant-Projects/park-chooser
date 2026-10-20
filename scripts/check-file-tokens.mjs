@@ -249,9 +249,10 @@ function attrSourceArgs() {
 function isBinary(filePath) {
 	// Always compare the staged blob against the empty tree: diffing against
 	// HEAD would report "binary" when only the *previous* version was binary.
+	// --attr-source is a global git option, so it goes before "diff".
 	const out = git([
-		"diff",
 		...attrSourceArgs(),
+		"diff",
 		"--numstat",
 		"-z",
 		"--cached",
