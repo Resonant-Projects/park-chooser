@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
+# Block files over 5,000 estimated tokens (bytes / 4). See scripts/check-file-tokens.mjs.
+node scripts/check-file-tokens.mjs
 bunx lint-staged

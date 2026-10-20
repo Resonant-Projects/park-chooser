@@ -16,6 +16,10 @@ bun --bun run test           # Run tests
 
 `@/` → `src/`
 
+## File Size Limit
+
+A pre-commit hook blocks files over 5,000 estimated tokens (20,000 bytes). Keep new files small and split by responsibility; generated files and lockfiles are exempt (see `scripts/check-file-tokens.mjs`).
+
 ## Context Files
 
 - [Architecture](.claude/architecture.md) - Frontend/backend structure, data flow

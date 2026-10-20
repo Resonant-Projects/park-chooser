@@ -1,0 +1,274 @@
+#!/usr/bin/env node
+/**
+ * Pre-commit guard: block committing any file over MAX_TOKENS estimated tokens.
+ *
+ * Tokens are estimated as bytes / 4, so the limit is MAX_TOKENS * 4 bytes.
+ * Only *staged* content is measured (the blob in the index, via
+ * `git cat-file -s :path`), never the working tree.
+ *
+ * Usage:
+ *   node scripts/check-file-tokens.mjs          # check staged files (pre-commit)
+ *   node scripts/check-file-tokens.mjs --all    # report every tracked file over the limit
+ *
+ * Dependency-free: Node >= 18 (or bun) and git are all it needs.
+ */
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const MAX_TOKENS = 5000;
+const BYTES_PER_TOKEN = 4;
+const MAX_BYTES = MAX_TOKENS * BYTES_PER_TOKEN; // 20,000 bytes
+
+// ---------------------------------------------------------------------------
+// IGNORE LIST — files nobody writes by hand (lockfiles, codegen, assets).
+//
+// Glob rules (gitignore-like, kept deliberately tiny):
+//   - A pattern WITHOUT "/" matches the file's basename anywhere in the tree.
+//   - A pattern WITH "/" matches the full repo-relative path.
+//   - "**" matches any number of path segments, "*" matches within a segment.
+//
+// To ignore a new path, add a line to the right group below.
+// Git-detected binary files are ignored automatically (see isBinary).
+// ---------------------------------------------------------------------------
+const IGNORE_PATTERNS = [
+	// Lockfiles
+	"bun.lock",
+	"bun.lockb",
+	"package-lock.json",
+	"npm-shrinkwrap.json",
+	"pnpm-lock.yaml",
+	"yarn.lock",
+	"Cargo.lock",
+	"poetry.lock",
+	"uv.lock",
+	"Gemfile.lock",
+	"go.sum",
+	"composer.lock",
+	"flake.lock",
+
+	// Generated / codegen
+	"convex/_generated/**", // Convex API + data model codegen (repo-specific)
+	"src/routeTree.gen.ts", // TanStack Router route tree (repo-specific)
+	"routeTree.gen.ts",
+	"**/generated/**",
+	"**/_generated/**",
+	"*.gen.*",
+	"worker-configuration.d.ts",
+	"*.map", // source maps
+	"dist/**",
+	"build/**",
+	".output/**", // Nitro build output (repo-specific)
+	".tanstack/**", // TanStack Start cache (repo-specific)
+
+	// Minified bundles
+	"*.min.*",
+
+	// Test snapshots
+	"__snapshots__/**",
+	"**/__snapshots__/**",
+	"*.snap",
+
+	// Images
+	"*.png",
+	"*.jpg",
+	"*.jpeg",
+	"*.gif",
+	"*.webp",
+	"*.avif",
+	"*.ico",
+	"*.bmp",
+	"*.tif",
+	"*.tiff",
+	"*.svg", // large SVGs are exported assets, not hand-written
+
+	// Fonts
+	"*.woff",
+	"*.woff2",
+	"*.ttf",
+	"*.otf",
+	"*.eot",
+
+	// Archives / binaries / data blobs
+	"*.zip",
+	"*.tar",
+	"*.gz",
+	"*.tgz",
+	"*.bz2",
+	"*.xz",
+	"*.7z",
+	"*.rar",
+	"*.pdf",
+	"*.db",
+	"*.sqlite",
+	"*.sqlite3",
+	"*.wasm",
+
+	// Video / audio
+	"*.mp4",
+	"*.webm",
+	"*.mov",
+	"*.avi",
+	"*.mkv",
+	"*.mp3",
+	"*.wav",
+	"*.ogg",
+	"*.flac",
+	"*.m4a",
+];
+
+// --- glob matching ----------------------------------------------------------
+
+function globToRegExp(glob) {
+	let re = "";
+	for (let i = 0; i < glob.length; i++) {
+		const ch = glob[i];
+		if (ch === "*") {
+			if (glob[i + 1] === "*") {
+				// "**/" matches zero or more directories; bare "**" matches anything.
+				if (glob[i + 2] === "/") {
+					re += "(?:.*/)?";
+					i += 2;
+				} else {
+					re += ".*";
+					i += 1;
+				}
+			} else {
+				re += "[^/]*";
+			}
+		} else if (ch === "?") {
+			re += "[^/]";
+		} else {
+			re += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+		}
+	}
+	return new RegExp(`^${re}$`);
+}
+
+const COMPILED = IGNORE_PATTERNS.map((pattern) => ({
+	pattern,
+	basenameOnly: !pattern.includes("/"),
+	re: globToRegExp(pattern),
+}));
+
+function isIgnored(filePath) {
+	const base = path.posix.basename(filePath);
+	return COMPILED.some(({ basenameOnly, re }) =>
+		basenameOnly ? re.test(base) : re.test(filePath)
+	);
+}
+
+// --- git helpers ------------------------------------------------------------
+
+function git(args, input) {
+	return execFileSync("git", args, {
+		encoding: "utf8",
+		input,
+		maxBuffer: 64 * 1024 * 1024,
+	});
+}
+
+function stagedFiles() {
+	return git(["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"])
+		.split("\0")
+		.filter(Boolean);
+}
+
+function trackedFiles() {
+	return git(["ls-files", "-z"]).split("\0").filter(Boolean);
+}
+
+/** Blob sizes for a list of object names (":path" for index, "HEAD:path" for tracked). */
+function blobSizes(objectNames) {
+	if (objectNames.length === 0) return [];
+	const out = git(["cat-file", "--batch-check=%(objectsize)"], `${objectNames.join("\n")}\n`);
+	return out
+		.trimEnd()
+		.split("\n")
+		.map((line) => (/^\d+$/.test(line) ? Number(line) : null));
+}
+
+/**
+ * Mirror git's own binary heuristic: a NUL byte in the first 8000 bytes, or a
+ * `binary` / `-diff` attribute from .gitattributes.
+ */
+function isBinary(objectName, filePath) {
+	const attrs = git(["check-attr", "-z", "binary", "diff", "--", filePath]).split("\0");
+	for (let i = 0; i + 2 < attrs.length; i += 3) {
+		const [, attr, value] = [attrs[i], attrs[i + 1], attrs[i + 2]];
+		if (attr === "binary" && value === "set") return true;
+		if (attr === "diff" && value === "unset") return true;
+	}
+	const head = execFileSync("git", ["cat-file", "blob", objectName], {
+		maxBuffer: 64 * 1024 * 1024,
+	}).subarray(0, 8000);
+	return head.includes(0);
+}
+
+// --- main -------------------------------------------------------------------
+
+const all = process.argv.includes("--all");
+const files = (all ? trackedFiles() : stagedFiles()).filter((f) => !isIgnored(f));
+const objectNames = files.map((f) => (all ? `HEAD:${f}` : `:${f}`));
+const sizes = blobSizes(objectNames);
+
+const offenders = [];
+files.forEach((file, i) => {
+	const bytes = sizes[i];
+	if (bytes == null || bytes <= MAX_BYTES) return;
+	if (isBinary(objectNames[i], file)) return;
+	offenders.push({ file, bytes, tokens: Math.ceil(bytes / BYTES_PER_TOKEN) });
+});
+
+if (offenders.length === 0) {
+	if (all) console.log(`All tracked files are under ${MAX_TOKENS.toLocaleString()} tokens.`);
+	process.exit(0);
+}
+
+offenders.sort((a, b) => b.bytes - a.bytes);
+const fmt = (n) => n.toLocaleString("en-US");
+
+if (all) {
+	console.log(`${offenders.length} tracked file(s) exceed ${fmt(MAX_TOKENS)} tokens:\n`);
+	for (const o of offenders) {
+		console.log(`  ${o.file}  (~${fmt(o.tokens)} tokens, ${fmt(o.bytes)} bytes)`);
+	}
+	process.exit(1);
+}
+
+const lines = [
+	"",
+	`✖ Commit blocked: ${offenders.length} staged file(s) exceed the ${fmt(MAX_TOKENS)}-token limit`,
+	`  (tokens ≈ bytes / ${BYTES_PER_TOKEN}, so the limit is ${fmt(MAX_BYTES)} bytes per file).`,
+	"",
+];
+for (const o of offenders) {
+	lines.push(`  ${o.file}`);
+	lines.push(
+		`      ~${fmt(o.tokens)} tokens (${fmt(o.bytes)} bytes) — over by ~${fmt(o.tokens - MAX_TOKENS)} tokens`
+	);
+}
+lines.push(
+	"",
+	"Large files are hard for people and AI agents to read, review and edit safely.",
+	"Split each file above before committing:",
+	"",
+	"  1. Split by responsibility: find the distinct concerns in the file and move",
+	"     each into its own module (e.g. one file per feature, model, or route).",
+	"  2. Move types, interfaces, constants and small helpers into their own files",
+	"     (types.ts, constants.ts, utils.ts) and import them.",
+	"  3. Extract components and sub-functions: large React components become",
+	"     smaller components; long functions become named helpers.",
+	"  4. If callers depend on a single import path, keep it working by",
+	"     re-exporting from an index.ts in the new folder.",
+	`  5. Keep every new file under ${fmt(MAX_TOKENS)} tokens (${fmt(MAX_BYTES)} bytes), then re-stage and commit.`,
+	"",
+	"Emergency bypass (use sparingly, and say why in the commit message):",
+	"",
+	"  git commit --no-verify",
+	"",
+	"Genuinely generated or non-authored file? Add its path or glob to",
+	"IGNORE_PATTERNS in scripts/check-file-tokens.mjs (see the comment there).",
+	""
+);
+console.error(lines.join("\n"));
+process.exit(1);

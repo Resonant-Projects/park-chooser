@@ -16,7 +16,9 @@
 		"lint:fix": "biome lint --write . && eslint --fix .",
 		"check": "biome check --write .",
 		"check:ci": "biome check . && eslint .",
-		"typecheck": "bun node_modules/@typescript/native/bin/tsc --noEmit"
+		"typecheck": "bun node_modules/@typescript/native/bin/tsc --noEmit",
+		"check:file-tokens": "node scripts/check-file-tokens.mjs --all",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@clerk/clerk-react": "^5.61.6",
@@ -56,7 +58,9 @@
 		"@typescript/native": "npm:typescript@^7.0.2",
 		"@vitejs/plugin-react": "^6.1.2",
 		"eslint": "^9.39.5",
+		"husky": "^9.1.7",
 		"jsdom": "^29.1.1",
+		"lint-staged": "^16.4.0",
 		"typescript": "npm:@typescript/typescript6@^6.0.2",
 		"vite": "^8.3.4",
 		"vitest": "^4.1.11",

@@ -93,6 +93,10 @@ App runs at [localhost:3000](http://localhost:3000)
 | `bun --bun run lint` | Lint with Biome |
 | `bun --bun run format` | Format with Biome |
 
+## File size limit (pre-commit)
+
+A Husky pre-commit hook (`scripts/check-file-tokens.mjs`) blocks any staged file over **5,000 estimated tokens** (bytes / 4, i.e. 20,000 bytes). Lockfiles, generated code (`convex/_generated/`, `routeTree.gen.ts`), and binary assets are ignored. Split large files by responsibility instead of bypassing; `git commit --no-verify` is for emergencies only. Hooks install automatically with `bun install` (via the `prepare` script); run `bun run check:file-tokens` to list every tracked file over the limit.
+
 ## Project Structure
 
 ```
