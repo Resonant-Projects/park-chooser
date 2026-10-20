@@ -1,2 +1,8 @@
 #!/usr/bin/env sh
+# Husky already runs this with `sh -e`; set it explicitly so a lint-staged
+# failure still aborts the commit if the hook is ever run directly.
+set -e
 bunx lint-staged
+# Block files over 5,000 estimated tokens (bytes / 4). Runs after lint-staged
+# so it measures the formatted content that is actually being committed.
+node scripts/check-file-tokens.mjs
