@@ -118,6 +118,7 @@ const IGNORE_PATTERNS = [
 
 // --- glob matching ----------------------------------------------------------
 
+/** Compile one ignore-list glob into an anchored RegExp (see the rules above). */
 function globToRegExp(glob) {
 	let re = "";
 	for (let i = 0; i < glob.length; i++) {
@@ -151,6 +152,7 @@ const COMPILED = IGNORE_PATTERNS.map((pattern) => ({
 	re: globToRegExp(pattern),
 }));
 
+/** True when a repo-relative path matches any IGNORE_PATTERNS entry. */
 function isIgnored(filePath) {
 	const base = path.posix.basename(filePath);
 	return COMPILED.some(({ basenameOnly, re }) =>
@@ -162,6 +164,7 @@ function isIgnored(filePath) {
 
 const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
+/** Run a git command and return its stdout as UTF-8 text; throws on non-zero exit. */
 function git(args, input) {
 	return execFileSync("git", args, {
 		encoding: "utf8",
