@@ -2,6 +2,10 @@
 
 TanStack Start + Convex + Clerk application for park discovery and visit tracking.
 
+## Scope discipline
+
+- Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
+
 ## Commands
 
 ```bash
