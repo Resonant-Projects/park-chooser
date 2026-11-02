@@ -46,7 +46,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
 		"@convex-dev/eslint-plugin": "^1.2.2",
-		"@tanstack/devtools-vite": "^0.6.1",
+		"@tanstack/devtools-vite": "^0.8.0",
 		"@tanstack/eslint-plugin-query": "^5.104.2",
 		"@tanstack/eslint-plugin-router": "^1.162.0",
 		"@testing-library/dom": "^10.4.2",
