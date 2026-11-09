@@ -37,7 +37,7 @@ export const migrateExistingUsers = internalMutation({
 			// Check if user already has parks
 			const existingUserPark = await ctx.db
 				.query("userParks")
-				.withIndex("by_user", (q) => q.eq("userId", user._id))
+				.withIndex("by_user_park", (q) => q.eq("userId", user._id))
 				.first();
 
 			if (!existingUserPark) {

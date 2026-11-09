@@ -73,12 +73,12 @@ export const incrementRateLimit = mutation({
 		const windowExpired = now - record.windowStart > RATE_LIMIT_WINDOW_MS;
 
 		if (windowExpired) {
-			await ctx.db.patch(record._id, {
+			await ctx.db.patch("rateLimits", record._id, {
 				count: 1,
 				windowStart: now,
 			});
 		} else {
-			await ctx.db.patch(record._id, {
+			await ctx.db.patch("rateLimits", record._id, {
 				count: record.count + 1,
 			});
 		}
@@ -123,7 +123,7 @@ export const checkAndIncrementRateLimit = mutation({
 
 		if (windowExpired) {
 			// Window expired - reset and allow
-			await ctx.db.patch(record._id, {
+			await ctx.db.patch("rateLimits", record._id, {
 				count: 1,
 				windowStart: now,
 			});
@@ -136,7 +136,7 @@ export const checkAndIncrementRateLimit = mutation({
 		}
 
 		// Under limit - increment and allow
-		await ctx.db.patch(record._id, {
+		await ctx.db.patch("rateLimits", record._id, {
 			count: record.count + 1,
 		});
 		return { allowed: true, remaining: max - record.count - 1 };

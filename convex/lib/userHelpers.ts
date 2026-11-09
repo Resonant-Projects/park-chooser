@@ -40,5 +40,5 @@ export async function getUserById(
 	ctx: QueryCtx | MutationCtx,
 	userId: Id<"users">
 ): Promise<Doc<"users"> | null> {
-	return await ctx.db.get(userId);
+	return await ctx.db.get("users", userId);
 }

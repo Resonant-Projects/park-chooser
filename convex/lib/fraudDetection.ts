@@ -77,7 +77,7 @@ export async function checkAndUpdateFraudSignals(
 	if (existing) {
 		// Reset if window has passed
 		if (existing.firstSeenAt < sevenDaysAgo) {
-			await db.patch(existing._id, {
+			await db.patch("referralFraudSignals", existing._id, {
 				count: 1,
 				firstSeenAt: now,
 				lastSeenAt: now,
@@ -87,7 +87,7 @@ export async function checkAndUpdateFraudSignals(
 
 		// Increment count
 		const newCount = existing.count + 1;
-		await db.patch(existing._id, {
+		await db.patch("referralFraudSignals", existing._id, {
 			count: newCount,
 			lastSeenAt: now,
 		});
@@ -128,8 +128,9 @@ export async function checkCodeVelocity(
 	// Filter in the loop to avoid loading unnecessary records while still getting accurate counts
 	const referrals = await db
 		.query("referrals")
-		.withIndex("by_referral_code", (q) => q.eq("referralCodeId", codeId))
-		.filter((q) => q.gte(q.field("signupAt"), oneDayAgo))
+		.withIndex("by_referral_code_signupAt", (q) =>
+			q.eq("referralCodeId", codeId).gte("signupAt", oneDayAgo)
+		)
 		.collect();
 
 	// Check hourly limit

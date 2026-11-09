@@ -309,7 +309,7 @@ export async function getTravelTime(
 		}
 
 		const element = data.rows?.[0]?.elements?.[0];
-		if (!element || element.status !== "OK") {
+		if (element?.status !== "OK") {
 			console.warn("No route found for destination");
 			return null;
 		}

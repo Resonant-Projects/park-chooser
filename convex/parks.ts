@@ -31,7 +31,7 @@ export const getByPlaceId = query({
 export const getById = internalQuery({
 	args: { id: v.id("parks") },
 	handler: async (ctx, args) => {
-		return await ctx.db.get(args.id);
+		return await ctx.db.get("parks", args.id);
 	},
 });
 
@@ -54,7 +54,7 @@ export const updateSyncState = internalMutation({
 		const existing = await ctx.db.query("syncState").first();
 
 		if (existing) {
-			await ctx.db.patch(existing._id, { lastSyncedAt: args.lastSyncedAt });
+			await ctx.db.patch("syncState", existing._id, { lastSyncedAt: args.lastSyncedAt });
 		} else {
 			await ctx.db.insert("syncState", { lastSyncedAt: args.lastSyncedAt });
 		}
@@ -85,7 +85,7 @@ export const upsertParks = internalMutation({
 				.unique();
 
 			if (existing) {
-				await ctx.db.patch(existing._id, {
+				await ctx.db.patch("parks", existing._id, {
 					name: park.name,
 					address: park.address,
 					photoRefs: park.photoRefs,
@@ -135,7 +135,7 @@ export const upsertDiscoveredParks = internalMutation({
 
 			if (existing) {
 				// Update existing park with new data
-				await ctx.db.patch(existing._id, {
+				await ctx.db.patch("parks", existing._id, {
 					name: park.name,
 					address: park.address,
 					photoRefs: park.photoRefs,

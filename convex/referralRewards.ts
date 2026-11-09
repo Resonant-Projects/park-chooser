@@ -71,7 +71,7 @@ export const grantDiscountCode = internalMutation({
 			// Check if code already exists
 			const existing = await ctx.db
 				.query("referralRewards")
-				.filter((q) => q.eq(q.field("discountCode"), candidateCode))
+				.withIndex("by_discount_code", (q) => q.eq("discountCode", candidateCode))
 				.first();
 
 			if (!existing) {
@@ -102,7 +102,7 @@ export const grantDiscountCode = internalMutation({
 export const markDiscountUsed = internalMutation({
 	args: { rewardId: v.id("referralRewards") },
 	handler: async (ctx, args) => {
-		await ctx.db.patch(args.rewardId, {
+		await ctx.db.patch("referralRewards", args.rewardId, {
 			discountUsedAt: Date.now(),
 		});
 	},
@@ -141,18 +141,14 @@ export const getUnusedDiscountCodes = internalQuery({
 	handler: async (ctx, args) => {
 		const rewards = await ctx.db
 			.query("referralRewards")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
-			.filter((q) =>
-				q.and(
-					q.neq(q.field("discountCode"), undefined),
-					q.eq(q.field("discountUsedAt"), undefined)
-				)
-			)
+			.withIndex("by_user_active", (q) => q.eq("userId", args.userId))
 			.collect();
 
-		// Filter already ensures discountCode exists
 		return rewards
-			.filter((r): r is typeof r & { discountCode: string } => r.discountCode !== undefined)
+			.filter(
+				(r): r is typeof r & { discountCode: string } =>
+					r.discountCode !== undefined && r.discountUsedAt === undefined
+			)
 			.map((r) => ({
 				code: r.discountCode,
 				grantedAt: r.grantedAt,

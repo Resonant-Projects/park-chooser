@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { getTravelTime, getTravelTimeBatch } from "../lib/googleMaps";
 
 export interface TravelTimeResponse {
@@ -20,7 +20,7 @@ export const calculateTravelTime = action({
 		placeId: v.string(),
 	},
 	handler: async (_ctx, args): Promise<TravelTimeResponse | null> => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 
 		if (!apiKey) {
 			console.error("GOOGLE_MAPS_API_KEY not configured");
@@ -56,7 +56,7 @@ export const calculateBatchTravelTime = action({
 		placeIds: v.array(v.string()),
 	},
 	handler: async (_ctx, args): Promise<BatchTravelTimeResponse> => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 
 		if (!apiKey) {
 			console.error("GOOGLE_MAPS_API_KEY not configured");

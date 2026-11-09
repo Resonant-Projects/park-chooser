@@ -79,7 +79,7 @@ export const getOrCreateMyCode = mutation({
 
 		// Deactivate any old codes for this user
 		if (existingCode) {
-			await ctx.db.patch(existingCode._id, { isActive: false });
+			await ctx.db.patch("referralCodes", existingCode._id, { isActive: false });
 		}
 
 		// Create new code
@@ -116,7 +116,7 @@ export const getMyCode = query({
 			.withIndex("by_user", (q) => q.eq("userId", user._id))
 			.first();
 
-		if (!code || !code.isActive) {
+		if (!code?.isActive) {
 			return null;
 		}
 
@@ -140,12 +140,12 @@ export const validateCode = query({
 			.withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
 			.unique();
 
-		if (!codeRecord || !codeRecord.isActive) {
+		if (!codeRecord?.isActive) {
 			return { valid: false, reason: "invalid_code" };
 		}
 
 		// Get referrer info for display
-		const referrer = await ctx.db.get(codeRecord.userId);
+		const referrer = await ctx.db.get("users", codeRecord.userId);
 
 		return {
 			valid: true,
@@ -160,9 +160,9 @@ export const validateCode = query({
 export const incrementReferralCount = internalMutation({
 	args: { codeId: v.id("referralCodes") },
 	handler: async (ctx, args) => {
-		const code = await ctx.db.get(args.codeId);
+		const code = await ctx.db.get("referralCodes", args.codeId);
 		if (code) {
-			await ctx.db.patch(args.codeId, {
+			await ctx.db.patch("referralCodes", args.codeId, {
 				totalReferrals: code.totalReferrals + 1,
 			});
 		}
@@ -207,7 +207,7 @@ export const getMyReferralStats = query({
 		// Get rewards earned
 		const rewards = await ctx.db
 			.query("referralRewards")
-			.withIndex("by_user", (q) => q.eq("userId", user._id))
+			.withIndex("by_user_active", (q) => q.eq("userId", user._id))
 			.collect();
 
 		// Check for active bonus days

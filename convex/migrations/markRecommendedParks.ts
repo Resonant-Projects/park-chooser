@@ -19,7 +19,7 @@ export const markRecommendedParks = internalMutation({
 		});
 
 		for (const park of paginatedResult.page) {
-			await ctx.db.patch(park._id, { isRecommended: true });
+			await ctx.db.patch("parks", park._id, { isRecommended: true });
 		}
 
 		return {

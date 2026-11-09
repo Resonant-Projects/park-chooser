@@ -22,7 +22,7 @@ export const recordFailedReward = internalMutation({
 
 		if (existing) {
 			// Update existing record
-			await ctx.db.patch(existing._id, {
+			await ctx.db.patch("failedReferralRewards", existing._id, {
 				error: args.error,
 				retryCount: 0,
 				lastAttemptAt: now,
@@ -66,7 +66,7 @@ export const getFailedRewardsForRetry = internalQuery({
 export const markResolved = internalMutation({
 	args: { failedRewardId: v.id("failedReferralRewards") },
 	handler: async (ctx, args) => {
-		await ctx.db.patch(args.failedRewardId, {
+		await ctx.db.patch("failedReferralRewards", args.failedRewardId, {
 			status: "resolved",
 		});
 	},
@@ -81,7 +81,7 @@ export const incrementRetryCount = internalMutation({
 		maxRetries: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		const failedReward = await ctx.db.get(args.failedRewardId);
+		const failedReward = await ctx.db.get("failedReferralRewards", args.failedRewardId);
 		if (!failedReward) {
 			throw new Error("Failed reward not found");
 		}
@@ -89,7 +89,7 @@ export const incrementRetryCount = internalMutation({
 		const newRetryCount = failedReward.retryCount + 1;
 		const maxRetries = args.maxRetries ?? 3;
 
-		await ctx.db.patch(args.failedRewardId, {
+		await ctx.db.patch("failedReferralRewards", args.failedRewardId, {
 			retryCount: newRetryCount,
 			lastAttemptAt: Date.now(),
 			status: newRetryCount >= maxRetries ? "escalated" : "pending",
