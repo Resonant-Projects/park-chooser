@@ -1,4 +1,4 @@
-import { PricingTable } from "@clerk/clerk-react";
+import { PricingTable } from "@clerk/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { useState } from "react";

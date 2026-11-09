@@ -1,4 +1,4 @@
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton } from "@clerk/react";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 import { Trees } from "lucide-react";
@@ -135,8 +135,8 @@ function AuthenticatedLayout() {
 					>
 						Support
 					</Link>
+					{/* Sign-out redirect is configured globally via ClerkProvider afterSignOutUrl. */}
 					<UserButton
-						afterSignOutUrl="/"
 						appearance={{
 							elements: {
 								avatarBox: "w-8 h-8",
