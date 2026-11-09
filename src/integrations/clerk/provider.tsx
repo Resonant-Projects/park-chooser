@@ -1,46 +1,19 @@
-import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
-import { createContext, type ReactNode, useContext } from "react";
+import { ClerkProvider } from "@clerk/react";
+import type { ReactNode } from "react";
 
+// Vite inlines this at build time for both the client and SSR bundles.
+// build/require-build-env.ts already aborts `vite build`/`vite dev` without it.
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-type AuthState = ReturnType<typeof useClerkAuth>;
 
-// SSR-safe auth context - provides "not loaded" state during prerendering
-const SSRAuthContext = createContext<AuthState | null>(null);
-
-const SSR_AUTH_STATE: AuthState = {
-	isLoaded: false,
-	isSignedIn: undefined,
-	userId: undefined,
-	sessionId: undefined,
-	orgId: undefined,
-	orgRole: undefined,
-	orgSlug: undefined,
-	actor: undefined,
-	signOut: async () => {},
-	getToken: async () => null,
-	has: undefined,
-	sessionClaims: undefined,
-};
-
-/**
- * SSR-safe useAuth hook. Returns "not loaded" state during SSR/prerendering.
- */
-export function useAuth(): AuthState {
-	const ssrContext = useContext(SSRAuthContext);
-	const clerkAuth = useClerkAuth();
-	// If we're in SSR mode (context is set), return SSR defaults
-	if (ssrContext !== null) {
-		return ssrContext;
-	}
-	// Otherwise use real Clerk auth
-	return clerkAuth;
-}
+// Re-exported so app code has a single import site for auth state.
+export { useAuth } from "@clerk/react";
 
 export default function AppClerkProvider({ children }: { children: ReactNode }) {
-	// During SSR/prerendering, VITE_ env vars aren't available.
-	// Provide mock auth context that returns "not loaded" state.
+	// Never render the app with sign-in silently disabled.
 	if (!PUBLISHABLE_KEY) {
-		return <SSRAuthContext.Provider value={SSR_AUTH_STATE}>{children}</SSRAuthContext.Provider>;
+		throw new Error(
+			"VITE_CLERK_PUBLISHABLE_KEY is not set. Refusing to render without Clerk authentication."
+		);
 	}
 
 	return (
