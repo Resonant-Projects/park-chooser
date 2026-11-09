@@ -67,8 +67,26 @@ describe("validateClerkWebhook", () => {
 		});
 	});
 
+	it("fails with 500 when the webhook secret is malformed", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		const result = await validateClerkWebhook(
+			signedRequest(JSON.stringify(EVENT)),
+			"whsec_!!!not-base64"
+		);
+		expect(result).toEqual({
+			success: false,
+			error: "Webhook secret misconfigured",
+			statusCode: 500,
+		});
+	});
+
 	it("rejects a correctly signed payload that is not a Clerk event", async () => {
 		const result = await validateClerkWebhook(signedRequest('{"hello":"world"}'), SECRET);
+		expect(result).toEqual({ success: false, error: "Invalid webhook payload" });
+	});
+
+	it("rejects a correctly signed payload that is not valid JSON", async () => {
+		const result = await validateClerkWebhook(signedRequest("{"), SECRET);
 		expect(result).toEqual({ success: false, error: "Invalid webhook payload" });
 	});
 });

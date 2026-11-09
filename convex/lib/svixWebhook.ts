@@ -35,8 +35,17 @@ export async function validateClerkWebhook(
 		return { success: false, error: "Webhook secret not configured", statusCode: 500 };
 	}
 
+	// A malformed secret is a server misconfiguration, not a bad request.
+	let webhook: Webhook;
 	try {
-		new Webhook(webhookSecret).verify(payloadString, {
+		webhook = new Webhook(webhookSecret);
+	} catch (error) {
+		console.error("CLERK_WEBHOOK_SECRET is malformed:", error);
+		return { success: false, error: "Webhook secret misconfigured", statusCode: 500 };
+	}
+
+	try {
+		webhook.verify(payloadString, {
 			"svix-id": svixId,
 			"svix-timestamp": svixTimestamp,
 			"svix-signature": svixSignature,
