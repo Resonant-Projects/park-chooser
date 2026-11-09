@@ -1,5 +1,4 @@
 import { httpRouter } from "convex/server";
-import { Webhook } from "svix";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import {
@@ -10,6 +9,7 @@ import {
 	normalizeSubscriptionEntitlement,
 	normalizeSubscriptionItemEntitlement,
 } from "./lib/clerkWebhooks";
+import { validateClerkWebhook } from "./lib/svixWebhook";
 
 const http = httpRouter();
 
@@ -89,7 +89,7 @@ http.route({
 	path: "/webhooks/clerk-billing",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const result = await validateRequest(request);
+		const result = await validateClerkWebhook(request, process.env.CLERK_WEBHOOK_SECRET);
 		if (!result.success) {
 			return new Response(result.error, { status: result.statusCode ?? 400 });
 		}
@@ -355,52 +355,6 @@ async function upsertUserFromPayer(
 		imageUrl: payer?.image_url ?? undefined,
 	});
 	return { _id: userId };
-}
-
-type ValidationResult =
-	| { success: true; event: ClerkWebhookEvent }
-	| { success: false; error: string; statusCode?: number };
-
-/**
- * Validate Svix webhook signature.
- */
-async function validateRequest(req: Request): Promise<ValidationResult> {
-	const payloadString = await req.text();
-
-	const svixId = req.headers.get("svix-id");
-	const svixTimestamp = req.headers.get("svix-timestamp");
-	const svixSignature = req.headers.get("svix-signature");
-
-	if (!svixId || !svixTimestamp || !svixSignature) {
-		console.error("Missing Svix headers");
-		return { success: false, error: "Missing Svix headers" };
-	}
-
-	const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
-	if (!webhookSecret) {
-		console.error("CLERK_WEBHOOK_SECRET not configured");
-		return { success: false, error: "Webhook secret not configured", statusCode: 500 };
-	}
-
-	const wh = new Webhook(webhookSecret);
-
-	try {
-		const event = wh.verify(payloadString, {
-			"svix-id": svixId,
-			"svix-timestamp": svixTimestamp,
-			"svix-signature": svixSignature,
-		}) as unknown as ClerkWebhookEvent;
-		return { success: true, event };
-	} catch (error) {
-		console.error("Error verifying webhook signature:", error);
-		return { success: false, error: "Invalid webhook signature" };
-	}
-}
-
-// Type definitions for Clerk Billing webhook events
-interface ClerkWebhookEvent {
-	type: string;
-	data: unknown;
 }
 
 export default http;
