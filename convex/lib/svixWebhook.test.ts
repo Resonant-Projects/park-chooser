@@ -81,12 +81,26 @@ describe("validateClerkWebhook", () => {
 	});
 
 	it("rejects a correctly signed payload that is not a Clerk event", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const result = await validateClerkWebhook(signedRequest('{"hello":"world"}'), SECRET);
 		expect(result).toEqual({ success: false, error: "Invalid webhook payload" });
 	});
 
 	it("rejects a correctly signed payload that is not valid JSON", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const result = await validateClerkWebhook(signedRequest("{"), SECRET);
 		expect(result).toEqual({ success: false, error: "Invalid webhook payload" });
+	});
+
+	it.each([
+		["null", null],
+		["an array", []],
+		["a string", "user_123"],
+	])("rejects a correctly signed event whose data is %s", async (_label, data) => {
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		const body = JSON.stringify({ type: "subscription.created", data });
+		const result = await validateClerkWebhook(signedRequest(body), SECRET);
+		expect(result).toEqual({ success: false, error: "Invalid webhook payload" });
+		expect(error).toHaveBeenCalled();
 	});
 });
