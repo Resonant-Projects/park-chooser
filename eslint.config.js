@@ -28,7 +28,9 @@ export default [
 			},
 		},
 		plugins: { "@convex-dev": convexPlugin },
-		rules: { ...convexPlugin.configs.recommended.rules },
+		// The plugin's ESM `configs.recommended` is a flat-config array, not an object;
+		// spreading `.rules` off the array silently enabled nothing.
+		rules: { ...convexPlugin.configs.recommended[0].rules },
 	},
 
 	// TanStack Router rules

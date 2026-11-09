@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"engines": {
-		"node": "^22.13.0 || >=24.0.0"
+		"node": "^24.0.0 || ^26.0.0"
 	},
 	"scripts": {
 		"dev": "vite dev --port 3000",
@@ -16,7 +16,7 @@
 		"lint:fix": "biome lint --write . && eslint --fix .",
 		"check": "biome check --write .",
 		"check:ci": "biome check . && eslint .",
-		"typecheck": "bun node_modules/@typescript/native/bin/tsc --noEmit",
+		"typecheck": "bun node_modules/@typescript/native/bin/tsc --noEmit && bun node_modules/@typescript/native/bin/tsc --noEmit --project convex",
 		"check:file-tokens": "node scripts/check-file-tokens.mjs --all",
 		"prepare": "husky"
 	},

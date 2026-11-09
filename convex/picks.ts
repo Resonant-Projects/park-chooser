@@ -23,7 +23,7 @@ export const getRecent = query({
 		// Fetch park details for each pick
 		const picksWithDetails = await Promise.all(
 			picks.map(async (pick) => {
-				const park = await ctx.db.get(pick.parkId);
+				const park = await ctx.db.get("parks", pick.parkId);
 				return {
 					...pick,
 					park,
@@ -64,13 +64,13 @@ export const getTodaysPickForUser = internalQuery({
 		const todayStart = new Date();
 		todayStart.setUTCHours(0, 0, 0, 0);
 
-		// Query picks from today only by using a filter
-		// We order desc and take more to ensure we don't miss today's picks
+		// Most recent pick from today (UTC), bounded by the index range
 		const picks = await ctx.db
 			.query("picks")
-			.withIndex("by_user_chosenAt", (q) => q.eq("userId", args.userId))
+			.withIndex("by_user_chosenAt", (q) =>
+				q.eq("userId", args.userId).gte("chosenAt", todayStart.getTime())
+			)
 			.order("desc")
-			.filter((q) => q.gte(q.field("chosenAt"), todayStart.getTime()))
 			.first();
 
 		// Get the most recent pick from today
@@ -81,7 +81,7 @@ export const getTodaysPickForUser = internalQuery({
 		}
 
 		// Get park details
-		const park = await ctx.db.get(todaysPick.parkId);
+		const park = await ctx.db.get("parks", todaysPick.parkId);
 		if (!park) {
 			return null;
 		}
@@ -89,7 +89,7 @@ export const getTodaysPickForUser = internalQuery({
 		// Get userPark for custom name
 		let customName: string | undefined;
 		if (todaysPick.userParkId) {
-			const userPark = await ctx.db.get(todaysPick.userParkId);
+			const userPark = await ctx.db.get("userParks", todaysPick.userParkId);
 			customName = userPark?.customName;
 		}
 

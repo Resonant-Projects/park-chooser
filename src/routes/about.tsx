@@ -136,7 +136,7 @@ function AboutPage() {
 						const Icon = step.icon;
 						return (
 							<div
-								key={index}
+								key={step.title}
 								className={`animate-slide-up delay-${(index + 1) * 100}`}
 								style={{
 									display: "flex",

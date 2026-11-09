@@ -15,13 +15,13 @@ export const getMyParks = query({
 
 		const userParks = await ctx.db
 			.query("userParks")
-			.withIndex("by_user", (q) => q.eq("userId", user._id))
+			.withIndex("by_user_park", (q) => q.eq("userId", user._id))
 			.collect();
 
 		// Fetch park details for each userPark
 		const parksWithDetails = await Promise.all(
 			userParks.map(async (up) => {
-				const park = await ctx.db.get(up.parkId);
+				const park = await ctx.db.get("parks", up.parkId);
 				if (!park) return null;
 				return {
 					...up,
@@ -30,7 +30,10 @@ export const getMyParks = query({
 			})
 		);
 
-		return parksWithDetails.filter((p) => p !== null);
+		// by_user_park sorts by parkId; keep the list in the order parks were added.
+		return parksWithDetails
+			.filter((p) => p !== null)
+			.sort((a, b) => a._creationTime - b._creationTime);
 	},
 });
 
@@ -47,7 +50,7 @@ export const getUserParkCount = query({
 
 		const userParks = await ctx.db
 			.query("userParks")
-			.withIndex("by_user", (q) => q.eq("userId", user._id))
+			.withIndex("by_user_park", (q) => q.eq("userId", user._id))
 			.collect();
 
 		return userParks.length;
@@ -102,12 +105,12 @@ export const removePark = mutation({
 			throw new Error("Must be authenticated to remove parks");
 		}
 
-		const userPark = await ctx.db.get(args.userParkId);
+		const userPark = await ctx.db.get("userParks", args.userParkId);
 		if (!userPark || userPark.userId !== user._id) {
 			throw new Error("Park not found in your list");
 		}
 
-		await ctx.db.delete(args.userParkId);
+		await ctx.db.delete("userParks", args.userParkId);
 	},
 });
 
@@ -119,12 +122,12 @@ export const getUserParksWithDetails = internalQuery({
 	handler: async (ctx, args) => {
 		const userParks = await ctx.db
 			.query("userParks")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
+			.withIndex("by_user_park", (q) => q.eq("userId", args.userId))
 			.collect();
 
 		const parksWithDetails = await Promise.all(
 			userParks.map(async (up) => {
-				const park = await ctx.db.get(up.parkId);
+				const park = await ctx.db.get("parks", up.parkId);
 				if (!park) return null;
 				return {
 					_id: up._id,
@@ -166,7 +169,7 @@ export const getUserParkIds = internalQuery({
 	handler: async (ctx, args) => {
 		const userParks = await ctx.db
 			.query("userParks")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
+			.withIndex("by_user_park", (q) => q.eq("userId", args.userId))
 			.collect();
 
 		return userParks.map((up) => up.parkId.toString());
@@ -218,7 +221,7 @@ export const incrementUserParkVisit = internalMutation({
 			.unique();
 
 		if (userPark) {
-			await ctx.db.patch(userPark._id, {
+			await ctx.db.patch("userParks", userPark._id, {
 				visitCount: userPark.visitCount + 1,
 				lastVisitedAt: Date.now(),
 			});
@@ -239,13 +242,13 @@ export const getMyParksByVisits = query({
 
 		const userParks = await ctx.db
 			.query("userParks")
-			.withIndex("by_user", (q) => q.eq("userId", user._id))
+			.withIndex("by_user_park", (q) => q.eq("userId", user._id))
 			.collect();
 
 		// Fetch park details and sort by visit count
 		const parksWithDetails = await Promise.all(
 			userParks.map(async (up) => {
-				const park = await ctx.db.get(up.parkId);
+				const park = await ctx.db.get("parks", up.parkId);
 				if (!park) return null;
 				return {
 					...up,

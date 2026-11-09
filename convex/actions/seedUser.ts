@@ -2,7 +2,7 @@
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 
 interface SeedResult {
 	seeded: boolean;
@@ -44,7 +44,7 @@ export const seedUserWithRecommendedParks = action({
 		const allParks: Park[] = await ctx.runQuery(api.parks.list);
 		if (allParks.length === 0) {
 			// Try to sync parks first
-			const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+			const apiKey = env.GOOGLE_MAPS_API_KEY;
 			if (apiKey) {
 				await ctx.runAction(api.actions.syncParks.syncParks, { force: true });
 				const syncedParks: Park[] = await ctx.runQuery(api.parks.list);

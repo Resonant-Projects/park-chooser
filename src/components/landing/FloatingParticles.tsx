@@ -16,11 +16,11 @@ const particles = [
 export function FloatingParticles() {
 	return (
 		<div className="particles-container" aria-hidden="true">
-			{particles.map((particle, index) => {
+			{particles.map((particle) => {
 				const { Icon, left, size, duration, delay } = particle;
 				return (
 					<div
-						key={index}
+						key={left}
 						className="floating-particle"
 						style={
 							{

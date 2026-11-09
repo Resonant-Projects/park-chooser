@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { fetchPlaceDetails, type PlaceDetails, SRQ_PARKS, searchPlace } from "../lib/googleMaps";
 
 // Sync interval: 24 hours
@@ -17,7 +17,7 @@ export const syncParks = action({
 		force: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 		if (!apiKey) {
 			throw new Error("GOOGLE_MAPS_API_KEY environment variable is required");
 		}

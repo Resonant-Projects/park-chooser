@@ -1,7 +1,7 @@
 "use node";
 
 import { internal } from "../_generated/api";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { loadFreshPhotos } from "../lib/googleMaps";
 
 export interface TodaysPickResult {
@@ -22,7 +22,7 @@ export interface TodaysPickResult {
 export const getTodaysPick = action({
 	args: {},
 	handler: async (ctx): Promise<TodaysPickResult | null> => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 
 		const user = await ctx.runQuery(internal.users.getCurrentUserInternal);
 		if (!user) return null;

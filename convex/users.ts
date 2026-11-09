@@ -23,7 +23,7 @@ export const store = mutation({
 		if (user !== null) {
 			// Update existing user
 			if (user.name !== identity.name || user.imageUrl !== identity.pictureUrl) {
-				await ctx.db.patch(user._id, {
+				await ctx.db.patch("users", user._id, {
 					name: identity.name ?? undefined,
 					imageUrl: identity.pictureUrl ?? undefined,
 				});
@@ -42,7 +42,7 @@ export const store = mutation({
 
 			if (webhookUser) {
 				// Update with the correct tokenIdentifier from JWT
-				await ctx.db.patch(webhookUser._id, {
+				await ctx.db.patch("users", webhookUser._id, {
 					tokenIdentifier: identity.tokenIdentifier,
 					name: identity.name ?? webhookUser.name,
 					imageUrl: identity.pictureUrl ?? webhookUser.imageUrl,
@@ -134,7 +134,7 @@ export const upsertFromClerkWebhook = internalMutation({
 
 		if (existingUser) {
 			// Update existing user
-			await ctx.db.patch(existingUser._id, {
+			await ctx.db.patch("users", existingUser._id, {
 				email: args.email,
 				name,
 				imageUrl: args.imageUrl,
@@ -165,7 +165,7 @@ export const markUserSeeded = internalMutation({
 		userId: v.id("users"),
 	},
 	handler: async (ctx, args) => {
-		await ctx.db.patch(args.userId, {
+		await ctx.db.patch("users", args.userId, {
 			seededAt: Date.now(),
 		});
 	},

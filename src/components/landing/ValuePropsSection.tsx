@@ -26,7 +26,7 @@ export function ValuePropsSection() {
 					const Icon = prop.icon;
 					return (
 						<div
-							key={index}
+							key={prop.title}
 							className={`glass-card animate-slide-up delay-${(index + 1) * 100}`}
 							style={{ textAlign: "center" }}
 						>

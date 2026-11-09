@@ -124,7 +124,7 @@ export const incrementDailyPickCount = internalMutation({
 			.unique();
 
 		if (existing) {
-			await ctx.db.patch(existing._id, {
+			await ctx.db.patch("dailyPickCounts", existing._id, {
 				pickCount: existing.pickCount + 1,
 			});
 		} else {
@@ -213,7 +213,7 @@ export const upsertFromClerkWebhook = internalMutation({
 				return { updated: false, entitlementId: existing._id, skipped: true };
 			}
 
-			await ctx.db.patch(existing._id, {
+			await ctx.db.patch("userEntitlements", existing._id, {
 				// Only update tier if plan slug was provided, to avoid overwriting with "free"
 				...(args.clerkPlanSlug !== undefined ? { tier } : {}),
 				clerkSubscriptionId: args.clerkSubscriptionId,

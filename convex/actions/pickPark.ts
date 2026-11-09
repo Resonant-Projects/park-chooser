@@ -3,7 +3,7 @@
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { createLimitError, ENTITLEMENT_ERRORS, getNextMidnightUTC } from "../lib/entitlements";
 import { loadFreshPhotos } from "../lib/googleMaps";
 
@@ -34,7 +34,7 @@ interface UserParkWithDetails {
 export const pickPark = action({
 	args: {},
 	handler: async (ctx): Promise<PickedPark> => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 
 		// Get current user (required for per-user lists)
 		const user = await ctx.runQuery(internal.users.getCurrentUserInternal);

@@ -1,0 +1,125 @@
+/* ============================================
+   Pricing Page Styles (Simplified)
+   ============================================ */
+
+.pricing-page-container {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Compact hero - just title and subtitle */
+.pricing-hero {
+	text-align: center;
+	padding: 2.5rem 1.5rem 1.5rem;
+}
+
+.pricing-hero-title {
+	font-family: "Fraunces", Georgia, serif;
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin: 0 0 0.5rem;
+}
+
+.pricing-hero-subtitle {
+	color: var(--color-mist);
+	font-size: 1.125rem;
+	margin: 0;
+}
+
+@media (max-width: 640px) {
+	.pricing-hero {
+		padding: 2rem 1rem 1rem;
+	}
+
+	.pricing-hero-title {
+		font-size: 2rem;
+	}
+}
+
+/* Clerk PricingTable section */
+.pricing-table-section {
+	max-width: 600px;
+	width: 100%;
+	margin: 0 auto;
+	padding: 1rem 1.5rem 2rem;
+}
+
+@media (max-width: 640px) {
+	.pricing-table-section {
+		padding: 1rem;
+	}
+}
+
+/* FAQ Section */
+.faq-section {
+	max-width: 600px;
+	width: 100%;
+	margin: 0 auto;
+	padding: 2rem 1.5rem;
+}
+
+.faq-list {
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 1rem;
+	overflow: hidden;
+}
+
+.faq-item {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.faq-item:last-child {
+	border-bottom: none;
+}
+
+.faq-question {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.125rem 1.25rem;
+	background: transparent;
+	border: none;
+	color: var(--color-cream);
+	font-size: 0.9375rem;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.faq-question:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.faq-toggle {
+	color: var(--color-mist);
+	font-size: 0.75rem;
+	transition: transform 0.2s;
+}
+
+.faq-answer {
+	padding: 0 1.25rem 1.125rem;
+	margin: 0;
+	color: var(--color-mist);
+	font-size: 0.875rem;
+	line-height: 1.6;
+	animation: faq-expand 0.2s ease-out;
+}
+
+@keyframes faq-expand {
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Utility for full-width buttons */
+.w-full {
+	width: 100%;
+}

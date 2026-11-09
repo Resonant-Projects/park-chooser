@@ -50,11 +50,12 @@ export const createPendingReferral = internalMutation({
 export const getPendingReferralByReferee = internalQuery({
 	args: { refereeId: v.id("users") },
 	handler: async (ctx, args) => {
-		return await ctx.db
+		// A referee has at most one referral (recordReferral rejects a second one).
+		const referrals = await ctx.db
 			.query("referrals")
 			.withIndex("by_referee", (q) => q.eq("refereeId", args.refereeId))
-			.filter((q) => q.eq(q.field("status"), "pending"))
-			.first();
+			.collect();
+		return referrals.find((r) => r.status === "pending") ?? null;
 	},
 });
 
@@ -64,8 +65,8 @@ export const getPendingReferralByReferee = internalQuery({
 export const markReferralConverted = internalMutation({
 	args: { referralId: v.id("referrals") },
 	handler: async (ctx, args) => {
-		const referral = await ctx.db.get(args.referralId);
-		if (!referral || referral.status !== "pending") {
+		const referral = await ctx.db.get("referrals", args.referralId);
+		if (referral?.status !== "pending") {
 			return { success: false, reason: "invalid_referral" };
 		}
 
@@ -77,7 +78,7 @@ export const markReferralConverted = internalMutation({
 			return { success: false, reason: "too_soon" };
 		}
 
-		await ctx.db.patch(args.referralId, {
+		await ctx.db.patch("referrals", args.referralId, {
 			status: "converted",
 			convertedAt: now,
 		});
@@ -93,7 +94,7 @@ export const markReferralRewarded = internalMutation({
 	args: { referralId: v.id("referrals") },
 	handler: async (ctx, args) => {
 		// Validate referral exists and is in correct status
-		const referral = await ctx.db.get(args.referralId);
+		const referral = await ctx.db.get("referrals", args.referralId);
 		if (!referral) {
 			throw new Error("Referral not found");
 		}
@@ -104,7 +105,7 @@ export const markReferralRewarded = internalMutation({
 		}
 
 		const now = Date.now();
-		await ctx.db.patch(args.referralId, {
+		await ctx.db.patch("referrals", args.referralId, {
 			status: "rewarded",
 			rewardGrantedAt: now,
 		});
@@ -121,12 +122,12 @@ export const markReferralFraudulent = internalMutation({
 	},
 	handler: async (ctx, args) => {
 		// Validate referral exists
-		const referral = await ctx.db.get(args.referralId);
+		const referral = await ctx.db.get("referrals", args.referralId);
 		if (!referral) {
 			throw new Error("Referral not found");
 		}
 
-		await ctx.db.patch(args.referralId, {
+		await ctx.db.patch("referrals", args.referralId, {
 			status: "fraudulent",
 			fraudReason: args.reason,
 		});
@@ -156,7 +157,7 @@ export const markExpiredReferrals = internalMutation({
 
 		// All returned records are expired, no need for additional filtering
 		for (const referral of expiredReferrals) {
-			await ctx.db.patch(referral._id, { status: "expired" });
+			await ctx.db.patch("referrals", referral._id, { status: "expired" });
 		}
 
 		// Return whether there might be more to process (for scheduler to re-run)
@@ -176,7 +177,7 @@ export const checkRewardLimits = internalQuery({
 	handler: async (ctx, args) => {
 		const rewards = await ctx.db
 			.query("referralRewards")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
+			.withIndex("by_user_active", (q) => q.eq("userId", args.userId))
 			.collect();
 
 		// Max 12 total rewards

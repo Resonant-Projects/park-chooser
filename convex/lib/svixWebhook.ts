@@ -2,7 +2,8 @@ import { Webhook } from "svix";
 
 export interface ClerkWebhookEvent {
 	type: string;
-	data: unknown;
+	/** Clerk sends an object for every event type; anything else is rejected. */
+	data: object;
 }
 
 export type ValidationResult =
@@ -59,19 +60,22 @@ export async function validateClerkWebhook(
 	try {
 		event = JSON.parse(payloadString);
 	} catch {
+		console.error("Signed webhook payload is not valid JSON");
 		return { success: false, error: "Invalid webhook payload" };
 	}
 	if (!isClerkWebhookEvent(event)) {
+		console.error(
+			"Signed webhook payload is not a Clerk event (needs a string type and object data)"
+		);
 		return { success: false, error: "Invalid webhook payload" };
 	}
 	return { success: true, event };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function isClerkWebhookEvent(value: unknown): value is ClerkWebhookEvent {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		typeof (value as { type?: unknown }).type === "string" &&
-		"data" in value
-	);
+	return isRecord(value) && typeof value.type === "string" && isRecord(value.data);
 }

@@ -130,7 +130,7 @@ export const updateStatus = internalMutation({
 	},
 	handler: async (ctx, { ticketId, status }) => {
 		// Verify ticket exists before updating
-		const ticket = await ctx.db.get(ticketId);
+		const ticket = await ctx.db.get("supportTickets", ticketId);
 		if (!ticket) {
 			throw new Error(`Support ticket ${ticketId} not found`);
 		}
@@ -141,7 +141,7 @@ export const updateStatus = internalMutation({
 			updates.respondedAt = Date.now();
 		}
 
-		await ctx.db.patch(ticketId, updates);
+		await ctx.db.patch("supportTickets", ticketId, updates);
 	},
 });
 

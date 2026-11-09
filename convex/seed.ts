@@ -169,7 +169,7 @@ export const clearParks = mutation({
 	handler: async (ctx) => {
 		const parks = await ctx.db.query("parks").collect();
 		for (const park of parks) {
-			await ctx.db.delete(park._id);
+			await ctx.db.delete("parks", park._id);
 		}
 		return { cleared: parks.length };
 	},
@@ -184,7 +184,7 @@ export const clearPicks = mutation({
 	handler: async (ctx) => {
 		const picks = await ctx.db.query("picks").collect();
 		for (const pick of picks) {
-			await ctx.db.delete(pick._id);
+			await ctx.db.delete("picks", pick._id);
 		}
 		return { cleared: picks.length };
 	},
@@ -199,7 +199,7 @@ export const clearSyncState = mutation({
 	handler: async (ctx) => {
 		const syncState = await ctx.db.query("syncState").collect();
 		for (const state of syncState) {
-			await ctx.db.delete(state._id);
+			await ctx.db.delete("syncState", state._id);
 		}
 		return { cleared: syncState.length };
 	},
@@ -242,7 +242,7 @@ export const cleanupDuplicates = mutation({
 				.withIndex("by_placeId", (q) => q.eq("placeId", placeId))
 				.unique();
 			if (park) {
-				await ctx.db.delete(park._id);
+				await ctx.db.delete("parks", park._id);
 				deleted++;
 			}
 		}
@@ -271,7 +271,7 @@ export const upsertSRQParks = mutation({
 
 			if (existing) {
 				// Update existing park with new data (preserving photoRefs and visitCount)
-				await ctx.db.patch(existing._id, {
+				await ctx.db.patch("parks", existing._id, {
 					name: park.name,
 					customName: park.customName,
 					address: park.address,

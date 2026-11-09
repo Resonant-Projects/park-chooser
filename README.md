@@ -31,7 +31,7 @@ Every weekend, the same conversation: "Which park should we go to?" Decision fat
 
 ### Prerequisites
 
-- Node.js 22.13+ (22.x), or Node.js 24+
+- Node.js 24 or 26 (LTS; matches `engines.node` in package.json)
 - [bun](https://bun.sh)
 - [Clerk](https://clerk.com) account
 - [Convex](https://convex.dev) account

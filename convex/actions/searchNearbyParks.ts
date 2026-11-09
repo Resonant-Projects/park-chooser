@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { calculateDistanceMiles, searchNearbyParksWithPagination } from "../lib/googleMaps";
 
 export interface NearbyParkResult {
@@ -32,7 +32,7 @@ export const searchNearbyParks = action({
 		radiusMiles: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<NearbyParkResult[]> => {
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 		if (!apiKey) {
 			throw new Error("Google Maps API key not configured");
 		}

@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { internal } from "./_generated/api";
-import { httpAction } from "./_generated/server";
+import { env, httpAction } from "./_generated/server";
 import {
 	type ClerkPayerData,
 	type ClerkSubscriptionData,
@@ -33,7 +33,7 @@ http.route({
 			return new Response("Missing photo reference", { status: 400 });
 		}
 
-		const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+		const apiKey = env.GOOGLE_MAPS_API_KEY;
 		if (!apiKey) {
 			console.error("[Photo Proxy] GOOGLE_MAPS_API_KEY not configured");
 			return new Response("Service unavailable", { status: 503 });
@@ -89,7 +89,7 @@ http.route({
 	path: "/webhooks/clerk-billing",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const result = await validateClerkWebhook(request, process.env.CLERK_WEBHOOK_SECRET);
+		const result = await validateClerkWebhook(request, env.CLERK_WEBHOOK_SECRET);
 		if (!result.success) {
 			return new Response(result.error, { status: result.statusCode ?? 400 });
 		}
