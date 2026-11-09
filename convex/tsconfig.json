@@ -11,6 +11,9 @@
 		"jsx": "react-jsx",
 		"skipLibCheck": true,
 		"allowSyntheticDefaultImports": true,
+		/* Functions read `process.env`. TypeScript 6 no longer auto-includes @types/*,
+		 * and svix 2 stopped pulling in Node types transitively, so declare them here. */
+		"types": ["node"],
 
 		/* These compiler options are required by Convex */
 		"target": "ESNext",
