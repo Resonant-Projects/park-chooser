@@ -1,0 +1,790 @@
+/* Park Chooser Theme Colors */
+:root {
+	--color-forest: #1a3a2f;
+	--color-moss: #3d5a4c;
+	--color-sage: #7d9b8a;
+	--color-mist: #d4e4dc;
+	--color-cream: #f5f7f4;
+	--color-bark: #4a3728;
+	--color-sunset: #e07b4c;
+	--color-gold: #d4a84b;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	font-family: "Source Sans 3", system-ui, sans-serif;
+	background: linear-gradient(
+		165deg,
+		var(--color-forest) 0%,
+		var(--color-moss) 50%,
+		var(--color-sage) 100%
+	);
+	min-height: 100vh;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+	color: var(--color-cream);
+	overflow-x: hidden;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+code {
+	font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.container {
+	width: 100%;
+	max-width: 640px;
+	margin: 0 auto;
+	padding: 2rem 1.5rem;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	overflow-x: hidden;
+}
+
+header {
+	text-align: center;
+	margin-bottom: 2rem;
+}
+
+.title {
+	font-family: "Fraunces", Georgia, serif;
+	font-size: 2.75rem;
+	font-weight: 700;
+	margin: 0 0 0.5rem;
+	color: var(--color-cream);
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+	letter-spacing: -0.02em;
+}
+
+.subtitle {
+	font-size: 1.125rem;
+	color: var(--color-mist);
+	margin: 0;
+	font-weight: 400;
+}
+
+main {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Actions */
+.actions {
+	margin-top: 2rem;
+	display: flex;
+	justify-content: center;
+}
+
+/* Loading state pulse animation */
+@keyframes pulse-glow {
+	0%,
+	100% {
+		box-shadow:
+			0 25px 50px -12px rgba(0, 0, 0, 0.25),
+			0 0 0 0 rgba(212, 168, 75, 0.4);
+	}
+	50% {
+		box-shadow:
+			0 25px 50px -12px rgba(0, 0, 0, 0.25),
+			0 0 0 12px rgba(212, 168, 75, 0);
+	}
+}
+
+.button-loading {
+	animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Keyframe animations */
+@keyframes card-appear {
+	from {
+		opacity: 0;
+		transform: translateY(20px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes badge-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Animation utilities */
+.animate-card-appear {
+	animation: card-appear 0.4s ease-out;
+	animation-fill-mode: both;
+}
+
+.animate-badge-fade-in {
+	animation: badge-fade-in 0.4s ease-out 0.3s forwards;
+}
+
+.animate-spin {
+	animation: spin 1s linear infinite;
+}
+
+/* Accessibility: Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		transition-duration: 0.01ms;
+		scroll-behavior: auto;
+	}
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+	.title {
+		font-size: 2.25rem;
+	}
+
+	.container {
+		padding: 1.5rem 1rem;
+	}
+}
+
+/* Park Card Styles */
+.park-card {
+	cursor: pointer;
+	transition: all 0.3s ease;
+	overflow: hidden;
+	min-width: 0;
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.park-card:hover {
+	background: rgba(255, 255, 255, 0.15);
+	transform: translateY(-2px);
+}
+
+.park-card[data-expanded="true"] {
+	cursor: default;
+}
+
+/* Photo Carousel */
+.carousel-container {
+	position: relative;
+	width: 100%;
+	border-radius: 0.75rem;
+	overflow: hidden;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.carousel-slides {
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-behavior: smooth;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.carousel-slides::-webkit-scrollbar {
+	display: none;
+}
+
+.carousel-slide {
+	flex: 0 0 100%;
+	scroll-snap-align: start;
+	aspect-ratio: 16 / 10;
+	position: relative;
+}
+
+.carousel-slide img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.carousel-slide .photo-fallback {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.05);
+	font-size: 4rem;
+}
+
+/* Carousel Navigation Arrows */
+.carousel-nav {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.5);
+	border: none;
+	color: white;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		background 0.2s,
+		opacity 0.2s;
+	opacity: 0;
+	z-index: 10;
+}
+
+.carousel-container:hover .carousel-nav,
+.carousel-container:focus-within .carousel-nav {
+	opacity: 1;
+}
+
+.carousel-nav:hover {
+	background: rgba(0, 0, 0, 0.7);
+}
+
+.carousel-nav:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+
+.carousel-nav:focus-visible {
+	outline: 2px solid var(--color-gold);
+	outline-offset: 2px;
+	opacity: 1;
+}
+
+.carousel-nav.prev {
+	left: 0.5rem;
+}
+
+.carousel-nav.next {
+	right: 0.5rem;
+}
+
+/* Carousel Dots */
+.carousel-dots {
+	display: flex;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 0.75rem 0;
+}
+
+.carousel-dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.3);
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		transform 0.2s;
+}
+
+.carousel-dot:hover {
+	background: rgba(255, 255, 255, 0.5);
+}
+
+.carousel-dot.active {
+	background: var(--color-gold);
+	transform: scale(1.2);
+}
+
+.carousel-dot:focus-visible {
+	outline: 2px solid var(--color-gold);
+	outline-offset: 2px;
+}
+
+/* Single photo - hide dots and nav */
+.carousel-container.single-photo .carousel-dots,
+.carousel-container.single-photo .carousel-nav {
+	display: none;
+}
+
+/* Mobile: always show nav arrows (except disabled) */
+@media (max-width: 768px) {
+	.carousel-nav:not(:disabled) {
+		opacity: 0.8;
+	}
+}
+
+/* Button Styles */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 1rem 2rem;
+	font-size: 1.125rem;
+	font-weight: 600;
+	border-radius: 9999px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+	user-select: none;
+	border: none;
+}
+
+.btn-primary {
+	background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-sunset) 100%);
+	color: white;
+	box-shadow: 0 10px 40px -10px rgba(212, 168, 75, 0.5);
+}
+
+.btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 15px 50px -10px rgba(212, 168, 75, 0.6);
+}
+
+.btn-primary:active {
+	transform: translateY(0);
+}
+
+.btn-secondary {
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--color-cream);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+	background: rgba(255, 255, 255, 0.15);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Glass Card Style */
+.glass-card {
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 1.5rem;
+}
+
+/* Banner Styles */
+.limit-banner {
+	background: linear-gradient(135deg, rgba(212, 168, 75, 0.2) 0%, rgba(224, 123, 76, 0.2) 100%);
+	border: 1px solid rgba(212, 168, 75, 0.3);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	text-align: center;
+}
+
+.location-banner {
+	background: rgba(125, 155, 138, 0.2);
+	border: 1px solid rgba(125, 155, 138, 0.3);
+	border-radius: 0.75rem;
+	padding: 0.75rem 1rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Link Styles */
+a {
+	color: var(--color-gold);
+	text-decoration: none;
+	transition: color 0.2s;
+}
+
+a:hover {
+	color: var(--color-sunset);
+	text-decoration: underline;
+}
+
+/* Form Inputs */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+textarea {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+	color: var(--color-cream);
+	font-size: 1rem;
+	width: 100%;
+	transition:
+		border-color 0.2s,
+		background 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+	border-color: var(--color-gold);
+	background: rgba(255, 255, 255, 0.15);
+}
+
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="search"]:focus-visible,
+textarea:focus-visible {
+	outline: 2px solid var(--color-gold);
+	outline-offset: 2px;
+}
+
+input::placeholder,
+textarea::placeholder {
+	color: rgba(245, 247, 244, 0.5);
+}
+
+/* Badge Styles */
+.badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.25rem 0.75rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--color-mist);
+}
+
+.badge-gold {
+	background: rgba(212, 168, 75, 0.2);
+	color: var(--color-gold);
+}
+
+.badge-success {
+	background: rgba(125, 155, 138, 0.2);
+	color: var(--color-sage);
+}
+
+/* Table Styles */
+.table-container {
+	overflow-x: auto;
+	border-radius: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+th,
+td {
+	padding: 0.75rem 1rem;
+	text-align: left;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+th {
+	font-weight: 600;
+	color: var(--color-mist);
+	background: rgba(255, 255, 255, 0.05);
+}
+
+tr:last-child td {
+	border-bottom: none;
+}
+
+tr:hover td {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+/* Separator */
+.separator {
+	height: 1px;
+	background: rgba(255, 255, 255, 0.1);
+	margin: 1.5rem 0;
+}
+
+/* Loading Spinner */
+.spinner {
+	width: 1.5rem;
+	height: 1.5rem;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top-color: var(--color-gold);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+/* Utility Classes */
+.text-center {
+	text-align: center;
+}
+
+.text-mist {
+	color: var(--color-mist);
+}
+
+.text-gold {
+	color: var(--color-gold);
+}
+
+.text-cream {
+	color: var(--color-cream);
+}
+
+.text-sunset {
+	color: var(--color-sunset);
+}
+
+.bg-glass {
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
+}
+
+/* Park Info Card - White background section */
+.park-info-card {
+	background: #fff;
+	color: var(--color-forest);
+	border-radius: 0 0 1rem 1rem;
+	padding: 1.25rem 1.5rem;
+}
+
+.park-info-card h2 {
+	color: var(--color-forest);
+}
+
+.park-info-card p {
+	color: var(--color-moss);
+}
+
+.park-info-card a {
+	color: var(--color-forest);
+}
+
+.park-info-card a:hover {
+	color: var(--color-sunset);
+}
+
+/* Travel Time Badge */
+.travel-badge {
+	background: rgba(255, 255, 255, 0.95);
+	color: var(--color-forest);
+	border-radius: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.875rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.travel-badge.loading {
+	opacity: 0.7;
+}
+
+.travel-badge.disabled {
+	background: rgba(255, 255, 255, 0.6);
+	color: var(--color-sage);
+}
+
+/* Big Button Variant - Kid-friendly */
+.btn-lg {
+	padding: 1.25rem 3rem;
+	font-size: 1.25rem;
+	min-width: 280px;
+}
+
+@media (max-width: 480px) {
+	.btn-lg {
+		min-width: 240px;
+		padding: 1.125rem 2.5rem;
+		font-size: 1.125rem;
+	}
+}
+
+/* Initial State Card */
+.initial-state-card {
+	text-align: center;
+	padding: 2.5rem 2rem;
+}
+
+.initial-state-card .icon {
+	font-size: 4rem;
+	margin-bottom: 1.5rem;
+}
+
+.initial-state-card h2 {
+	font-family: "Fraunces", Georgia, serif;
+	font-size: 1.75rem;
+	font-weight: 600;
+	color: var(--color-cream);
+	margin: 0 0 0.75rem;
+}
+
+.initial-state-card p {
+	color: var(--color-mist);
+	font-size: 1rem;
+	line-height: 1.5;
+	margin: 0 0 1rem;
+}
+
+.initial-state-card .arrow {
+	font-size: 1.5rem;
+	color: var(--color-gold);
+	animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+	0%,
+	20%,
+	50%,
+	80%,
+	100% {
+		transform: translateY(0);
+	}
+	40% {
+		transform: translateY(-8px);
+	}
+	60% {
+		transform: translateY(-4px);
+	}
+}
+
+/* Park Card with carousel - combined glass/white design */
+.park-card-main {
+	background: transparent;
+	border-radius: 1rem;
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.park-card-main .carousel-container {
+	border-radius: 1rem 1rem 0 0;
+}
+
+/* Maps Link Button in park info card */
+.maps-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--color-forest);
+	font-weight: 500;
+	font-size: 0.9375rem;
+	padding: 0.5rem 0;
+	transition: color 0.2s;
+}
+
+.maps-link:hover {
+	color: var(--color-sunset);
+	text-decoration: none;
+}
+
+/* Mobile-first stat cards */
+.stat-card {
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 1.5rem;
+	text-align: center;
+}
+
+/* Full-width park list item for mobile */
+.park-list-item {
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.park-list-item .park-content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.park-list-item .park-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+/* Larger touch targets for buttons */
+.touch-target {
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Discover page park card */
+.discover-card {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.discover-card .park-image {
+	width: 100%;
+	height: 160px;
+	border-radius: 0.75rem;
+	object-fit: cover;
+}
+
+.discover-card .park-details {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.discover-card .park-meta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 0.5rem;
+}

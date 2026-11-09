@@ -217,7 +217,7 @@ function AppPage() {
 								onScroll={handleCarouselScroll}
 							>
 								{photos.map((url, i) => (
-									<div key={i} className="carousel-slide">
+									<div key={url} className="carousel-slide">
 										<img
 											src={url}
 											alt={`${todaysPick.name} - view ${i + 1}`}
@@ -230,10 +230,10 @@ function AppPage() {
 							{/* Dot Indicators */}
 							{hasMultiplePhotos && (
 								<div className="carousel-dots">
-									{photos.map((_, i) => (
+									{photos.map((url, i) => (
 										<button
 											type="button"
-											key={i}
+											key={url}
 											className={`carousel-dot ${currentSlide === i ? "active" : ""}`}
 											onClick={() => scrollToSlide(i)}
 											aria-label={`Go to photo ${i + 1}`}

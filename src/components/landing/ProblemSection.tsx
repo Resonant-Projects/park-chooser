@@ -30,7 +30,7 @@ export function ProblemSection() {
 					const Icon = problem.icon;
 					return (
 						<div
-							key={index}
+							key={problem.title}
 							className={`glass-card-accent animate-slide-up delay-${(index + 1) * 100}`}
 						>
 							<div

@@ -115,7 +115,7 @@ function HelpPage() {
 						const Icon = link.icon;
 						return (
 							<Link
-								key={index}
+								key={link.href}
 								to={link.href}
 								className="trail-marker"
 								style={{ animationDelay: `${index * 100}ms` }}
@@ -136,7 +136,11 @@ function HelpPage() {
 				<h2 className="section-header">Frequently Asked Questions</h2>
 				<div className="glass-card-accent whisper-container">
 					{faqs.map((faq, index) => (
-						<div key={index} className="whisper-item" data-open={openIndex === index}>
+						<div
+							key={faq.question}
+							className="whisper-item"
+							data-open={openIndex === index}
+						>
 							<button
 								type="button"
 								className="whisper-question"
